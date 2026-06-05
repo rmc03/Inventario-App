@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:uuid/uuid.dart';
@@ -17,9 +17,7 @@ class ProductoFormScreen extends ConsumerStatefulWidget {
 
 class _ProductoFormScreenState extends ConsumerState<ProductoFormScreen> {
   final _nombreController = TextEditingController();
-  final _codigoController = TextEditingController();
   final _stockController = TextEditingController();
-  final _stockMinimoController = TextEditingController();
   final _precioController = TextEditingController();
   String? _categoriaId;
   Producto? _producto;
@@ -37,9 +35,7 @@ class _ProductoFormScreenState extends ConsumerState<ProductoFormScreen> {
       if (producto != null) {
         _producto = producto;
         _nombreController.text = producto.nombre;
-        _codigoController.text = producto.codigoRef ?? '';
         _stockController.text = producto.stockActual.toString();
-        _stockMinimoController.text = producto.stockMinimo.toString();
         _precioController.text = producto.precio.toStringAsFixed(2);
         _categoriaId = producto.categoriaId;
       }
@@ -49,9 +45,7 @@ class _ProductoFormScreenState extends ConsumerState<ProductoFormScreen> {
   @override
   void dispose() {
     _nombreController.dispose();
-    _codigoController.dispose();
     _stockController.dispose();
-    _stockMinimoController.dispose();
     _precioController.dispose();
     super.dispose();
   }
@@ -82,14 +76,6 @@ class _ProductoFormScreenState extends ConsumerState<ProductoFormScreen> {
               ),
             ),
             const SizedBox(height: 14),
-            TextField(
-              controller: _codigoController,
-              decoration: const InputDecoration(
-                labelText: 'SKU',
-                hintText: 'Ej. LAP-001',
-              ),
-            ),
-            const SizedBox(height: 14),
             DropdownButtonFormField<String>(
               initialValue: _categoriaId,
               decoration: const InputDecoration(labelText: 'Categoría'),
@@ -114,21 +100,12 @@ class _ProductoFormScreenState extends ConsumerState<ProductoFormScreen> {
             ),
             const SizedBox(height: 14),
             TextField(
-              controller: _stockMinimoController,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(
-                labelText: 'Stock mínimo',
-                hintText: 'Ej. 5',
-              ),
-            ),
-            const SizedBox(height: 14),
-            TextField(
               controller: _precioController,
               keyboardType: const TextInputType.numberWithOptions(
                 decimal: true,
               ),
               decoration: const InputDecoration(
-                labelText: 'Precio unitario',
+                labelText: 'Precio por Unidad',
                 hintText: 'Ej. 750.00',
               ),
             ),
@@ -159,10 +136,8 @@ class _ProductoFormScreenState extends ConsumerState<ProductoFormScreen> {
       categoriaId: categoriaId,
       precio: double.tryParse(_precioController.text.replaceAll(',', '.')) ?? 0,
       stockActual: int.tryParse(_stockController.text.trim()) ?? 0,
-      stockMinimo: int.tryParse(_stockMinimoController.text.trim()) ?? 0,
-      codigoRef: _codigoController.text.trim().isEmpty
-          ? null
-          : _codigoController.text.trim(),
+      stockMinimo: _producto?.stockMinimo ?? 0,
+      codigoRef: null,
       fotoUrl: _producto?.fotoUrl,
       createdAt: _producto?.createdAt ?? now,
       updatedAt: now,

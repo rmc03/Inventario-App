@@ -97,7 +97,7 @@ class ProductoDetalleScreen extends ConsumerWidget {
             ),
             _DetailRow(
               icon: Icons.paid_outlined,
-              label: 'Precio unitario',
+              label: 'Precio por Unidad',
               value: formatCurrency(producto.precio),
             ),
             _DetailRow(
