@@ -253,86 +253,117 @@ class _ProductTile extends ConsumerWidget {
     BuildContext context,
     WidgetRef ref,
     Producto producto,
-  ) {
-    final cantidadController = TextEditingController(text: '1');
-
-    showModalBottomSheet<void>(
+  ) async {
+    final cantidad = await showModalBottomSheet<int>(
       context: context,
       isScrollControlled: true,
       showDragHandle: true,
-      builder: (context) => SafeArea(
-        child: Padding(
-          padding: EdgeInsets.fromLTRB(
-            20,
-            0,
-            20,
-            MediaQuery.of(context).viewInsets.bottom + 20,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Agregar al cuadre',
-                style: Theme.of(context).textTheme.titleLarge,
+      builder: (sheetCtx) => _AgregarCuadreSheet(
+        producto: producto,
+      ),
+    );
+
+    // The bottom sheet is fully dismissed and removed from the tree.
+    // Now it is safe to mutate providers.
+    if (cantidad != null && cantidad > 0) {
+      ref
+          .read(turnoControllerProvider.notifier)
+          .agregarItem(producto, cantidad);
+    }
+  }
+}
+
+class _AgregarCuadreSheet extends StatefulWidget {
+  const _AgregarCuadreSheet({required this.producto});
+
+  final Producto producto;
+
+  @override
+  State<_AgregarCuadreSheet> createState() => _AgregarCuadreSheetState();
+}
+
+class _AgregarCuadreSheetState extends State<_AgregarCuadreSheet> {
+  final _cantidadController = TextEditingController(text: '1');
+
+  @override
+  void dispose() {
+    _cantidadController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final producto = widget.producto;
+
+    return SafeArea(
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(
+          20,
+          0,
+          20,
+          MediaQuery.of(context).viewInsets.bottom + 20,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Agregar al cuadre',
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
+            const SizedBox(height: 4),
+            Text(
+              producto.nombre,
+              style: Theme.of(context).textTheme.bodyLarge,
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Stock disponible: ${producto.stockActual} unidades',
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: _cantidadController,
+              autofocus: true,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(
+                labelText: 'Cantidad vendida',
+                prefixIcon: Icon(Icons.numbers_rounded),
               ),
-              const SizedBox(height: 4),
-              Text(
-                producto.nombre,
-                style: Theme.of(context).textTheme.bodyLarge,
+            ),
+            const SizedBox(height: 18),
+            ElevatedButton.icon(
+              onPressed: () {
+                final cantidad =
+                    int.tryParse(_cantidadController.text.trim()) ?? 0;
+                if (cantidad <= 0) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Ingresa una cantidad mayor a 0'),
+                    ),
+                  );
+                  return;
+                }
+                if (cantidad > producto.stockActual) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('La cantidad supera el stock disponible'),
+                    ),
+                  );
+                  return;
+                }
+                Navigator.of(context).pop(cantidad);
+              },
+              icon: const Icon(Icons.add_shopping_cart_rounded),
+              label: const Text('Agregar al cuadre'),
+              style: ElevatedButton.styleFrom(
+                minimumSize: const Size(double.infinity, 50),
               ),
-              const SizedBox(height: 4),
-              Text(
-                'Stock disponible: ${producto.stockActual} unidades',
-                style: Theme.of(context).textTheme.bodyMedium,
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: cantidadController,
-                autofocus: true,
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(
-                  labelText: 'Cantidad vendida',
-                  prefixIcon: Icon(Icons.numbers_rounded),
-                ),
-              ),
-              const SizedBox(height: 18),
-              ElevatedButton.icon(
-                onPressed: () {
-                  final cantidad =
-                      int.tryParse(cantidadController.text.trim()) ?? 0;
-                  if (cantidad <= 0) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Ingresa una cantidad mayor a 0'),
-                      ),
-                    );
-                    return;
-                  }
-                  if (cantidad > producto.stockActual) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('La cantidad supera el stock disponible'),
-                      ),
-                    );
-                    return;
-                  }
-                  ref
-                      .read(turnoControllerProvider.notifier)
-                      .agregarItem(producto, cantidad);
-                  Navigator.of(context).pop();
-                },
-                icon: const Icon(Icons.add_shopping_cart_rounded),
-                label: const Text('Agregar al cuadre'),
-                style: ElevatedButton.styleFrom(
-                  minimumSize: const Size(double.infinity, 50),
-                ),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
-    ).whenComplete(cantidadController.dispose);
+    );
   }
 }
 
