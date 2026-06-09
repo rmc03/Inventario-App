@@ -11,17 +11,42 @@ import '../../features/inventario/presentation/inventario_screen.dart';
 import '../../features/inventario/presentation/producto_detalle_screen.dart';
 import '../../features/inventario/presentation/producto_form_screen.dart';
 import '../../features/movimientos/presentation/movimientos_screen.dart';
+import '../../features/turno/presentation/cuadre_resumen_screen.dart';
 import '../../features/turno/presentation/mi_turno_screen.dart';
 import '../../shared/models/usuario.dart';
 import '../../shared/widgets/role_shell.dart';
 
+/// Notifica a GoRouter cuando el estado de autenticación cambia,
+/// sin necesidad de recrear la instancia del router.
+class _AuthNotifier extends ChangeNotifier {
+  _AuthNotifier(Ref ref) {
+    _sub = ref.listen<AuthState>(
+      authControllerProvider,
+      (_, _) => notifyListeners(),
+    );
+  }
+
+  late final ProviderSubscription<AuthState> _sub;
+
+  @override
+  void dispose() {
+    _sub.close();
+    super.dispose();
+  }
+}
+
 final appRouterProvider = Provider<GoRouter>((ref) {
-  final authState = ref.watch(authControllerProvider);
+  // El notifier escucha cambios de auth y dispara refreshListenable.
+  // GoRouter NO se recrea: solo re-evalúa su función redirect.
+  final notifier = _AuthNotifier(ref);
+  ref.onDispose(notifier.dispose);
 
   return GoRouter(
     initialLocation: '/login',
+    refreshListenable: notifier,
     redirect: (context, state) {
-      final user = authState.user;
+      // Leer (no watch) el estado actual en cada evaluación de redirect.
+      final user = ref.read(authControllerProvider).user;
       final path = state.uri.path;
       final isLogin = path == '/login';
 
@@ -100,6 +125,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/dependiente/turno',
             builder: (context, state) => const MiTurnoScreen(),
+          ),
+          GoRoute(
+            path: '/dependiente/turno/resumen',
+            builder: (context, state) => const CuadreResumenScreen(),
           ),
         ],
       ),

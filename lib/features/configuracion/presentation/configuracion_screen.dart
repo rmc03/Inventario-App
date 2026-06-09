@@ -115,28 +115,63 @@ class ConfiguracionScreen extends ConsumerWidget {
     final controller = TextEditingController();
     final name = await showDialog<String>(
       context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text('Crear categoría'),
-          content: TextField(
-            controller: controller,
-            decoration: const InputDecoration(labelText: 'Nombre'),
-          ),
-          actions: [
-            OutlinedButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancelar'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                final value = controller.text.trim();
-                if (value.isNotEmpty) {
-                  Navigator.of(context).pop(value);
-                }
-              },
-              child: const Text('Guardar'),
-            ),
-          ],
+      builder: (dialogContext) {
+        String? errorText;
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: const Text('Crear categoría'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  TextField(
+                    controller: controller,
+                    autofocus: true,
+                    textCapitalization: TextCapitalization.words,
+                    decoration: InputDecoration(
+                      labelText: 'Nombre',
+                      errorText: errorText,
+                    ),
+                    onChanged: (_) {
+                      if (errorText != null) {
+                        setDialogState(() => errorText = null);
+                      }
+                    },
+                  ),
+                ],
+              ),
+              actions: [
+                OutlinedButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text('Cancelar'),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    final value = controller.text.trim();
+                    if (value.isEmpty) {
+                      setDialogState(
+                        () => errorText = 'El nombre es obligatorio',
+                      );
+                      return;
+                    }
+                    final isDuplicate = ref
+                        .read(inventarioControllerProvider.notifier)
+                        .existsCategoriaConNombre(value);
+                    if (isDuplicate) {
+                      setDialogState(
+                        () => errorText =
+                            'Ya existe una categoría con este nombre',
+                      );
+                      return;
+                    }
+                    Navigator.of(context).pop(value);
+                  },
+                  child: const Text('Guardar'),
+                ),
+              ],
+            );
+          },
         );
       },
     );

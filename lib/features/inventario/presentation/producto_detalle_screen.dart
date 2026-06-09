@@ -27,6 +27,8 @@ class ProductoDetalleScreen extends ConsumerWidget {
       );
     }
 
+    final descripcion = producto.descripcion?.trim();
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Detalle del producto'),
@@ -81,6 +83,17 @@ class ProductoDetalleScreen extends ConsumerWidget {
                 ),
               ),
             ),
+            if (descripcion != null && descripcion.isNotEmpty) ...[
+              const SizedBox(height: 16),
+              Text('Descripción', style: Theme.of(context).textTheme.titleMedium),
+              const SizedBox(height: 6),
+              Text(
+                descripcion,
+                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                  color: AppColors.muted,
+                ),
+              ),
+            ],
             const SizedBox(height: 18),
             _DetailRow(
               icon: Icons.category_outlined,

@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 
@@ -21,29 +23,47 @@ class ProductPhoto extends StatelessWidget {
         borderRadius: BorderRadius.circular(8),
         child: DecoratedBox(
           decoration: const BoxDecoration(color: Color(0xFFF0F4FA)),
-          child: imageUrl == null || imageUrl.isEmpty
-              ? Icon(
-                  Icons.inventory_2_outlined,
-                  color: AppColors.primaryDark.withValues(alpha: 0.55),
-                  size: iconSize ?? size * 0.42,
-                )
-              : CachedNetworkImage(
-                  imageUrl: imageUrl,
-                  fit: BoxFit.cover,
-                  placeholder: (context, url) => const Center(
-                    child: SizedBox.square(
-                      dimension: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    ),
-                  ),
-                  errorWidget: (context, url, error) => Icon(
-                    Icons.inventory_2_outlined,
-                    color: AppColors.primaryDark.withValues(alpha: 0.55),
-                    size: iconSize ?? size * 0.42,
-                  ),
-                ),
+          child: _buildImage(imageUrl),
         ),
       ),
+    );
+  }
+
+  Widget _buildImage(String? imageUrl) {
+    if (imageUrl == null || imageUrl.isEmpty) {
+      return _placeholder();
+    }
+
+    if (!_isNetworkUrl(imageUrl)) {
+      return Image.file(
+        File(imageUrl),
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) => _placeholder(),
+      );
+    }
+
+    return CachedNetworkImage(
+      imageUrl: imageUrl,
+      fit: BoxFit.cover,
+      placeholder: (context, url) => const Center(
+        child: SizedBox.square(
+          dimension: 18,
+          child: CircularProgressIndicator(strokeWidth: 2),
+        ),
+      ),
+      errorWidget: (context, url, error) => _placeholder(),
+    );
+  }
+
+  bool _isNetworkUrl(String value) {
+    return value.startsWith('http://') || value.startsWith('https://');
+  }
+
+  Widget _placeholder() {
+    return Icon(
+      Icons.inventory_2_outlined,
+      color: AppColors.primaryDark.withValues(alpha: 0.55),
+      size: iconSize ?? size * 0.42,
     );
   }
 }

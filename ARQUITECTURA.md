@@ -82,7 +82,7 @@ DependienteShell (Bottom Navigation)
 - **Dependiente:** botón "Registrar movimiento" por producto
 
 #### ProductoFormScreen (solo Admin)
-- Campos: nombre, categoría, precio, stock actual, stock mínimo, código de referencia (opcional), foto (Supabase Storage)
+- Campos: nombre, descripción (opcional), categoría, precio, stock actual, stock mínimo, código de referencia (opcional), foto (opcional, Supabase Storage)
 - Modo crear y modo editar
 
 ---
@@ -156,6 +156,7 @@ created_at    timestamptz DEFAULT now()
 ```sql
 id            uuid PRIMARY KEY DEFAULT gen_random_uuid()
 nombre        text NOT NULL
+descripcion   text
 categoria_id  uuid REFERENCES categorias(id)
 precio        numeric(10,2)
 stock_actual  integer NOT NULL DEFAULT 0

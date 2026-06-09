@@ -2,6 +2,7 @@ class Producto {
   const Producto({
     required this.id,
     required this.nombre,
+    this.descripcion,
     required this.categoriaId,
     this.categoriaNombre,
     required this.precio,
@@ -16,6 +17,7 @@ class Producto {
 
   final String id;
   final String nombre;
+  final String? descripcion;
   final String categoriaId;
   final String? categoriaNombre;
   final double precio;
@@ -33,6 +35,7 @@ class Producto {
   Producto copyWith({
     String? id,
     String? nombre,
+    String? descripcion,
     String? categoriaId,
     String? categoriaNombre,
     double? precio,
@@ -47,6 +50,7 @@ class Producto {
     return Producto(
       id: id ?? this.id,
       nombre: nombre ?? this.nombre,
+      descripcion: descripcion ?? this.descripcion,
       categoriaId: categoriaId ?? this.categoriaId,
       categoriaNombre: categoriaNombre ?? this.categoriaNombre,
       precio: precio ?? this.precio,
@@ -64,6 +68,7 @@ class Producto {
     return {
       'id': id,
       'nombre': nombre,
+      'descripcion': descripcion,
       'categoria_id': categoriaId,
       'precio': precio,
       'stock_actual': stockActual,
@@ -80,6 +85,7 @@ class Producto {
     return Producto(
       id: json['id'] as String,
       nombre: json['nombre'] as String,
+      descripcion: json['descripcion'] as String?,
       categoriaId: json['categoria_id'] as String,
       categoriaNombre: json['categoria_nombre'] as String?,
       precio: (json['precio'] as num?)?.toDouble() ?? 0,

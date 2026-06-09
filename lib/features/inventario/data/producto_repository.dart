@@ -147,6 +147,14 @@ class InMemoryProductoRepository implements ProductoRepository {
     _categorias.removeWhere((categoria) => categoria.id == id);
   }
 
+  @override
+  bool existsCategoriaConNombre(String nombre, {String? excludeId}) {
+    final normalized = nombre.trim().toLowerCase();
+    return _categorias.any(
+      (c) => c.nombre.trim().toLowerCase() == normalized && c.id != excludeId,
+    );
+  }
+
   Producto _withCategoryName(Producto producto) {
     final index = _categorias.indexWhere(
       (categoria) => categoria.id == producto.categoriaId,

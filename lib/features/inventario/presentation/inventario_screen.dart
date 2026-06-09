@@ -4,10 +4,8 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/formatters.dart';
-import '../../../features/auth/providers/auth_provider.dart';
-import '../../../features/movimientos/providers/movimiento_provider.dart';
-import '../../../shared/models/movimiento.dart';
 import '../../../shared/models/producto.dart';
+import '../../turno/providers/turno_provider.dart';
 import '../../../shared/widgets/product_photo.dart';
 import '../../../shared/widgets/stat_card.dart';
 import '../providers/inventario_provider.dart';
@@ -168,7 +166,7 @@ class _ProductTile extends ConsumerWidget {
         borderRadius: BorderRadius.circular(8),
         onTap: isAdmin
             ? () => context.go('/admin/inventario/productos/${producto.id}')
-            : () => _showMovimientoSheet(context, ref, producto),
+            : () => _handleDependienteTap(context, ref, producto),
         child: Padding(
           padding: const EdgeInsets.all(12),
           child: Row(
@@ -234,119 +232,107 @@ class _ProductTile extends ConsumerWidget {
     );
   }
 
-  void _showMovimientoSheet(
+  void _handleDependienteTap(
+    BuildContext context,
+    WidgetRef ref,
+    Producto producto,
+  ) {
+    final turno = ref.read(turnoControllerProvider);
+    if (!turno.estaActivo) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Inicia tu turno para registrar ventas'),
+        ),
+      );
+      return;
+    }
+    _showAgregarCuadreSheet(context, ref, producto);
+  }
+
+  void _showAgregarCuadreSheet(
     BuildContext context,
     WidgetRef ref,
     Producto producto,
   ) {
     final cantidadController = TextEditingController(text: '1');
-    final notaController = TextEditingController();
-    var tipo = MovimientoTipo.salida;
 
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       showDragHandle: true,
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setState) {
-            return SafeArea(
-              child: Padding(
-                padding: EdgeInsets.fromLTRB(
-                  20,
-                  0,
-                  20,
-                  MediaQuery.of(context).viewInsets.bottom + 20,
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Registrar movimiento',
-                      style: Theme.of(context).textTheme.titleLarge,
-                    ),
-                    const SizedBox(height: 4),
-                    Text(producto.nombre),
-                    const SizedBox(height: 16),
-                    SegmentedButton<MovimientoTipo>(
-                      segments: const [
-                        ButtonSegment(
-                          value: MovimientoTipo.salida,
-                          label: Text('Salida'),
-                          icon: Icon(Icons.arrow_upward_rounded),
-                        ),
-                        ButtonSegment(
-                          value: MovimientoTipo.entrada,
-                          label: Text('Entrada'),
-                          icon: Icon(Icons.arrow_downward_rounded),
-                        ),
-                      ],
-                      selected: {tipo},
-                      onSelectionChanged: (selection) {
-                        setState(() => tipo = selection.first);
-                      },
-                    ),
-                    const SizedBox(height: 14),
-                    TextField(
-                      controller: cantidadController,
-                      keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(
-                        labelText: 'Cantidad',
-                        prefixIcon: Icon(Icons.numbers_rounded),
-                      ),
-                    ),
-                    const SizedBox(height: 14),
-                    TextField(
-                      controller: notaController,
-                      maxLines: 2,
-                      decoration: const InputDecoration(
-                        labelText: 'Nota',
-                        prefixIcon: Icon(Icons.notes_rounded),
-                      ),
-                    ),
-                    const SizedBox(height: 18),
-                    ElevatedButton.icon(
-                      onPressed: () {
-                        final user = ref.read(authControllerProvider).user;
-                        final cantidad =
-                            int.tryParse(cantidadController.text.trim()) ?? 0;
-                        if (user == null || cantidad <= 0) {
-                          return;
-                        }
-
-                        ref
-                            .read(movimientoControllerProvider.notifier)
-                            .registrarMovimiento(
-                              producto: producto,
-                              usuario: user,
-                              tipo: tipo,
-                              cantidad: cantidad,
-                              nota: notaController.text,
-                            );
-                        ref
-                            .read(inventarioControllerProvider.notifier)
-                            .applyMovimiento(
-                              productoId: producto.id,
-                              tipo: tipo,
-                              cantidad: cantidad,
-                            );
-                        Navigator.of(context).pop();
-                      },
-                      icon: const Icon(Icons.save_rounded),
-                      label: const Text('Guardar movimiento'),
-                    ),
-                  ],
+      builder: (context) => SafeArea(
+        child: Padding(
+          padding: EdgeInsets.fromLTRB(
+            20,
+            0,
+            20,
+            MediaQuery.of(context).viewInsets.bottom + 20,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Agregar al cuadre',
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
+              const SizedBox(height: 4),
+              Text(
+                producto.nombre,
+                style: Theme.of(context).textTheme.bodyLarge,
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Stock disponible: ${producto.stockActual} unidades',
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: cantidadController,
+                autofocus: true,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                  labelText: 'Cantidad vendida',
+                  prefixIcon: Icon(Icons.numbers_rounded),
                 ),
               ),
-            );
-          },
-        );
-      },
-    ).whenComplete(() {
-      cantidadController.dispose();
-      notaController.dispose();
-    });
+              const SizedBox(height: 18),
+              ElevatedButton.icon(
+                onPressed: () {
+                  final cantidad =
+                      int.tryParse(cantidadController.text.trim()) ?? 0;
+                  if (cantidad <= 0) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Ingresa una cantidad mayor a 0'),
+                      ),
+                    );
+                    return;
+                  }
+                  if (cantidad > producto.stockActual) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('La cantidad supera el stock disponible'),
+                      ),
+                    );
+                    return;
+                  }
+                  ref
+                      .read(turnoControllerProvider.notifier)
+                      .agregarItem(producto, cantidad);
+                  Navigator.of(context).pop();
+                },
+                icon: const Icon(Icons.add_shopping_cart_rounded),
+                label: const Text('Agregar al cuadre'),
+                style: ElevatedButton.styleFrom(
+                  minimumSize: const Size(double.infinity, 50),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    ).whenComplete(cantidadController.dispose);
   }
 }
 

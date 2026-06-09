@@ -17,12 +17,13 @@ class LocalDatabase {
     final dbPath = await getDatabasesPath();
     final database = await openDatabase(
       p.join(dbPath, 'inventario_app.db'),
-      version: 1,
+      version: 2,
       onCreate: (db, version) async {
         await db.execute('''
 CREATE TABLE productos (
   id TEXT PRIMARY KEY,
   nombre TEXT NOT NULL,
+  descripcion TEXT,
   categoria_id TEXT NOT NULL,
   categoria_nombre TEXT,
   precio REAL NOT NULL DEFAULT 0,
@@ -65,6 +66,11 @@ CREATE TABLE cuadres (
   updated_at TEXT NOT NULL
 )
 ''');
+      },
+      onUpgrade: (db, oldVersion, newVersion) async {
+        if (oldVersion < 2) {
+          await db.execute('ALTER TABLE productos ADD COLUMN descripcion TEXT');
+        }
       },
     );
 

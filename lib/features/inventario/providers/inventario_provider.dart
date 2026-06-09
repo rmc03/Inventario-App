@@ -136,6 +136,40 @@ class InventarioController extends Notifier<InventarioState> {
     _refresh();
   }
 
+  /// Devuelve stock de [productoId] en [cantidad] unidades.
+  /// Inverso de [applyMovimiento] para salidas.
+  void restoreMovimiento({
+    required String productoId,
+    required int cantidad,
+  }) {
+    final producto = _repository.findProducto(productoId);
+    if (producto == null) return;
+
+    final nextStock =
+        (producto.stockActual + cantidad).clamp(0, 999999);
+    _repository.upsertProducto(
+      producto.copyWith(
+        stockActual: nextStock,
+        updatedAt: DateTime.now(),
+      ),
+    );
+    _refresh();
+  }
+
+  bool existsProductoConNombre(String nombre, {String? excludeId}) {
+    final normalized = nombre.trim().toLowerCase();
+    return state.productos.any(
+      (p) =>
+          p.activo &&
+          p.nombre.trim().toLowerCase() == normalized &&
+          p.id != excludeId,
+    );
+  }
+
+  bool existsCategoriaConNombre(String nombre, {String? excludeId}) {
+    return _repository.existsCategoriaConNombre(nombre, excludeId: excludeId);
+  }
+
   void _refresh() {
     state = state.copyWith(
       productos: _repository.fetchProductos(),
