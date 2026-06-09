@@ -16,9 +16,10 @@ class ProductoDetalleScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final producto = ref
-        .watch(inventarioControllerProvider.notifier)
-        .findProducto(productId);
+    final inventarioState = ref.watch(inventarioControllerProvider);
+    final producto = inventarioState.productos
+        .where((p) => p.id == productId)
+        .firstOrNull;
 
     if (producto == null || !producto.activo) {
       return Scaffold(

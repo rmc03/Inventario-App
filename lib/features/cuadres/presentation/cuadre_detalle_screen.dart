@@ -25,9 +25,10 @@ class _CuadreDetalleScreenState extends ConsumerState<CuadreDetalleScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final cuadre = ref
-        .watch(cuadreControllerProvider.notifier)
-        .findCuadre(widget.cuadreId);
+    final cuadres = ref.watch(cuadreControllerProvider);
+    final cuadre = cuadres
+        .where((c) => c.id == widget.cuadreId)
+        .firstOrNull;
 
     if (cuadre == null) {
       return Scaffold(

@@ -20,18 +20,10 @@ import '../../shared/widgets/role_shell.dart';
 /// sin necesidad de recrear la instancia del router.
 class _AuthNotifier extends ChangeNotifier {
   _AuthNotifier(Ref ref) {
-    _sub = ref.listen<AuthState>(
+    ref.listen<AuthState>(
       authControllerProvider,
       (_, _) => notifyListeners(),
     );
-  }
-
-  late final ProviderSubscription<AuthState> _sub;
-
-  @override
-  void dispose() {
-    _sub.close();
-    super.dispose();
   }
 }
 
