@@ -15,19 +15,31 @@ final inventarioControllerProvider =
     );
 
 class InventarioState {
-  const InventarioState({
+  InventarioState({
     required this.productos,
     required this.categorias,
     this.search = '',
     this.categoriaId,
-  });
+  })  : productosFiltrados = _computeFiltrados(productos, search, categoriaId),
+        totalProductos = productos.where((p) => p.activo).length,
+        valorTotal = productos
+            .where((p) => p.activo)
+            .fold(0, (sum, p) => sum + p.valorTotal);
 
   final List<Producto> productos;
   final List<Categoria> categorias;
   final String search;
   final String? categoriaId;
 
-  List<Producto> get productosFiltrados {
+  final List<Producto> productosFiltrados;
+  final int totalProductos;
+  final double valorTotal;
+
+  static List<Producto> _computeFiltrados(
+    List<Producto> productos,
+    String search,
+    String? categoriaId,
+  ) {
     final normalizedSearch = search.trim().toLowerCase();
     return productos.where((producto) {
       final matchesSearch =
@@ -38,15 +50,6 @@ class InventarioState {
           categoriaId == null || producto.categoriaId == categoriaId;
       return producto.activo && matchesSearch && matchesCategoria;
     }).toList();
-  }
-
-  int get totalProductos =>
-      productos.where((producto) => producto.activo).length;
-
-  double get valorTotal {
-    return productos
-        .where((producto) => producto.activo)
-        .fold(0, (total, producto) => total + producto.valorTotal);
   }
 
   InventarioState copyWith({

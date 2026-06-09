@@ -7,6 +7,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../shared/models/cuadre.dart';
 import '../../../shared/models/cuadre_item.dart';
+import '../../../shared/widgets/qty_controls.dart';
 import '../../inventario/providers/inventario_provider.dart';
 import '../providers/cuadre_provider.dart';
 
@@ -193,34 +194,36 @@ class _ItemViewCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        child: Row(
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    item.productoNombre,
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    '${item.cantidad} unid. × ${formatCurrency(item.precioUnitario)}',
-                    style: Theme.of(context).textTheme.bodyMedium,
-                  ),
-                ],
+    return RepaintBoundary(
+      child: Card(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      item.productoNombre,
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      '${item.cantidad} unid. × ${formatCurrency(item.precioUnitario)}',
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                  ],
+                ),
               ),
-            ),
-            Text(
-              formatCurrency(item.subtotal),
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    color: AppColors.primary,
-                  ),
-            ),
-          ],
+              Text(
+                formatCurrency(item.subtotal),
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      color: AppColors.primary,
+                    ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -239,138 +242,78 @@ class _ItemEditCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final ctrl = ref.read(cuadreControllerProvider.notifier);
 
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(14, 10, 8, 10),
-        child: Row(
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+    return RepaintBoundary(
+      child: Card(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(14, 10, 8, 10),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      item.productoNombre,
+                      style: Theme.of(context).textTheme.titleMedium,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      '${formatCurrency(item.precioUnitario)} c/u',
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 10),
+              QtyControls(
+                cantidad: item.cantidad,
+                onDecrement: item.cantidad > 1
+                    ? () => ctrl.modificarCantidadItem(
+                          cuadreId,
+                          item.productoId,
+                          item.cantidad - 1,
+                        )
+                    : null,
+                onIncrement: () => ctrl.modificarCantidadItem(
+                  cuadreId,
+                  item.productoId,
+                  item.cantidad + 1,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Text(
-                    item.productoNombre,
-                    style: Theme.of(context).textTheme.titleMedium,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
+                    formatCurrency(item.subtotal),
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          color: AppColors.primary,
+                        ),
                   ),
-                  const SizedBox(height: 2),
-                  Text(
-                    '${formatCurrency(item.precioUnitario)} c/u',
-                    style: Theme.of(context).textTheme.bodyMedium,
+                  const SizedBox(height: 4),
+                  GestureDetector(
+                    onTap: () => ctrl.eliminarItemCuadre(
+                      cuadreId,
+                      item.productoId,
+                    ),
+                    child: const Icon(
+                      Icons.delete_outline_rounded,
+                      size: 18,
+                      color: AppColors.danger,
+                    ),
                   ),
                 ],
               ),
-            ),
-            const SizedBox(width: 10),
-            _QtyControls(
-              cantidad: item.cantidad,
-              onDecrement: item.cantidad > 1
-                  ? () => ctrl.modificarCantidadItem(
-                        cuadreId,
-                        item.productoId,
-                        item.cantidad - 1,
-                      )
-                  : null,
-              onIncrement: () => ctrl.modificarCantidadItem(
-                cuadreId,
-                item.productoId,
-                item.cantidad + 1,
-              ),
-            ),
-            const SizedBox(width: 10),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text(
-                  formatCurrency(item.subtotal),
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        color: AppColors.primary,
-                      ),
-                ),
-                const SizedBox(height: 4),
-                GestureDetector(
-                  onTap: () => ctrl.eliminarItemCuadre(
-                    cuadreId,
-                    item.productoId,
-                  ),
-                  child: const Icon(
-                    Icons.delete_outline_rounded,
-                    size: 18,
-                    color: AppColors.danger,
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _QtyControls extends StatelessWidget {
-  const _QtyControls({
-    required this.cantidad,
-    required this.onDecrement,
-    required this.onIncrement,
-  });
-
-  final int cantidad;
-  final VoidCallback? onDecrement;
-  final VoidCallback onIncrement;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        _QtyBtn(icon: Icons.remove_rounded, onTap: onDecrement),
-        SizedBox(
-          width: 32,
-          child: Text(
-            '$cantidad',
-            textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.titleMedium,
-          ),
-        ),
-        _QtyBtn(icon: Icons.add_rounded, onTap: onIncrement),
-      ],
-    );
-  }
-}
-
-class _QtyBtn extends StatelessWidget {
-  const _QtyBtn({required this.icon, required this.onTap});
-
-  final IconData icon;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final enabled = onTap != null;
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(6),
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: enabled
-              ? AppColors.primary.withValues(alpha: 0.08)
-              : const Color(0xFFF0F0F0),
-          borderRadius: BorderRadius.circular(6),
-        ),
-        child: SizedBox.square(
-          dimension: 30,
-          child: Icon(
-            icon,
-            size: 16,
-            color: enabled ? AppColors.primary : AppColors.muted,
+            ],
           ),
         ),
       ),
     );
   }
 }
+
 
 // ─── Botón agregar ítem ───────────────────────────────────────────────────────
 

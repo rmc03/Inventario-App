@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../shared/models/cuadre_item.dart';
+import '../../../shared/widgets/qty_controls.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../cuadres/providers/cuadre_provider.dart';
 import '../providers/turno_provider.dart';
@@ -164,7 +165,7 @@ class _ResumenItemCard extends ConsumerWidget {
               ),
             ),
             const SizedBox(width: 10),
-            _QtyControls(
+            QtyControls(
               cantidad: item.cantidad,
               onDecrement: item.cantidad > 1
                   ? () => ref
@@ -205,68 +206,6 @@ class _ResumenItemCard extends ConsumerWidget {
   }
 }
 
-class _QtyControls extends StatelessWidget {
-  const _QtyControls({
-    required this.cantidad,
-    required this.onDecrement,
-    required this.onIncrement,
-  });
-
-  final int cantidad;
-  final VoidCallback? onDecrement;
-  final VoidCallback onIncrement;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        _QtyBtn(icon: Icons.remove_rounded, onTap: onDecrement),
-        SizedBox(
-          width: 32,
-          child: Text(
-            '$cantidad',
-            textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.titleMedium,
-          ),
-        ),
-        _QtyBtn(icon: Icons.add_rounded, onTap: onIncrement),
-      ],
-    );
-  }
-}
-
-class _QtyBtn extends StatelessWidget {
-  const _QtyBtn({required this.icon, required this.onTap});
-
-  final IconData icon;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final enabled = onTap != null;
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(6),
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: enabled
-              ? AppColors.primary.withValues(alpha: 0.08)
-              : const Color(0xFFF0F0F0),
-          borderRadius: BorderRadius.circular(6),
-        ),
-        child: SizedBox.square(
-          dimension: 30,
-          child: Icon(
-            icon,
-            size: 16,
-            color: enabled ? AppColors.primary : AppColors.muted,
-          ),
-        ),
-      ),
-    );
-  }
-}
 
 class _ResumenTotal extends StatelessWidget {
   const _ResumenTotal({required this.turno});

@@ -12,8 +12,10 @@ class ConfiguracionScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final user = ref.watch(authControllerProvider).user;
-    final inventario = ref.watch(inventarioControllerProvider);
+    final user = ref.watch(authControllerProvider.select((s) => s.user));
+    final categorias = ref.watch(
+      inventarioControllerProvider.select((s) => s.categorias),
+    );
 
     return Scaffold(
       appBar: AppBar(
@@ -88,8 +90,9 @@ class ConfiguracionScreen extends ConsumerWidget {
               ],
             ),
             const SizedBox(height: 10),
-            for (final categoria in inventario.categorias) ...[
+            for (final categoria in categorias) ...[
               Card(
+                key: ValueKey(categoria.id),
                 child: ListTile(
                   title: Text(categoria.nombre),
                   leading: const Icon(Icons.category_outlined),

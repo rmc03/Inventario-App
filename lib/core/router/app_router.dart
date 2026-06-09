@@ -13,6 +13,7 @@ import '../../features/inventario/presentation/producto_form_screen.dart';
 import '../../features/movimientos/presentation/movimientos_screen.dart';
 import '../../features/turno/presentation/cuadre_resumen_screen.dart';
 import '../../features/turno/presentation/mi_turno_screen.dart';
+import '../../shared/widgets/error_page.dart';
 import '../../shared/models/usuario.dart';
 import '../../shared/widgets/role_shell.dart';
 
@@ -125,8 +126,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         ],
       ),
     ],
-    errorBuilder: (context, state) => Scaffold(
-      body: Center(child: Text('Ruta no encontrada: ${state.uri.path}')),
-    ),
+    errorBuilder: (context, state) => ErrorPage(uri: state.uri.path),
   );
 });

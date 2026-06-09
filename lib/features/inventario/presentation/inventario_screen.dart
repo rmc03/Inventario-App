@@ -67,16 +67,34 @@ class InventarioScreen extends ConsumerWidget {
             const SizedBox(height: 16),
             Row(
               children: [
-                StatCard(
-                  label: 'Total productos',
-                  value: state.totalProductos.toString(),
-                  tint: AppColors.primary,
+                Consumer(
+                  builder: (context, ref, _) {
+                    final total = ref.watch(
+                      inventarioControllerProvider.select(
+                        (s) => s.totalProductos,
+                      ),
+                    );
+                    return StatCard(
+                      label: 'Total productos',
+                      value: total.toString(),
+                      tint: AppColors.primary,
+                    );
+                  },
                 ),
                 const SizedBox(width: 10),
-                StatCard(
-                  label: 'Valor total',
-                  value: formatCurrency(state.valorTotal),
-                  tint: AppColors.success,
+                Consumer(
+                  builder: (context, ref, _) {
+                    final valor = ref.watch(
+                      inventarioControllerProvider.select(
+                        (s) => s.valorTotal,
+                      ),
+                    );
+                    return StatCard(
+                      label: 'Valor total',
+                      value: formatCurrency(valor),
+                      tint: AppColors.success,
+                    );
+                  },
                 ),
               ],
             ),
@@ -85,7 +103,7 @@ class InventarioScreen extends ConsumerWidget {
               const _EmptyInventory()
             else
               for (final producto in productos) ...[
-                _ProductTile(producto: producto, isAdmin: isAdmin),
+                _ProductTile(key: ValueKey(producto.id), producto: producto, isAdmin: isAdmin),
                 const SizedBox(height: 10),
               ],
           ],
@@ -154,7 +172,7 @@ class InventarioScreen extends ConsumerWidget {
 }
 
 class _ProductTile extends ConsumerWidget {
-  const _ProductTile({required this.producto, required this.isAdmin});
+  const _ProductTile({super.key, required this.producto, required this.isAdmin});
 
   final Producto producto;
   final bool isAdmin;
@@ -171,7 +189,9 @@ class _ProductTile extends ConsumerWidget {
           padding: const EdgeInsets.all(12),
           child: Row(
             children: [
-              ProductPhoto(url: producto.fotoUrl, size: 56),
+              RepaintBoundary(
+                child: ProductPhoto(url: producto.fotoUrl, size: 56),
+              ),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(

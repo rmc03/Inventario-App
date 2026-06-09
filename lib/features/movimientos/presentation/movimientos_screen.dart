@@ -52,7 +52,7 @@ class _MovimientosScreenState extends ConsumerState<MovimientosScreen> {
             ),
             const SizedBox(height: 16),
             for (final movimiento in movimientos) ...[
-              _MovimientoCard(movimiento: movimiento),
+              _MovimientoCard(key: ValueKey(movimiento.id), movimiento: movimiento),
               const SizedBox(height: 10),
             ],
           ],
@@ -91,7 +91,7 @@ class _FilterChip extends StatelessWidget {
 }
 
 class _MovimientoCard extends StatelessWidget {
-  const _MovimientoCard({required this.movimiento});
+  const _MovimientoCard({super.key, required this.movimiento});
 
   final Movimiento movimiento;
 

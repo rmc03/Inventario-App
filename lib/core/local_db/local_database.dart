@@ -17,7 +17,7 @@ class LocalDatabase {
     final dbPath = await getDatabasesPath();
     final database = await openDatabase(
       p.join(dbPath, 'inventario_app.db'),
-      version: 2,
+      version: 3,
       onCreate: (db, version) async {
         await db.execute('''
 CREATE TABLE productos (
@@ -34,6 +34,13 @@ CREATE TABLE productos (
   activo INTEGER NOT NULL DEFAULT 1,
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL
+)
+''');
+        await db.execute('''
+CREATE TABLE categorias (
+  id TEXT PRIMARY KEY,
+  nombre TEXT NOT NULL,
+  created_at TEXT NOT NULL
 )
 ''');
         await db.execute('''
@@ -61,6 +68,7 @@ CREATE TABLE cuadres (
   total_salidas INTEGER NOT NULL DEFAULT 0,
   estado TEXT NOT NULL DEFAULT 'pendiente',
   comentario_jefe TEXT,
+  items_json TEXT,
   synced INTEGER NOT NULL DEFAULT 0,
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL
@@ -70,6 +78,18 @@ CREATE TABLE cuadres (
       onUpgrade: (db, oldVersion, newVersion) async {
         if (oldVersion < 2) {
           await db.execute('ALTER TABLE productos ADD COLUMN descripcion TEXT');
+        }
+        if (oldVersion < 3) {
+          await db.execute('''
+CREATE TABLE IF NOT EXISTS categorias (
+  id TEXT PRIMARY KEY,
+  nombre TEXT NOT NULL,
+  created_at TEXT NOT NULL
+)
+''');
+          await db.execute(
+            'ALTER TABLE cuadres ADD COLUMN items_json TEXT',
+          );
         }
       },
     );

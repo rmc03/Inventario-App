@@ -23,6 +23,7 @@ class CuadresScreen extends ConsumerWidget {
           children: [
             for (final cuadre in cuadres) ...[
               Card(
+                key: ValueKey(cuadre.id),
                 child: ListTile(
                   contentPadding: const EdgeInsets.all(14),
                   onTap: () => context.go('/admin/cuadres/${cuadre.id}'),
