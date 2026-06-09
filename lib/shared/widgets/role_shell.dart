@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -22,32 +23,85 @@ class RoleShell extends ConsumerWidget {
     final items = role == UserRole.admin ? _adminItems : _dependienteItems;
     final selectedIndex = items.indexWhere((item) => item.path == path);
     final showNavigation = selectedIndex != -1;
+    final isRootTab = showNavigation;
 
-    return Scaffold(
-      body: Column(
-        children: [
-          const IndicadorConexion(),
-          Expanded(child: child),
-        ],
+    return _PopGuard(
+      isRootTab: isRootTab,
+      child: Scaffold(
+        body: Column(
+          children: [
+            const IndicadorConexion(),
+            Expanded(child: child),
+          ],
+        ),
+        bottomNavigationBar: showNavigation
+            ? SafeArea(
+                top: false,
+                child: BottomNavigationBar(
+                  currentIndex: selectedIndex,
+                  onTap: (index) => context.go(items[index].path),
+                  items: [
+                    for (final item in items)
+                      BottomNavigationBarItem(
+                        icon: Icon(item.icon),
+                        activeIcon: Icon(item.activeIcon),
+                        label: item.label,
+                      ),
+                  ],
+                ),
+              )
+            : null,
+        floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       ),
-      bottomNavigationBar: showNavigation
-          ? SafeArea(
-              top: false,
-              child: BottomNavigationBar(
-                currentIndex: selectedIndex,
-                onTap: (index) => context.go(items[index].path),
-                items: [
-                  for (final item in items)
-                    BottomNavigationBarItem(
-                      icon: Icon(item.icon),
-                      activeIcon: Icon(item.activeIcon),
-                      label: item.label,
-                    ),
-                ],
-              ),
-            )
-          : null,
-      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
+    );
+  }
+}
+
+/// Intercepts the system back button on root tabs.
+/// Shows "Press again to exit" snackbar; exits only on a second press
+/// within [_backExitInterval].
+class _PopGuard extends StatefulWidget {
+  const _PopGuard({required this.isRootTab, required this.child});
+
+  final bool isRootTab;
+  final Widget child;
+
+  @override
+  State<_PopGuard> createState() => _PopGuardState();
+}
+
+class _PopGuardState extends State<_PopGuard> {
+  static const _backExitInterval = Duration(seconds: 2);
+  DateTime? _lastBackPress;
+
+  @override
+  Widget build(BuildContext context) {
+    return PopScope(
+      canPop: !widget.isRootTab,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+
+        final now = DateTime.now();
+        final last = _lastBackPress;
+
+        if (last != null && now.difference(last) < _backExitInterval) {
+          // Second press within interval → exit the app.
+          SystemNavigator.pop();
+          return;
+        }
+
+        _lastBackPress = now;
+        ScaffoldMessenger.of(context)
+          ..hideCurrentSnackBar()
+          ..showSnackBar(
+            const SnackBar(
+              content: Text('Presiona atrás otra vez para salir'),
+              duration: _backExitInterval,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+      },
+      child: widget.child,
     );
   }
 }
