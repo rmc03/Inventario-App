@@ -1,4 +1,6 @@
 # Miscellaneous
+*.kilo
+*.kiro
 *.class
 *.log
 *.pyc

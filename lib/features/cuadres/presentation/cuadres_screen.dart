@@ -26,7 +26,7 @@ class CuadresScreen extends ConsumerWidget {
                 key: ValueKey(cuadre.id),
                 child: ListTile(
                   contentPadding: const EdgeInsets.all(14),
-                  onTap: () => context.go('/admin/cuadres/${cuadre.id}'),
+                  onTap: () => context.push('/admin/cuadres/${cuadre.id}'),
                   title: Text(
                     compactDateFormatter.format(cuadre.fechaTurno),
                     style: Theme.of(context).textTheme.titleMedium,

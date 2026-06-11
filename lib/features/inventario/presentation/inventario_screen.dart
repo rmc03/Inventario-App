@@ -33,7 +33,7 @@ class InventarioScreen extends ConsumerWidget {
       ),
       floatingActionButton: isAdmin
           ? FloatingActionButton(
-              onPressed: () => context.go('/admin/inventario/productos/nuevo'),
+              onPressed: () => context.push('/admin/inventario/productos/nuevo'),
               tooltip: 'Crear producto',
               child: const Icon(Icons.add),
             )
@@ -183,7 +183,7 @@ class _ProductTile extends ConsumerWidget {
       child: InkWell(
         borderRadius: BorderRadius.circular(8),
         onTap: isAdmin
-            ? () => context.go('/admin/inventario/productos/${producto.id}')
+            ? () => context.push('/admin/inventario/productos/${producto.id}')
             : () => _handleDependienteTap(context, ref, producto),
         child: Padding(
           padding: const EdgeInsets.all(12),

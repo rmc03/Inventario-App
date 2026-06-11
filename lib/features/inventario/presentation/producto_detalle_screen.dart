@@ -34,14 +34,14 @@ class ProductoDetalleScreen extends ConsumerWidget {
       appBar: AppBar(
         title: const Text('Detalle del producto'),
         leading: IconButton(
-          onPressed: () => context.go('/admin/inventario'),
+          onPressed: () => context.pop(),
           icon: const Icon(Icons.arrow_back_rounded),
           tooltip: 'Volver',
         ),
         actions: [
           IconButton(
             onPressed: () =>
-                context.go('/admin/inventario/productos/${producto.id}/editar'),
+                context.push('/admin/inventario/productos/${producto.id}/editar'),
             icon: const Icon(Icons.edit_rounded),
             tooltip: 'Editar',
           ),

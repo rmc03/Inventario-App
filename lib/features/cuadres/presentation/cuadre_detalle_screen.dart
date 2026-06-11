@@ -44,7 +44,7 @@ class _CuadreDetalleScreenState extends ConsumerState<CuadreDetalleScreen> {
       appBar: AppBar(
         title: const Text('Detalle del cuadre'),
         leading: IconButton(
-          onPressed: () => context.go('/admin/cuadres'),
+          onPressed: () => context.pop(),
           icon: const Icon(Icons.arrow_back_rounded),
           tooltip: 'Volver',
         ),

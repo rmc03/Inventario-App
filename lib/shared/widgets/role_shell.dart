@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -57,9 +59,15 @@ class RoleShell extends ConsumerWidget {
   }
 }
 
-/// Intercepts the system back button on root tabs.
-/// Shows "Press again to exit" snackbar; exits only on a second press
-/// within [_backExitInterval].
+/// Intercepts Android back presses on root tabs.
+/// First press shows a confirmation; second press exits only if repeated quickly.
+///
+/// Uses [ChildBackButtonDispatcher] instead of [PopScope] because PopScope
+/// registers at the ModalRoute level, which is *below* GoRouter's own back
+/// handling.  After a push/pop cycle inside a ShellRoute, GoRouter intercepts
+/// the back button before PopScope can respond.  A ChildBackButtonDispatcher
+/// with [takePriority] fires at the Router level — above GoRouter — so the
+/// double-tap-to-exit logic works reliably regardless of navigation history.
 class _PopGuard extends StatefulWidget {
   const _PopGuard({required this.isRootTab, required this.child});
 
@@ -72,35 +80,106 @@ class _PopGuard extends StatefulWidget {
 
 class _PopGuardState extends State<_PopGuard> {
   static const _backExitInterval = Duration(seconds: 2);
-  DateTime? _lastBackPress;
+
+  ChildBackButtonDispatcher? _backDispatcher;
+  bool _exitOnNextBack = false;
+  Timer? _exitTimer;
+
+  // ── lifecycle ───────────────────────────────────────────────────────────
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _syncDispatcher();
+  }
+
+  @override
+  void didUpdateWidget(covariant _PopGuard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.isRootTab != oldWidget.isRootTab) {
+      _exitOnNextBack = false;
+      _exitTimer?.cancel();
+      _syncDispatcher();
+    }
+  }
+
+  @override
+  void dispose() {
+    _removeDispatcher();
+    _exitTimer?.cancel();
+    super.dispose();
+  }
+
+  // ── dispatcher management ───────────────────────────────────────────────
+
+  void _syncDispatcher() {
+    if (widget.isRootTab) {
+      _ensureDispatcher();
+    } else {
+      _removeDispatcher();
+    }
+  }
+
+  void _ensureDispatcher() {
+    if (_backDispatcher != null) {
+      // Already registered — just re-assert priority so it stays on top
+      // after any GoRouter internal changes.
+      _backDispatcher!.takePriority();
+      return;
+    }
+
+    final root = Router.of(context).backButtonDispatcher;
+    if (root == null) return;
+
+    _backDispatcher = root.createChildBackButtonDispatcher()
+      ..addCallback(_handleBack)
+      ..takePriority();
+  }
+
+  void _removeDispatcher() {
+    _backDispatcher?.removeCallback(_handleBack);
+    _backDispatcher = null;
+  }
+
+  // ── back button handler ─────────────────────────────────────────────────
+
+  Future<bool> _handleBack() async {
+    // Safety: if we are somehow called while not on a root tab, let the
+    // framework handle it normally.
+    if (!widget.isRootTab) return false;
+
+    if (_exitOnNextBack) {
+      _exitTimer?.cancel();
+      _exitOnNextBack = false;
+      SystemNavigator.pop();
+      return true;
+    }
+
+    _exitOnNextBack = true;
+    _exitTimer?.cancel();
+    _exitTimer = Timer(_backExitInterval, () {
+      if (mounted) _exitOnNextBack = false;
+    });
+
+    ScaffoldMessenger.maybeOf(context)
+      ?..hideCurrentSnackBar()
+      ..showSnackBar(
+        const SnackBar(
+          content: Text('Presiona atrás otra vez para salir'),
+          duration: _backExitInterval,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+
+    return true; // consumed — do NOT let GoRouter pop the route.
+  }
+
+  // ── build ───────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
     return PopScope(
       canPop: !widget.isRootTab,
-      onPopInvokedWithResult: (didPop, result) {
-        if (didPop) return;
-
-        final now = DateTime.now();
-        final last = _lastBackPress;
-
-        if (last != null && now.difference(last) < _backExitInterval) {
-          // Second press within interval → exit the app.
-          SystemNavigator.pop();
-          return;
-        }
-
-        _lastBackPress = now;
-        ScaffoldMessenger.of(context)
-          ..hideCurrentSnackBar()
-          ..showSnackBar(
-            const SnackBar(
-              content: Text('Presiona atrás otra vez para salir'),
-              duration: _backExitInterval,
-              behavior: SnackBarBehavior.floating,
-            ),
-          );
-      },
       child: widget.child,
     );
   }

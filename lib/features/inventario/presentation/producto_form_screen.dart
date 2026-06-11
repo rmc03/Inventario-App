@@ -285,12 +285,7 @@ class _ProductoFormScreenState extends ConsumerState<ProductoFormScreen> {
   }
 
   void _goBack(BuildContext context) {
-    final producto = _producto;
-    if (producto == null) {
-      context.go('/admin/inventario');
-      return;
-    }
-    context.go('/admin/inventario/productos/${producto.id}');
+    context.pop();
   }
 
   Future<void> _showCreateCategoryDialog(
