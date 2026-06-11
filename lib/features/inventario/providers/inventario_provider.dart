@@ -44,8 +44,7 @@ class InventarioState {
     return productos.where((producto) {
       final matchesSearch =
           normalizedSearch.isEmpty ||
-          producto.nombre.toLowerCase().contains(normalizedSearch) ||
-          (producto.codigoRef ?? '').toLowerCase().contains(normalizedSearch);
+          producto.nombre.toLowerCase().contains(normalizedSearch);
       final matchesCategoria =
           categoriaId == null || producto.categoriaId == categoriaId;
       return producto.activo && matchesSearch && matchesCategoria;

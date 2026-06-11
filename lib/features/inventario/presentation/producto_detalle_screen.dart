@@ -67,23 +67,6 @@ class ProductoDetalleScreen extends ConsumerWidget {
               producto.nombre,
               style: Theme.of(context).textTheme.headlineMedium,
             ),
-            const SizedBox(height: 8),
-            DecoratedBox(
-              decoration: BoxDecoration(
-                color: AppColors.primary.withValues(alpha: 0.10),
-                borderRadius: BorderRadius.circular(6),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
-                child: Text(
-                  'SKU: ${producto.codigoRef ?? producto.id}',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: AppColors.primary,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-              ),
-            ),
             if (descripcion != null && descripcion.isNotEmpty) ...[
               const SizedBox(height: 16),
               Text('Descripción', style: Theme.of(context).textTheme.titleMedium),

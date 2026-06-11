@@ -204,11 +204,6 @@ class _ProductTile extends ConsumerWidget {
                       style: Theme.of(context).textTheme.titleMedium,
                     ),
                     const SizedBox(height: 4),
-                    Text(
-                      'SKU: ${producto.codigoRef ?? producto.id}',
-                      style: Theme.of(context).textTheme.bodyMedium,
-                    ),
-                    const SizedBox(height: 4),
                     Row(
                       children: [
                         Text(
