@@ -13,6 +13,9 @@
 .svn/
 .swiftpm/
 migrate_working_dir/
+.metadata
+skills-lock.json
+ChatGPT Image*.png
 
 # IntelliJ related
 *.iml

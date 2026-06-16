@@ -1,4 +1,7 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
+
+import '../../core/theme/app_dimens.dart';
+import '../../core/theme/app_theme.dart';
 
 class LoadingOverlay extends StatelessWidget {
   const LoadingOverlay({
@@ -18,8 +21,10 @@ class LoadingOverlay extends StatelessWidget {
         if (isLoading)
           Positioned.fill(
             child: ColoredBox(
-              color: Colors.white.withValues(alpha: 0.65),
-              child: const Center(child: CircularProgressIndicator()),
+              color: AppColors.ink.withValues(alpha: AppAlphas.overlay),
+              child: const Center(
+                child: CupertinoActivityIndicator(radius: 14),
+              ),
             ),
           ),
       ],

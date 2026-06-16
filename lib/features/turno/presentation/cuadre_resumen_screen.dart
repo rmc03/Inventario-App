@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -143,7 +145,7 @@ class _ResumenItemCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return Card(
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(14, 10, 8, 10),
+        padding: const EdgeInsets.fromLTRB(16, 14, 12, 14),
         child: Row(
           children: [
             Expanded(
@@ -271,30 +273,35 @@ class _ConfirmBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: const BoxDecoration(
-        color: AppColors.surface,
-        border: Border(top: BorderSide(color: AppColors.line)),
-      ),
-      child: SafeArea(
-        top: false,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
-          child: SizedBox(
-            height: 54,
-            width: double.infinity,
-            child: ElevatedButton.icon(
-              onPressed: enabled ? onConfirm : null,
-              icon: const Icon(Icons.send_rounded),
-              label: const Text('Confirmar y enviar'),
-              style: ElevatedButton.styleFrom(
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                textStyle: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: 0,
+    return ClipRect(
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: AppColors.surface.withValues(alpha: 0.85),
+            border: Border(top: BorderSide(color: AppColors.line)),
+          ),
+          child: SafeArea(
+            top: false,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
+              child: SizedBox(
+                height: 54,
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: enabled ? onConfirm : null,
+                  icon: const Icon(Icons.send_rounded),
+                  label: const Text('Confirmar y enviar'),
+                  style: ElevatedButton.styleFrom(
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    textStyle: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 0,
+                    ),
+                  ),
                 ),
               ),
             ),

@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
 
+import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
 
+/// Tarjeta de estadística estilo iOS: blanca, sin borde, con número destacado
+/// en el color de acento. Sobria frente a la versión anterior (que usaba
+/// fondo de color a un 8% de opacidad).
 class StatCard extends StatelessWidget {
   const StatCard({
     super.key,
@@ -18,23 +22,26 @@ class StatCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Expanded(
       child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: tint.withValues(alpha: 0.08),
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: tint.withValues(alpha: 0.10)),
+        decoration: ShapeDecoration(
+          color: AppColors.surface,
+          shape: const RoundedRectangleBorder(
+            borderRadius: AppRadii.mdBorder,
+          ),
+          shadows: AppShadows.subtle,
         ),
         child: Padding(
-          padding: const EdgeInsets.all(14),
+          padding: const EdgeInsets.all(AppSpacing.lg),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(label, style: Theme.of(context).textTheme.bodyMedium),
-              const SizedBox(height: 6),
+              const SizedBox(height: AppSpacing.sm),
               Text(
                 value,
-                style: Theme.of(
-                  context,
-                ).textTheme.titleMedium?.copyWith(fontSize: 18),
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  color: tint,
+                  fontSize: 22,
+                ),
               ),
             ],
           ),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/theme/app_dimens.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../shared/models/usuario.dart';
 import '../../../shared/widgets/loading_overlay.dart';
@@ -37,7 +38,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         body: SafeArea(
           child: Center(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.all(24),
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.xl,
+                vertical: AppSpacing.lg,
+              ),
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 430),
                 child: Column(
@@ -47,12 +51,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       children: [
                         DecoratedBox(
                           decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: AppColors.line),
+                            color: AppColors.surface,
+                            borderRadius: const BorderRadius.all(
+                              Radius.circular(AppRadii.md),
+                            ),
+                            boxShadow: AppShadows.subtle,
                           ),
                           child: const Padding(
-                            padding: EdgeInsets.all(12),
+                            padding: EdgeInsets.all(AppSpacing.md),
                             child: Icon(
                               Icons.inventory_2_outlined,
                               color: AppColors.primary,
@@ -60,7 +66,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             ),
                           ),
                         ),
-                        const SizedBox(width: 14),
+                        const SizedBox(width: AppSpacing.md),
                         Text(
                           'Gestión de\nInventario',
                           style: Theme.of(
@@ -69,19 +75,19 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 30),
+                    const SizedBox(height: AppSpacing.xxl + AppSpacing.xs),
                     Text(
                       'Ingresar',
                       style: Theme.of(context).textTheme.headlineMedium,
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: AppSpacing.sm),
                     Text(
                       'Acceso interno para jefe y dependientes.',
                       style: Theme.of(
                         context,
                       ).textTheme.bodyLarge?.copyWith(color: AppColors.muted),
                     ),
-                    const SizedBox(height: 22),
+                    const SizedBox(height: AppSpacing.xl),
                     SegmentedButton<UserRole>(
                       segments: const [
                         ButtonSegment(
@@ -106,7 +112,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         });
                       },
                     ),
-                    const SizedBox(height: 18),
+                    const SizedBox(height: AppSpacing.xl),
                     TextField(
                       controller: _emailController,
                       keyboardType: TextInputType.emailAddress,
@@ -116,7 +122,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         prefixIcon: Icon(Icons.mail_outline),
                       ),
                     ),
-                    const SizedBox(height: 14),
+                    const SizedBox(height: AppSpacing.md),
                     TextField(
                       controller: _passwordController,
                       obscureText: true,
@@ -127,20 +133,25 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       ),
                     ),
                     if (authState.error != null) ...[
-                      const SizedBox(height: 12),
+                      const SizedBox(height: AppSpacing.sm),
                       Text(
                         authState.error!,
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           color: AppColors.danger,
-                          fontWeight: FontWeight.w700,
+                          fontWeight: FontWeight.w500,
                         ),
                       ),
                     ],
-                    const SizedBox(height: 22),
+                    const SizedBox(height: AppSpacing.xl),
                     ElevatedButton.icon(
                       onPressed: _signIn,
                       icon: const Icon(Icons.login_rounded),
                       label: const Text('Ingresar'),
+                      style: ElevatedButton.styleFrom(
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
                     ),
                   ],
                 ),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/theme/app_dimens.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../shared/models/producto.dart';
@@ -50,11 +51,21 @@ class ProductoDetalleScreen extends ConsumerWidget {
       body: SafeArea(
         top: false,
         child: ListView(
-          padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.xl, AppSpacing.sm, AppSpacing.xl, AppSpacing.xxl,
+          ),
           children: [
-            Card(
+            // ─── Foto ────────────────────────────────────────────────────
+            DecoratedBox(
+              decoration: ShapeDecoration(
+                color: AppColors.surface,
+                shape: RoundedRectangleBorder(
+                  borderRadius: const BorderRadius.all(Radius.circular(14)),
+                ),
+                shadows: AppShadows.subtle,
+              ),
               child: Padding(
-                padding: const EdgeInsets.all(18),
+                padding: const EdgeInsets.all(AppSpacing.lg),
                 child: ProductPhoto(
                   url: producto.fotoUrl,
                   size: 188,
@@ -62,15 +73,14 @@ class ProductoDetalleScreen extends ConsumerWidget {
                 ),
               ),
             ),
-            const SizedBox(height: 18),
+            const SizedBox(height: AppSpacing.xl),
+            // ─── Nombre ──────────────────────────────────────────────────
             Text(
               producto.nombre,
               style: Theme.of(context).textTheme.headlineMedium,
             ),
             if (descripcion != null && descripcion.isNotEmpty) ...[
-              const SizedBox(height: 16),
-              Text('Descripción', style: Theme.of(context).textTheme.titleMedium),
-              const SizedBox(height: 6),
+              const SizedBox(height: AppSpacing.sm),
               Text(
                 descripcion,
                 style: Theme.of(context).textTheme.bodyLarge?.copyWith(
@@ -78,41 +88,185 @@ class ProductoDetalleScreen extends ConsumerWidget {
                 ),
               ),
             ],
-            const SizedBox(height: 18),
-            _DetailRow(
-              icon: Icons.category_outlined,
-              label: 'Categoría',
-              value: producto.categoriaNombre ?? 'Sin categoría',
+            const SizedBox(height: AppSpacing.xl),
+            // ─── Sección: Producto ────────────────────────────────────────
+            _SectionHeader(title: 'PRODUCTO'),
+            _GroupedCard(
+              children: [
+                _DetailRow(
+                  icon: Icons.category_outlined,
+                  label: 'Categoría',
+                  value: producto.categoriaNombre ?? 'Sin categoría',
+                ),
+                const _CardSeparator(),
+                _DetailRow(
+                  icon: Icons.paid_outlined,
+                  label: 'Precio por Unidad',
+                  value: formatCurrency(producto.precio),
+                ),
+              ],
             ),
-            _DetailRow(
-              icon: Icons.inventory_outlined,
-              label: 'Stock disponible',
-              customValue: StockBadge(
-                stock: producto.stockActual,
-                isLow: producto.tieneStockBajo,
-              ),
+            // ─── Sección: Inventario ──────────────────────────────────────
+            _SectionHeader(title: 'INVENTARIO'),
+            _GroupedCard(
+              children: [
+                _DetailRow(
+                  icon: Icons.inventory_outlined,
+                  label: 'Stock disponible',
+                  customValue: StockBadge(
+                    stock: producto.stockActual,
+                    isLow: producto.tieneStockBajo,
+                  ),
+                ),
+                const _CardSeparator(),
+                _DetailRow(
+                  icon: Icons.assessment_outlined,
+                  label: 'Valor total',
+                  value: formatCurrency(producto.valorTotal),
+                ),
+              ],
             ),
-            _DetailRow(
-              icon: Icons.paid_outlined,
-              label: 'Precio por Unidad',
-              value: formatCurrency(producto.precio),
-            ),
-            _DetailRow(
-              icon: Icons.assessment_outlined,
-              label: 'Valor total',
-              value: formatCurrency(producto.valorTotal),
-            ),
-            const SizedBox(height: 26),
-            OutlinedButton.icon(
-              onPressed: () => _confirmDelete(context, ref, producto),
-              icon: const Icon(Icons.delete_outline_rounded),
-              label: const Text('Eliminar producto'),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: AppColors.danger,
-                side: const BorderSide(color: AppColors.danger),
-              ),
+            // ─── Eliminar ────────────────────────────────────────────────
+            const SizedBox(height: AppSpacing.xl),
+            _GroupedCard(
+              children: [
+                _DeleteButton(
+                  producto: producto,
+                ),
+              ],
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Helpers de sección agrupada estilo iOS ───────────────────────────────────
+
+class _SectionHeader extends StatelessWidget {
+  const _SectionHeader({required this.title});
+
+  final String title;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(AppSpacing.sm, AppSpacing.lg, AppSpacing.sm, AppSpacing.sm),
+      child: Text(
+        title,
+        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+          fontWeight: FontWeight.w600,
+          letterSpacing: 0.5,
+        ),
+      ),
+    );
+  }
+}
+
+class _GroupedCard extends StatelessWidget {
+  const _GroupedCard({required this.children});
+
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: ShapeDecoration(
+        color: AppColors.surface,
+        shape: RoundedRectangleBorder(
+          borderRadius: AppRadii.mdBorder,
+        ),
+        shadows: AppShadows.subtle,
+      ),
+      child: ClipRRect(
+        borderRadius: AppRadii.mdBorder,
+        child: Column(children: children),
+      ),
+    );
+  }
+}
+
+class _CardSeparator extends StatelessWidget {
+  const _CardSeparator();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Padding(
+      padding: EdgeInsets.only(left: AppSpacing.xxl),
+      child: Divider(height: 1, indent: 0),
+    );
+  }
+}
+
+class _DetailRow extends StatelessWidget {
+  const _DetailRow({
+    required this.icon,
+    required this.label,
+    this.value,
+    this.customValue,
+  });
+
+  final IconData icon;
+  final String label;
+  final String? value;
+  final Widget? customValue;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.lg,
+        vertical: AppSpacing.md,
+      ),
+      child: Row(
+        children: [
+          Icon(icon, size: 20, color: AppColors.primary),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: Text(
+              label,
+              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+          customValue ??
+              Text(
+                value ?? '',
+                textAlign: TextAlign.end,
+                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DeleteButton extends ConsumerWidget {
+  const _DeleteButton({required this.producto});
+
+  final Producto producto;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return InkWell(
+      onTap: () => _confirmDelete(context, ref, producto),
+      borderRadius: AppRadii.mdBorder,
+      child: const Padding(
+        padding: EdgeInsets.symmetric(vertical: AppSpacing.md),
+        child: Center(
+          child: Text(
+            'Eliminar producto',
+            style: TextStyle(
+              color: AppColors.danger,
+              fontSize: 17,
+              fontWeight: FontWeight.w600,
+              letterSpacing: -0.1,
+            ),
+          ),
         ),
       ),
     );
@@ -161,53 +315,5 @@ class ProductoDetalleScreen extends ConsumerWidget {
         context.go('/admin/inventario');
       }
     }
-  }
-}
-
-class _DetailRow extends StatelessWidget {
-  const _DetailRow({
-    required this.icon,
-    required this.label,
-    this.value,
-    this.customValue,
-  });
-
-  final IconData icon;
-  final String label;
-  final String? value;
-  final Widget? customValue;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(vertical: 12),
-          child: Row(
-            children: [
-              Icon(icon, size: 20, color: AppColors.primaryDark),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  label,
-                  style: Theme.of(
-                    context,
-                  ).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w700),
-                ),
-              ),
-              customValue ??
-                  Text(
-                    value ?? '',
-                    textAlign: TextAlign.end,
-                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-            ],
-          ),
-        ),
-        const Divider(height: 1),
-      ],
-    );
   }
 }

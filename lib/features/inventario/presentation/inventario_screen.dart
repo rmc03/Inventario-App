@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/theme/app_dimens.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../shared/models/producto.dart';
@@ -22,19 +23,11 @@ class InventarioScreen extends ConsumerWidget {
     final productos = state.productosFiltrados;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Inventario'),
-        actions: [
-          IconButton(
-            onPressed: () {},
-            icon: const Icon(Icons.notifications_none_rounded),
-            tooltip: 'Notificaciones',
-          ),
-        ],
-      ),
+      appBar: AppBar(title: const Text('Inventario')),
       floatingActionButton: isAdmin
           ? FloatingActionButton(
-              onPressed: () => context.push('/admin/inventario/productos/nuevo'),
+              onPressed: () =>
+                  context.push('/admin/inventario/productos/nuevo'),
               tooltip: 'Crear producto',
               child: const Icon(Icons.add),
             )
@@ -42,8 +35,14 @@ class InventarioScreen extends ConsumerWidget {
       body: SafeArea(
         top: false,
         child: ListView(
-          padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.xl,
+            AppSpacing.sm,
+            AppSpacing.xl,
+            AppSpacing.xxl,
+          ),
           children: [
+            // ─── Barra de búsqueda tipo pill ────────────────────────────────
             Row(
               children: [
                 Expanded(
@@ -54,10 +53,25 @@ class InventarioScreen extends ConsumerWidget {
                     decoration: const InputDecoration(
                       hintText: 'Buscar producto...',
                       prefixIcon: Icon(Icons.search_rounded),
+                      border: OutlineInputBorder(
+                        borderRadius: AppRadii.pillBorder,
+                        borderSide: BorderSide(color: AppColors.line),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: AppRadii.pillBorder,
+                        borderSide: BorderSide(color: AppColors.line),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: AppRadii.pillBorder,
+                        borderSide: BorderSide(
+                          color: AppColors.primary,
+                          width: 1.5,
+                        ),
+                      ),
                     ),
                   ),
                 ),
-                const SizedBox(width: 10),
+                const SizedBox(width: AppSpacing.sm),
                 IconButton.filledTonal(
                   onPressed: () => _showFilterSheet(context, ref),
                   icon: const Icon(Icons.tune_rounded),
@@ -65,10 +79,11 @@ class InventarioScreen extends ConsumerWidget {
                 ),
               ],
             ),
+            // ─── Chips de filtros activos ───────────────────────────────────
             if (state.categoriaId != null ||
                 state.soloStockBajo ||
                 state.sortBy != ProductoSortBy.nombreAsc) ...[
-              const SizedBox(height: 12),
+              const SizedBox(height: AppSpacing.sm),
               SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
                 child: Row(
@@ -77,19 +92,21 @@ class InventarioScreen extends ConsumerWidget {
                       InputChip(
                         label: Text(
                           state.categorias
-                              .firstWhere((c) => c.id == state.categoriaId,
-                                  orElse: () => Categoria(
-                                        id: '',
-                                        nombre: '',
-                                        createdAt: DateTime.now(),
-                                      ))
+                              .firstWhere(
+                                (c) => c.id == state.categoriaId,
+                                orElse: () => Categoria(
+                                  id: '',
+                                  nombre: '',
+                                  createdAt: DateTime.now(),
+                                ),
+                              )
                               .nombre,
                         ),
                         onDeleted: () => ref
                             .read(inventarioControllerProvider.notifier)
                             .setCategoria(null),
                       ),
-                      const SizedBox(width: 8),
+                      const SizedBox(width: AppSpacing.sm),
                     ],
                     if (state.soloStockBajo) ...[
                       InputChip(
@@ -98,7 +115,7 @@ class InventarioScreen extends ConsumerWidget {
                             .read(inventarioControllerProvider.notifier)
                             .setSoloStockBajo(false),
                       ),
-                      const SizedBox(width: 8),
+                      const SizedBox(width: AppSpacing.sm),
                     ],
                     if (state.sortBy != ProductoSortBy.nombreAsc) ...[
                       InputChip(
@@ -107,13 +124,14 @@ class InventarioScreen extends ConsumerWidget {
                             .read(inventarioControllerProvider.notifier)
                             .setSortBy(ProductoSortBy.nombreAsc),
                       ),
-                      const SizedBox(width: 8),
+                      const SizedBox(width: AppSpacing.sm),
                     ],
                   ],
                 ),
               ),
             ],
-            const SizedBox(height: 16),
+            const SizedBox(height: AppSpacing.xl),
+            // ─── Stats ─────────────────────────────────────────────────────
             Row(
               children: [
                 Consumer(
@@ -130,13 +148,11 @@ class InventarioScreen extends ConsumerWidget {
                     );
                   },
                 ),
-                const SizedBox(width: 10),
+                const SizedBox(width: AppSpacing.sm),
                 Consumer(
                   builder: (context, ref, _) {
                     final valor = ref.watch(
-                      inventarioControllerProvider.select(
-                        (s) => s.valorTotal,
-                      ),
+                      inventarioControllerProvider.select((s) => s.valorTotal),
                     );
                     return StatCard(
                       label: 'Valor total',
@@ -147,19 +163,26 @@ class InventarioScreen extends ConsumerWidget {
                 ),
               ],
             ),
-            const SizedBox(height: 18),
+            const SizedBox(height: AppSpacing.xl),
+            // ─── Lista de productos ────────────────────────────────────────
             if (productos.isEmpty)
               const _EmptyInventory()
             else
               for (final producto in productos) ...[
-                _ProductTile(key: ValueKey(producto.id), producto: producto, isAdmin: isAdmin),
-                const SizedBox(height: 10),
+                _ProductTile(
+                  key: ValueKey(producto.id),
+                  producto: producto,
+                  isAdmin: isAdmin,
+                ),
+                const _ListSeparator(),
               ],
           ],
         ),
       ),
     );
   }
+
+  // ─── Filter bottom sheet ──────────────────────────────────────────────────
 
   void _showFilterSheet(BuildContext context, WidgetRef ref) {
     showModalBottomSheet<void>(
@@ -172,7 +195,12 @@ class InventarioScreen extends ConsumerWidget {
             final state = ref.watch(inventarioControllerProvider);
             return SafeArea(
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+                padding: EdgeInsets.fromLTRB(
+                  AppSpacing.xl,
+                  0,
+                  AppSpacing.xl,
+                  MediaQuery.of(context).viewInsets.bottom + AppSpacing.xl,
+                ),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -181,26 +209,28 @@ class InventarioScreen extends ConsumerWidget {
                       'Ordenar y Filtrar',
                       style: Theme.of(context).textTheme.titleLarge,
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: AppSpacing.xl),
                     Text(
                       'Ordenar por',
                       style: Theme.of(context).textTheme.titleMedium,
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: AppSpacing.sm),
                     DropdownButtonFormField<ProductoSortBy>(
-                      value: state.sortBy,
+                      initialValue: state.sortBy,
                       decoration: const InputDecoration(
                         isDense: true,
                         contentPadding: EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 12,
+                          horizontal: AppSpacing.sm,
+                          vertical: AppSpacing.sm,
                         ),
                       ),
                       items: ProductoSortBy.values
-                          .map((s) => DropdownMenuItem(
-                                value: s,
-                                child: Text(s.label),
-                              ))
+                          .map(
+                            (s) => DropdownMenuItem(
+                              value: s,
+                              child: Text(s.label),
+                            ),
+                          )
                           .toList(),
                       onChanged: (val) {
                         if (val != null) {
@@ -210,12 +240,12 @@ class InventarioScreen extends ConsumerWidget {
                         }
                       },
                     ),
-                    const SizedBox(height: 18),
+                    const SizedBox(height: AppSpacing.xl),
                     SwitchListTile(
                       contentPadding: EdgeInsets.zero,
                       title: const Text('Solo stock bajo'),
                       subtitle: const Text(
-                        'Muestra productos que están por debajo del mínimo',
+                        'Muestra productos con 3 unidades o menos disponibles',
                       ),
                       value: state.soloStockBajo,
                       onChanged: (val) {
@@ -229,7 +259,7 @@ class InventarioScreen extends ConsumerWidget {
                       'Categoría',
                       style: Theme.of(context).textTheme.titleMedium,
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: AppSpacing.sm),
                     ConstrainedBox(
                       constraints: const BoxConstraints(maxHeight: 200),
                       child: ListView(
@@ -278,77 +308,92 @@ class InventarioScreen extends ConsumerWidget {
   }
 }
 
+// ─── Tile de producto estilo iOS ─────────────────────────────────────────────
+
 class _ProductTile extends ConsumerWidget {
-  const _ProductTile({super.key, required this.producto, required this.isAdmin});
+  const _ProductTile({
+    super.key,
+    required this.producto,
+    required this.isAdmin,
+  });
 
   final Producto producto;
   final bool isAdmin;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return Card(
-      child: InkWell(
-        borderRadius: BorderRadius.circular(8),
-        onTap: isAdmin
-            ? () => context.push('/admin/inventario/productos/${producto.id}')
-            : () => _handleDependienteTap(context, ref, producto),
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Row(
-            children: [
-              RepaintBoundary(
-                child: ProductPhoto(url: producto.fotoUrl, size: 56),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      producto.nombre,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
-                    const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        Text(
-                          'Stock: ${producto.stockActual}',
-                          style: Theme.of(context).textTheme.bodyMedium,
-                        ),
-                        if (producto.tieneStockBajo) ...[
-                          const SizedBox(width: 8),
-                          const Icon(
-                            Icons.warning_amber_rounded,
-                            size: 16,
-                            color: AppColors.danger,
-                          ),
-                        ],
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 10),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
+    return InkWell(
+      onTap: isAdmin
+          ? () => context.push('/admin/inventario/productos/${producto.id}')
+          : () => _handleDependienteTap(context, ref, producto),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.sm,
+          vertical: AppSpacing.md,
+        ),
+        child: Row(
+          children: [
+            ProductPhoto(url: producto.fotoUrl, size: 56),
+            const SizedBox(width: AppSpacing.md),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    formatCurrency(producto.precio),
+                    producto.nombre,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                     style: Theme.of(context).textTheme.titleMedium,
                   ),
-                  const SizedBox(height: 10),
-                  Icon(
-                    isAdmin
-                        ? Icons.chevron_right_rounded
-                        : Icons.add_circle_outline_rounded,
-                    color: AppColors.primary,
+                  const SizedBox(height: 2),
+                  Row(
+                    children: [
+                      Text(
+                        '${producto.stockActual} uds.',
+                        style: Theme.of(context).textTheme.bodyMedium,
+                      ),
+                      if (producto.tieneStockBajo) ...[
+                        const SizedBox(width: AppSpacing.sm),
+                        Icon(
+                          Icons.warning_amber_rounded,
+                          size: 14,
+                          color: AppColors.danger,
+                        ),
+                        Text(
+                          ' Stock bajo',
+                          style: Theme.of(context).textTheme.bodyMedium
+                              ?.copyWith(
+                                color: AppColors.danger,
+                                fontWeight: FontWeight.w500,
+                              ),
+                        ),
+                      ],
+                    ],
                   ),
                 ],
               ),
-            ],
-          ),
+            ),
+            const SizedBox(width: AppSpacing.sm),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  formatCurrency(producto.precio),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleMedium?.copyWith(color: AppColors.primary),
+                ),
+                const SizedBox(height: 8),
+                Icon(
+                  isAdmin
+                      ? Icons.chevron_right_rounded
+                      : Icons.add_circle_outline_rounded,
+                  color: AppColors.muted,
+                  size: 22,
+                ),
+              ],
+            ),
+          ],
         ),
       ),
     );
@@ -362,9 +407,7 @@ class _ProductTile extends ConsumerWidget {
     final turno = ref.read(turnoControllerProvider);
     if (!turno.estaActivo) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Inicia tu turno para registrar ventas'),
-        ),
+        const SnackBar(content: Text('Inicia tu turno para registrar ventas')),
       );
       return;
     }
@@ -380,9 +423,7 @@ class _ProductTile extends ConsumerWidget {
       context: context,
       isScrollControlled: true,
       showDragHandle: true,
-      builder: (sheetCtx) => _AgregarCuadreSheet(
-        producto: producto,
-      ),
+      builder: (sheetCtx) => _AgregarCuadreSheet(producto: producto),
     );
 
     // The bottom sheet is fully dismissed and removed from the tree.
@@ -394,6 +435,21 @@ class _ProductTile extends ConsumerWidget {
     }
   }
 }
+
+/// Separador fino estilo iOS (0.33pt con padding horizontal).
+class _ListSeparator extends StatelessWidget {
+  const _ListSeparator();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Padding(
+      padding: EdgeInsets.symmetric(horizontal: AppSpacing.sm),
+      child: Divider(height: 1, indent: 72),
+    );
+  }
+}
+
+// ─── Bottom sheet: agregar al cuadre ───────────────────────────────────────
 
 class _AgregarCuadreSheet extends StatefulWidget {
   const _AgregarCuadreSheet({required this.producto});
@@ -420,10 +476,10 @@ class _AgregarCuadreSheetState extends State<_AgregarCuadreSheet> {
     return SafeArea(
       child: Padding(
         padding: EdgeInsets.fromLTRB(
-          20,
+          AppSpacing.xl,
           0,
-          20,
-          MediaQuery.of(context).viewInsets.bottom + 20,
+          AppSpacing.xl,
+          MediaQuery.of(context).viewInsets.bottom + AppSpacing.xl,
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -433,17 +489,14 @@ class _AgregarCuadreSheetState extends State<_AgregarCuadreSheet> {
               'Agregar al cuadre',
               style: Theme.of(context).textTheme.titleLarge,
             ),
-            const SizedBox(height: 4),
-            Text(
-              producto.nombre,
-              style: Theme.of(context).textTheme.bodyLarge,
-            ),
-            const SizedBox(height: 4),
+            const SizedBox(height: AppSpacing.sm),
+            Text(producto.nombre, style: Theme.of(context).textTheme.bodyLarge),
+            const SizedBox(height: 2),
             Text(
               'Stock disponible: ${producto.stockActual} unidades',
               style: Theme.of(context).textTheme.bodyMedium,
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: AppSpacing.xl),
             TextField(
               controller: _cantidadController,
               autofocus: true,
@@ -453,7 +506,7 @@ class _AgregarCuadreSheetState extends State<_AgregarCuadreSheet> {
                 prefixIcon: Icon(Icons.numbers_rounded),
               ),
             ),
-            const SizedBox(height: 18),
+            const SizedBox(height: AppSpacing.xl),
             ElevatedButton.icon(
               onPressed: () {
                 final cantidad =
@@ -479,7 +532,7 @@ class _AgregarCuadreSheetState extends State<_AgregarCuadreSheet> {
               icon: const Icon(Icons.add_shopping_cart_rounded),
               label: const Text('Agregar al cuadre'),
               style: ElevatedButton.styleFrom(
-                minimumSize: const Size(double.infinity, 50),
+                minimumSize: const Size(double.infinity, 52),
               ),
             ),
           ],
@@ -489,27 +542,34 @@ class _AgregarCuadreSheetState extends State<_AgregarCuadreSheet> {
   }
 }
 
+// ─── Empty state ─────────────────────────────────────────────────────────
+
 class _EmptyInventory extends StatelessWidget {
   const _EmptyInventory();
 
   @override
   Widget build(BuildContext context) {
-    return Card(
+    return DecoratedBox(
+      decoration: ShapeDecoration(
+        color: AppColors.surface,
+        shape: RoundedRectangleBorder(borderRadius: AppRadii.mdBorder),
+        shadows: AppShadows.subtle,
+      ),
       child: Padding(
-        padding: const EdgeInsets.all(22),
+        padding: const EdgeInsets.all(AppSpacing.xxl),
         child: Column(
           children: [
             const Icon(
               Icons.inventory_2_outlined,
               size: 42,
-              color: AppColors.primary,
+              color: AppColors.muted,
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: AppSpacing.sm),
             Text(
               'Sin productos',
-              style: Theme.of(context).textTheme.titleLarge,
+              style: Theme.of(context).textTheme.titleMedium,
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: AppSpacing.xs),
             Text(
               'Ajusta la búsqueda o crea un producto nuevo.',
               textAlign: TextAlign.center,

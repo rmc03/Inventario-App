@@ -17,7 +17,7 @@ class LocalDatabase {
     final dbPath = await getDatabasesPath();
     final database = await openDatabase(
       p.join(dbPath, 'inventario_app.db'),
-      version: 3,
+      version: 4,
       onCreate: (db, version) async {
         await db.execute('''
 CREATE TABLE productos (
@@ -28,7 +28,7 @@ CREATE TABLE productos (
   categoria_nombre TEXT,
   precio REAL NOT NULL DEFAULT 0,
   stock_actual INTEGER NOT NULL DEFAULT 0,
-  stock_minimo INTEGER NOT NULL DEFAULT 0,
+  stock_minimo INTEGER NOT NULL DEFAULT 3,
   codigo_ref TEXT,
   foto_url TEXT,
   activo INTEGER NOT NULL DEFAULT 1,
@@ -87,8 +87,11 @@ CREATE TABLE IF NOT EXISTS categorias (
   created_at TEXT NOT NULL
 )
 ''');
+          await db.execute('ALTER TABLE cuadres ADD COLUMN items_json TEXT');
+        }
+        if (oldVersion < 4) {
           await db.execute(
-            'ALTER TABLE cuadres ADD COLUMN items_json TEXT',
+            "UPDATE productos SET stock_minimo = 3 WHERE stock_minimo = 0 OR stock_minimo IS NULL",
           );
         }
       },

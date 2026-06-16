@@ -90,7 +90,7 @@ class Producto {
       categoriaNombre: json['categoria_nombre'] as String?,
       precio: (json['precio'] as num?)?.toDouble() ?? 0,
       stockActual: (json['stock_actual'] as num?)?.toInt() ?? 0,
-      stockMinimo: (json['stock_minimo'] as num?)?.toInt() ?? 0,
+      stockMinimo: (json['stock_minimo'] as num?)?.toInt() ?? 3,
       codigoRef: json['codigo_ref'] as String?,
       fotoUrl: json['foto_url'] as String?,
       activo: (json['activo'] as bool?) ?? true,

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
 
 class QtyControls extends StatelessWidget {
@@ -21,7 +22,7 @@ class QtyControls extends StatelessWidget {
       children: [
         QtyBtn(icon: Icons.remove_rounded, onTap: onDecrement),
         SizedBox(
-          width: 32,
+          width: 36,
           child: Text(
             '$cantidad',
             textAlign: TextAlign.center,
@@ -45,19 +46,19 @@ class QtyBtn extends StatelessWidget {
     final enabled = onTap != null;
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(6),
+      borderRadius: const BorderRadius.all(Radius.circular(AppRadii.sm)),
       child: DecoratedBox(
         decoration: BoxDecoration(
           color: enabled
-              ? AppColors.primary.withValues(alpha: 0.08)
-              : const Color(0xFFF0F0F0),
-          borderRadius: BorderRadius.circular(6),
+              ? AppColors.primary.withValues(alpha: AppAlphas.fill)
+              : AppColors.muted.withValues(alpha: AppAlphas.fill),
+          borderRadius: const BorderRadius.all(Radius.circular(AppRadii.sm)),
         ),
         child: SizedBox.square(
-          dimension: 30,
+          dimension: 34,
           child: Icon(
             icon,
-            size: 16,
+            size: 18,
             color: enabled ? AppColors.primary : AppColors.muted,
           ),
         ),

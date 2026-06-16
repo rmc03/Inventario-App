@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -108,34 +110,11 @@ class _TurnoActivoView extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.only(right: 16),
               child: Center(
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    color: AppColors.success.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Padding(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(
-                          Icons.circle,
-                          color: AppColors.success,
-                          size: 8,
-                        ),
-                        const SizedBox(width: 6),
-                        Text(
-                          'Desde ${timeFormatter.format(turno.horaInicio!)}',
-                          style:
-                              Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                    color: AppColors.success,
-                                    fontWeight: FontWeight.w800,
-                                  ),
-                        ),
-                      ],
-                    ),
-                  ),
+                child: Text(
+                  'Desde ${timeFormatter.format(turno.horaInicio!)}',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: AppColors.muted,
+                      ),
                 ),
               ),
             ),
@@ -210,7 +189,7 @@ class _TurnoItemCard extends ConsumerWidget {
     return RepaintBoundary(
       child: Card(
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(14, 10, 8, 10),
+          padding: const EdgeInsets.fromLTRB(16, 14, 12, 14),
           child: Row(
             children: [
               Expanded(
@@ -283,51 +262,56 @@ class _TotalBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isEmpty = turno.items.isEmpty;
-    return DecoratedBox(
-      decoration: const BoxDecoration(
-        color: AppColors.surface,
-        border: Border(top: BorderSide(color: AppColors.line)),
-      ),
-      child: SafeArea(
-        top: false,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
-          child: Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      '${turno.items.length} '
-                      '${turno.items.length == 1 ? 'producto' : 'productos'}',
-                      style: Theme.of(context).textTheme.bodyMedium,
+    return ClipRect(
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: AppColors.surface.withValues(alpha: 0.85),
+            border: const Border(top: BorderSide(color: AppColors.line)),
+          ),
+          child: SafeArea(
+            top: false,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          '${turno.items.length} '
+                          '${turno.items.length == 1 ? 'producto' : 'productos'}',
+                          style: Theme.of(context).textTheme.bodyMedium,
+                        ),
+                        Text(
+                          formatCurrency(turno.valorTotal),
+                          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                                color: AppColors.primary,
+                              ),
+                        ),
+                      ],
                     ),
-                    Text(
-                      formatCurrency(turno.valorTotal),
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                            color: AppColors.primary,
-                          ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 16),
-              ElevatedButton.icon(
-                onPressed: isEmpty
-                    ? null
-                    : () => context.push('/dependiente/turno/resumen'),
-                icon: const Icon(Icons.send_rounded, size: 18),
-                label: const Text('Enviar cuadre'),
-                style: ElevatedButton.styleFrom(
-                  minimumSize: const Size(0, 50),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
                   ),
-                ),
+                  const SizedBox(width: 16),
+                  ElevatedButton.icon(
+                    onPressed: isEmpty
+                        ? null
+                        : () => context.push('/dependiente/turno/resumen'),
+                    icon: const Icon(Icons.send_rounded, size: 18),
+                    label: const Text('Enviar cuadre'),
+                    style: ElevatedButton.styleFrom(
+                      minimumSize: const Size(0, 50),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
         ),
       ),

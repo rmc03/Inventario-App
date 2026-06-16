@@ -29,63 +29,26 @@ class _MovimientosScreenState extends ConsumerState<MovimientosScreen> {
         child: ListView(
           padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
           children: [
-            Row(
-              children: [
-                _FilterChip(
-                  label: 'Todos',
-                  selected: _tipo == null,
-                  onTap: () => setState(() => _tipo = null),
-                ),
-                const SizedBox(width: 8),
-                _FilterChip(
-                  label: 'Entradas',
-                  selected: _tipo == MovimientoTipo.entrada,
-                  onTap: () => setState(() => _tipo = MovimientoTipo.entrada),
-                ),
-                const SizedBox(width: 8),
-                _FilterChip(
-                  label: 'Salidas',
-                  selected: _tipo == MovimientoTipo.salida,
-                  onTap: () => setState(() => _tipo = MovimientoTipo.salida),
-                ),
+            SegmentedButton<MovimientoTipo?>(
+              segments: const [
+                ButtonSegment(value: null, label: Text('Todos')),
+                ButtonSegment(value: MovimientoTipo.entrada, label: Text('Entradas')),
+                ButtonSegment(value: MovimientoTipo.salida, label: Text('Salidas')),
               ],
+              selected: {_tipo},
+              onSelectionChanged: (value) => setState(() => _tipo = value.first),
+              style: SegmentedButton.styleFrom(
+                selectedBackgroundColor: AppColors.primary.withValues(alpha: 0.12),
+              ),
             ),
             const SizedBox(height: 16),
             for (final movimiento in movimientos) ...[
               _MovimientoCard(key: ValueKey(movimiento.id), movimiento: movimiento),
-              const SizedBox(height: 10),
+              const Divider(),
             ],
           ],
         ),
       ),
-    );
-  }
-}
-
-class _FilterChip extends StatelessWidget {
-  const _FilterChip({
-    required this.label,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return ActionChip(
-      onPressed: onTap,
-      label: Text(label),
-      backgroundColor: selected
-          ? AppColors.primary.withValues(alpha: 0.12)
-          : Colors.white,
-      labelStyle: TextStyle(
-        color: selected ? AppColors.primary : AppColors.ink,
-        fontWeight: FontWeight.w800,
-      ),
-      side: BorderSide(color: selected ? AppColors.primary : AppColors.line),
     );
   }
 }

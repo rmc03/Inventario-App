@@ -1,9 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/connectivity_service.dart';
 
+/// Indicador de conexión compacto estilo iOS.
+///
+/// Antes era un banner ancho con fondo de color al 10%. Ahora es una fila
+/// discreta con un punto de estado + texto, mucho menos invasiva.
 class IndicadorConexion extends ConsumerWidget {
   const IndicadorConexion({super.key});
 
@@ -16,32 +21,36 @@ class IndicadorConexion extends ConsumerWidget {
           error: (_, _) => true,
           loading: () => true,
         );
-    final color = isConnected ? AppColors.success : AppColors.warning;
-    final text = isConnected ? 'Conectado y sincronizado' : 'Modo offline';
+
+    // Solo mostramos el banner cuando hay algo que avisar (offline).
+    // Con conexión no ocupamos espacio vertical en cada pantalla.
+    if (isConnected) {
+      return const SizedBox.shrink();
+    }
+
+    final color = AppColors.warning;
 
     return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.10),
-        border: Border(
-          bottom: BorderSide(color: color.withValues(alpha: 0.20)),
-        ),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.lg,
+        vertical: AppSpacing.xs,
       ),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(
-            isConnected ? Icons.check_circle_rounded : Icons.cloud_off_rounded,
-            color: color,
-            size: 16,
+          Container(
+            width: 8,
+            height: 8,
+            decoration: BoxDecoration(
+              color: color,
+              shape: BoxShape.circle,
+            ),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: AppSpacing.sm),
           Text(
-            text,
+            'Offline',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: AppColors.ink,
-              fontWeight: FontWeight.w700,
+              color: AppColors.muted,
+              fontWeight: FontWeight.w500,
             ),
           ),
         ],

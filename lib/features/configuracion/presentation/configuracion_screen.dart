@@ -41,7 +41,7 @@ class ConfiguracionScreen extends ConsumerWidget {
                   children: [
                     const CircleAvatar(
                       backgroundColor: AppColors.primary,
-                      foregroundColor: Colors.white,
+                      foregroundColor: AppColors.surface,
                       child: Icon(Icons.admin_panel_settings_outlined),
                     ),
                     const SizedBox(width: 12),
@@ -62,7 +62,7 @@ class ConfiguracionScreen extends ConsumerWidget {
               ),
             ),
             const SizedBox(height: 18),
-            Text('Usuarios', style: Theme.of(context).textTheme.titleLarge),
+            Text('USUARIOS', style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600, color: AppColors.muted, letterSpacing: 0.5)),
             const SizedBox(height: 10),
             Card(
               child: ListTile(
@@ -78,8 +78,8 @@ class ConfiguracionScreen extends ConsumerWidget {
               children: [
                 Expanded(
                   child: Text(
-                    'Categorías',
-                    style: Theme.of(context).textTheme.titleLarge,
+                    'CATEGORÍAS',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600, color: AppColors.muted, letterSpacing: 0.5),
                   ),
                 ),
                 IconButton.filledTonal(

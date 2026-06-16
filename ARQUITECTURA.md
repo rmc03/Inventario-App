@@ -43,22 +43,27 @@
 ## 3. Navegación por Rol
 
 ```
-SplashScreen
-  └── (verifica sesión local)
+LoginScreen (/login)
+  └── (verifica sesión)
         ├── Sin sesión → LoginScreen
         └── Con sesión
               ├── rol = admin  → AdminShell
               └── rol = dependiente → DependienteShell
 
-AdminShell (Bottom Navigation)
-  ├── /admin/inventario         → InventarioScreen
-  ├── /admin/movimientos        → MovimientosScreen
-  ├── /admin/cuadres            → CuadresScreen (panel de aprobación)
-  └── /admin/configuracion      → ConfiguracionScreen
+AdminShell (RoleShell)
+  ├── /admin/inventario                → InventarioScreen
+  ├── /admin/inventario/productos/nuevo    → ProductoFormScreen (crear)
+  ├── /admin/inventario/productos/:id      → ProductoDetalleScreen
+  ├── /admin/inventario/productos/:id/editar → ProductoFormScreen (editar)
+  ├── /admin/movimientos               → MovimientosScreen
+  ├── /admin/cuadres                   → CuadresScreen (panel de aprobación)
+  ├── /admin/cuadres/:id               → CuadreDetalleScreen
+  └── /admin/configuracion             → ConfiguracionScreen
 
-DependienteShell (Bottom Navigation)
-  ├── /dependiente/inventario   → InventarioScreen (solo lectura)
-  └── /dependiente/turno        → MiTurnoScreen (historial del día + cerrar turno)
+DependienteShell (RoleShell)
+  ├── /dependiente/inventario          → InventarioScreen (solo lectura)
+  ├── /dependiente/turno               → MiTurnoScreen (historial del día + cerrar turno)
+  └── /dependiente/turno/resumen       → CuadreResumenScreen (resumen del cuadre)
 ```
 
 ---
@@ -76,13 +81,17 @@ DependienteShell (Bottom Navigation)
 ### 4.2 InventarioScreen (compartida, comportamiento diferente por rol)
 - Lista de productos con búsqueda por nombre
 - Filtro por categoría
-- Indicador visual de stock bajo (cuando `stock_actual <= stock_minimo`)
+- Indicador visual de stock bajo (cuando quedan 3 unidades o menos)
 - Foto del producto si existe
 - **Solo Admin:** botón "+" para agregar producto, opciones de editar/eliminar
 - **Dependiente:** botón "Registrar movimiento" por producto
 
+#### ProductoDetalleScreen (solo Admin)
+- Detalle completo del producto: foto, nombre, descripción, categoría, precio, stock actual, código de referencia
+- Botones de editar y eliminar
+
 #### ProductoFormScreen (solo Admin)
-- Campos: nombre, descripción (opcional), categoría, precio, stock actual, stock mínimo, código de referencia (opcional), foto (opcional, Supabase Storage)
+- Campos: nombre, descripción (opcional), categoría, precio, stock actual, código de referencia (opcional), foto (opcional, Supabase Storage)
 - Modo crear y modo editar
 
 ---
@@ -103,6 +112,11 @@ DependienteShell (Bottom Navigation)
   - Guarda el cuadre en Supabase con estado `pendiente`
   - Muestra confirmación y bloquea nuevos movimientos hasta el día siguiente
 
+#### CuadreResumenScreen (solo Dependiente)
+- Resumen del cuadre generado tras cerrar turno
+- Muestra totales de entradas y salidas del día
+- Indica el estado del cuadre (pendiente de revisión)
+
 ---
 
 ### 4.5 CuadresScreen (solo Admin)
@@ -122,7 +136,7 @@ DependienteShell (Bottom Navigation)
 ### 4.6 ConfiguracionScreen (solo Admin)
 - Gestión de usuarios: crear dependiente, cambiar contraseña
 - Gestión de categorías: crear, editar, eliminar
-- Ajuste de stock mínimo global
+- Umbral de stock bajo fijo en 3 unidades
 
 ---
 
@@ -160,7 +174,7 @@ descripcion   text
 categoria_id  uuid REFERENCES categorias(id)
 precio        numeric(10,2)
 stock_actual  integer NOT NULL DEFAULT 0
-stock_minimo  integer NOT NULL DEFAULT 0
+stock_minimo  integer NOT NULL DEFAULT 3
 codigo_ref    text
 foto_url      text
 activo        boolean DEFAULT true
@@ -266,14 +280,18 @@ lib/
 │   ├── router/
 │   │   └── app_router.dart         # Rutas y redirección por rol
 │   ├── theme/
-│   │   └── app_theme.dart          # Colores, tipografía, estilos globales
+│   │   ├── app_theme.dart          # Colores, tipografía, estilos globales
+│   │   └── app_dimens.dart         # Constantes de dimensiones y espaciado
 │   ├── supabase/
-│   │   └── supabase_client.dart    # Instancia global de Supabase
+│   │   ├── supabase_client.dart    # Instancia global de Supabase
+│   │   ├── supabase_config.dart    # Variables de entorno (URL + anon key)
+│   │   └── supabase_bootstrap.dart # Inicialización condicional de Supabase
 │   ├── local_db/
 │   │   ├── local_database.dart     # Configuración de sqflite
 │   │   └── sync_service.dart       # Lógica de sincronización offline→Supabase
 │   └── utils/
-│       └── connectivity_service.dart  # Detección de conexión
+│       ├── connectivity_service.dart  # Detección de conexión
+│       └── formatters.dart         # Formateo de fechas, monedas, etc.
 │
 ├── features/
 │   ├── auth/
@@ -287,16 +305,19 @@ lib/
 │   ├── inventario/
 │   │   ├── data/
 │   │   │   ├── producto_repository.dart
+│   │   │   ├── sqlite_producto_repository.dart
 │   │   │   └── categoria_repository.dart
 │   │   ├── providers/
 │   │   │   └── inventario_provider.dart
 │   │   └── presentation/
 │   │       ├── inventario_screen.dart
-│   │       └── producto_form_screen.dart
+│   │       ├── producto_form_screen.dart
+│   │       └── producto_detalle_screen.dart
 │   │
 │   ├── movimientos/
 │   │   ├── data/
-│   │   │   └── movimiento_repository.dart
+│   │   │   ├── movimiento_repository.dart
+│   │   │   └── sqlite_movimiento_repository.dart
 │   │   ├── providers/
 │   │   │   └── movimiento_provider.dart
 │   │   └── presentation/
@@ -308,27 +329,40 @@ lib/
 │   │   ├── providers/
 │   │   │   └── turno_provider.dart
 │   │   └── presentation/
-│   │       └── mi_turno_screen.dart
+│   │       ├── mi_turno_screen.dart
+│   │       └── cuadre_resumen_screen.dart
 │   │
-│   └── cuadres/
-│       ├── data/
-│       │   └── cuadre_repository.dart
-│       ├── providers/
-│       │   └── cuadre_provider.dart
+│   ├── cuadres/
+│   │   ├── data/
+│   │   │   ├── cuadre_repository.dart
+│   │   │   └── sqlite_cuadre_repository.dart
+│   │   ├── providers/
+│   │   │   └── cuadre_provider.dart
+│   │   └── presentation/
+│   │       ├── cuadres_screen.dart
+│   │       └── cuadre_detalle_screen.dart
+│   │
+│   └── configuracion/
 │       └── presentation/
-│           ├── cuadres_screen.dart
-│           └── cuadre_detalle_screen.dart
+│           └── configuracion_screen.dart
 │
 └── shared/
     ├── widgets/
     │   ├── indicador_conexion.dart
     │   ├── stock_badge.dart
-    │   └── loading_overlay.dart
+    │   ├── loading_overlay.dart
+    │   ├── error_page.dart
+    │   ├── product_photo.dart
+    │   ├── qty_controls.dart
+    │   ├── role_shell.dart
+    │   └── stat_card.dart
     └── models/
         ├── usuario.dart
         ├── producto.dart
         ├── movimiento.dart
-        └── cuadre.dart
+        ├── cuadre.dart
+        ├── cuadre_item.dart
+        └── categoria.dart
 ```
 
 ---
