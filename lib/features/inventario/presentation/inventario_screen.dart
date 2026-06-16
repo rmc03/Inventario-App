@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../shared/models/producto.dart';
+import '../../../shared/models/categoria.dart';
 import '../../turno/providers/turno_provider.dart';
 import '../../../shared/widgets/product_photo.dart';
 import '../../../shared/widgets/stat_card.dart';
@@ -58,12 +59,60 @@ class InventarioScreen extends ConsumerWidget {
                 ),
                 const SizedBox(width: 10),
                 IconButton.filledTonal(
-                  onPressed: () => _showCategoryFilter(context, ref),
+                  onPressed: () => _showFilterSheet(context, ref),
                   icon: const Icon(Icons.tune_rounded),
-                  tooltip: 'Filtrar',
+                  tooltip: 'Filtrar y Ordenar',
                 ),
               ],
             ),
+            if (state.categoriaId != null ||
+                state.soloStockBajo ||
+                state.sortBy != ProductoSortBy.nombreAsc) ...[
+              const SizedBox(height: 12),
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: [
+                    if (state.categoriaId != null) ...[
+                      InputChip(
+                        label: Text(
+                          state.categorias
+                              .firstWhere((c) => c.id == state.categoriaId,
+                                  orElse: () => Categoria(
+                                        id: '',
+                                        nombre: '',
+                                        createdAt: DateTime.now(),
+                                      ))
+                              .nombre,
+                        ),
+                        onDeleted: () => ref
+                            .read(inventarioControllerProvider.notifier)
+                            .setCategoria(null),
+                      ),
+                      const SizedBox(width: 8),
+                    ],
+                    if (state.soloStockBajo) ...[
+                      InputChip(
+                        label: const Text('Solo stock bajo'),
+                        onDeleted: () => ref
+                            .read(inventarioControllerProvider.notifier)
+                            .setSoloStockBajo(false),
+                      ),
+                      const SizedBox(width: 8),
+                    ],
+                    if (state.sortBy != ProductoSortBy.nombreAsc) ...[
+                      InputChip(
+                        label: Text('Orden: ${state.sortBy.label}'),
+                        onDeleted: () => ref
+                            .read(inventarioControllerProvider.notifier)
+                            .setSortBy(ProductoSortBy.nombreAsc),
+                      ),
+                      const SizedBox(width: 8),
+                    ],
+                  ],
+                ),
+              ),
+            ],
             const SizedBox(height: 16),
             Row(
               children: [
@@ -112,59 +161,117 @@ class InventarioScreen extends ConsumerWidget {
     );
   }
 
-  void _showCategoryFilter(BuildContext context, WidgetRef ref) {
-    final state = ref.read(inventarioControllerProvider);
-
+  void _showFilterSheet(BuildContext context, WidgetRef ref) {
     showModalBottomSheet<void>(
       context: context,
+      isScrollControlled: true,
       showDragHandle: true,
       builder: (context) {
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Categoría',
-                  style: Theme.of(context).textTheme.titleLarge,
-                ),
-                const SizedBox(height: 12),
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: const Text('Todas'),
-                  leading: Icon(
-                    state.categoriaId == null
-                        ? Icons.radio_button_checked_rounded
-                        : Icons.radio_button_unchecked_rounded,
-                  ),
-                  onTap: () {
-                    ref
-                        .read(inventarioControllerProvider.notifier)
-                        .setCategoria(null);
-                    Navigator.of(context).pop();
-                  },
-                ),
-                for (final categoria in state.categorias)
-                  ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    title: Text(categoria.nombre),
-                    leading: Icon(
-                      state.categoriaId == categoria.id
-                          ? Icons.radio_button_checked_rounded
-                          : Icons.radio_button_unchecked_rounded,
+        return Consumer(
+          builder: (context, ref, _) {
+            final state = ref.watch(inventarioControllerProvider);
+            return SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Ordenar y Filtrar',
+                      style: Theme.of(context).textTheme.titleLarge,
                     ),
-                    onTap: () {
-                      ref
-                          .read(inventarioControllerProvider.notifier)
-                          .setCategoria(categoria.id);
-                      Navigator.of(context).pop();
-                    },
-                  ),
-              ],
-            ),
-          ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Ordenar por',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    const SizedBox(height: 8),
+                    DropdownButtonFormField<ProductoSortBy>(
+                      value: state.sortBy,
+                      decoration: const InputDecoration(
+                        isDense: true,
+                        contentPadding: EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 12,
+                        ),
+                      ),
+                      items: ProductoSortBy.values
+                          .map((s) => DropdownMenuItem(
+                                value: s,
+                                child: Text(s.label),
+                              ))
+                          .toList(),
+                      onChanged: (val) {
+                        if (val != null) {
+                          ref
+                              .read(inventarioControllerProvider.notifier)
+                              .setSortBy(val);
+                        }
+                      },
+                    ),
+                    const SizedBox(height: 18),
+                    SwitchListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: const Text('Solo stock bajo'),
+                      subtitle: const Text(
+                        'Muestra productos que están por debajo del mínimo',
+                      ),
+                      value: state.soloStockBajo,
+                      onChanged: (val) {
+                        ref
+                            .read(inventarioControllerProvider.notifier)
+                            .setSoloStockBajo(val);
+                      },
+                    ),
+                    const Divider(),
+                    Text(
+                      'Categoría',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    const SizedBox(height: 8),
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(maxHeight: 200),
+                      child: ListView(
+                        shrinkWrap: true,
+                        children: [
+                          ListTile(
+                            contentPadding: EdgeInsets.zero,
+                            title: const Text('Todas'),
+                            leading: Icon(
+                              state.categoriaId == null
+                                  ? Icons.radio_button_checked_rounded
+                                  : Icons.radio_button_unchecked_rounded,
+                            ),
+                            onTap: () {
+                              ref
+                                  .read(inventarioControllerProvider.notifier)
+                                  .setCategoria(null);
+                            },
+                          ),
+                          for (final categoria in state.categorias)
+                            ListTile(
+                              contentPadding: EdgeInsets.zero,
+                              title: Text(categoria.nombre),
+                              leading: Icon(
+                                state.categoriaId == categoria.id
+                                    ? Icons.radio_button_checked_rounded
+                                    : Icons.radio_button_unchecked_rounded,
+                              ),
+                              onTap: () {
+                                ref
+                                    .read(inventarioControllerProvider.notifier)
+                                    .setCategoria(categoria.id);
+                              },
+                            ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
         );
       },
     );

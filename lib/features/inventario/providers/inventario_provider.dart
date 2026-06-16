@@ -9,6 +9,17 @@ final productoRepositoryProvider = Provider<ProductoRepository>((ref) {
   return InMemoryProductoRepository();
 });
 
+enum ProductoSortBy {
+  nombreAsc('Nombre (A-Z)'),
+  precioAsc('Precio (Menor a Mayor)'),
+  precioDesc('Precio (Mayor a Menor)'),
+  stockAsc('Stock (Menor a Mayor)'),
+  stockDesc('Stock (Mayor a Menor)');
+
+  const ProductoSortBy(this.label);
+  final String label;
+}
+
 final inventarioControllerProvider =
     NotifierProvider<InventarioController, InventarioState>(
       InventarioController.new,
@@ -20,7 +31,15 @@ class InventarioState {
     required this.categorias,
     this.search = '',
     this.categoriaId,
-  })  : productosFiltrados = _computeFiltrados(productos, search, categoriaId),
+    this.sortBy = ProductoSortBy.nombreAsc,
+    this.soloStockBajo = false,
+  })  : productosFiltrados = _computeFiltrados(
+          productos,
+          search,
+          categoriaId,
+          sortBy,
+          soloStockBajo,
+        ),
         totalProductos = productos.where((p) => p.activo).length,
         valorTotal = productos
             .where((p) => p.activo)
@@ -30,6 +49,8 @@ class InventarioState {
   final List<Categoria> categorias;
   final String search;
   final String? categoriaId;
+  final ProductoSortBy sortBy;
+  final bool soloStockBajo;
 
   final List<Producto> productosFiltrados;
   final int totalProductos;
@@ -39,16 +60,41 @@ class InventarioState {
     List<Producto> productos,
     String search,
     String? categoriaId,
+    ProductoSortBy sortBy,
+    bool soloStockBajo,
   ) {
     final normalizedSearch = search.trim().toLowerCase();
-    return productos.where((producto) {
+    final filtrados = productos.where((producto) {
       final matchesSearch =
           normalizedSearch.isEmpty ||
           producto.nombre.toLowerCase().contains(normalizedSearch);
       final matchesCategoria =
           categoriaId == null || producto.categoriaId == categoriaId;
-      return producto.activo && matchesSearch && matchesCategoria;
+      final matchesStockBajo =
+          !soloStockBajo || producto.tieneStockBajo;
+      return producto.activo && matchesSearch && matchesCategoria && matchesStockBajo;
     }).toList();
+
+    switch (sortBy) {
+      case ProductoSortBy.nombreAsc:
+        filtrados.sort((a, b) =>
+            a.nombre.toLowerCase().compareTo(b.nombre.toLowerCase()));
+        break;
+      case ProductoSortBy.precioAsc:
+        filtrados.sort((a, b) => a.precio.compareTo(b.precio));
+        break;
+      case ProductoSortBy.precioDesc:
+        filtrados.sort((a, b) => b.precio.compareTo(a.precio));
+        break;
+      case ProductoSortBy.stockAsc:
+        filtrados.sort((a, b) => a.stockActual.compareTo(b.stockActual));
+        break;
+      case ProductoSortBy.stockDesc:
+        filtrados.sort((a, b) => b.stockActual.compareTo(a.stockActual));
+        break;
+    }
+
+    return filtrados;
   }
 
   InventarioState copyWith({
@@ -56,6 +102,8 @@ class InventarioState {
     List<Categoria>? categorias,
     String? search,
     String? categoriaId,
+    ProductoSortBy? sortBy,
+    bool? soloStockBajo,
     bool clearCategoria = false,
   }) {
     return InventarioState(
@@ -63,6 +111,8 @@ class InventarioState {
       categorias: categorias ?? this.categorias,
       search: search ?? this.search,
       categoriaId: clearCategoria ? null : categoriaId ?? this.categoriaId,
+      sortBy: sortBy ?? this.sortBy,
+      soloStockBajo: soloStockBajo ?? this.soloStockBajo,
     );
   }
 }
@@ -87,6 +137,14 @@ class InventarioController extends Notifier<InventarioState> {
       categoriaId: categoriaId,
       clearCategoria: categoriaId == null,
     );
+  }
+
+  void setSortBy(ProductoSortBy sortBy) {
+    state = state.copyWith(sortBy: sortBy);
+  }
+
+  void setSoloStockBajo(bool value) {
+    state = state.copyWith(soloStockBajo: value);
   }
 
   Producto? findProducto(String id) {

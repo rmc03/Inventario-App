@@ -45,3 +45,10 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Supabase CLI and local dev (activate when frontend is complete)
+bin/
+supabase/
+
+# Node.js
+node_modules/

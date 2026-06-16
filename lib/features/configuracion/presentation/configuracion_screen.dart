@@ -97,9 +97,11 @@ class ConfiguracionScreen extends ConsumerWidget {
                   title: Text(categoria.nombre),
                   leading: const Icon(Icons.category_outlined),
                   trailing: IconButton(
-                    onPressed: () => ref
-                        .read(inventarioControllerProvider.notifier)
-                        .deleteCategoria(categoria.id),
+                    onPressed: () => _confirmDeleteCategoria(
+                      context,
+                      ref,
+                      categoria,
+                    ),
                     icon: const Icon(Icons.delete_outline_rounded),
                     color: AppColors.danger,
                     tooltip: 'Eliminar',
@@ -190,6 +192,48 @@ class ConfiguracionScreen extends ConsumerWidget {
               createdAt: DateTime.now(),
             ),
           );
+    }
+  }
+
+  Future<void> _confirmDeleteCategoria(
+    BuildContext context,
+    WidgetRef ref,
+    Categoria categoria,
+  ) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          icon: const Icon(
+            Icons.warning_amber_rounded,
+            color: AppColors.danger,
+            size: 42,
+          ),
+          title: const Text('¿Eliminar categoría?'),
+          content: Text(
+            'Esta acción no se puede deshacer. ¿Deseas eliminar la categoría "${categoria.nombre}"?',
+          ),
+          actions: [
+            OutlinedButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Cancelar'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.danger,
+              ),
+              child: const Text('Eliminar'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmed ?? false) {
+      ref
+          .read(inventarioControllerProvider.notifier)
+          .deleteCategoria(categoria.id);
     }
   }
 }
