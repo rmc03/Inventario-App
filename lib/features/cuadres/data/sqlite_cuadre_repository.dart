@@ -59,6 +59,7 @@ class SqliteCuadreRepository {
       'id': cuadre.id,
       'dependiente_id': cuadre.dependienteId,
       'dependiente_nombre': cuadre.dependienteNombre,
+      'dependiente_foto_url': cuadre.dependienteFotoUrl,
       'fecha_turno': cuadre.fechaTurno.toIso8601String(),
       'total_entradas': 0,
       'total_salidas': cuadre.totalSalidas,
@@ -84,6 +85,7 @@ class SqliteCuadreRepository {
       dependienteId: row['dependiente_id'] as String,
       dependienteNombre:
           (row['dependiente_nombre'] as String?) ?? 'Dependiente',
+      dependienteFotoUrl: row['dependiente_foto_url'] as String?,
       fechaTurno: DateTime.parse(row['fecha_turno'] as String),
       items: items,
       estado: CuadreEstado.fromValue(
@@ -94,5 +96,41 @@ class SqliteCuadreRepository {
       createdAt: DateTime.parse(row['created_at'] as String),
       updatedAt: DateTime.parse(row['updated_at'] as String),
     );
+  }
+
+  /// Aprueba el cuadre: descuenta los `cantidad` de cada `CuadreItem` del stock
+  /// dentro de una transacción y marca el cuadre como `aprobado`.
+  Future<void> approveCuadre(String cuadreId) async {
+    final db = await _db.database;
+    final rows = await db.query('cuadres', where: 'id = ?', whereArgs: [cuadreId]);
+    if (rows.isEmpty) return;
+    final row = rows.first;
+    final itemsJson = row['items_json'] as String?;
+    final items = itemsJson != null
+        ? (jsonDecode(itemsJson) as List<dynamic>)
+            .map((e) => CuadreItem.fromJson(e as Map<String, dynamic>))
+            .toList()
+        : <CuadreItem>[];
+
+    await db.transaction((txn) async {
+      for (final item in items) {
+        // Safely subtract without going below zero
+        await txn.rawUpdate('''
+          UPDATE productos
+          SET stock_actual = CASE WHEN stock_actual - ? < 0 THEN 0 ELSE stock_actual - ? END,
+              updated_at = ?
+          WHERE id = ?
+        ''', [item.cantidad, item.cantidad, DateTime.now().toIso8601String(), item.productoId]);
+      }
+
+      await txn.update('cuadres', {'estado': 'aprobado', 'updated_at': DateTime.now().toIso8601String()}, where: 'id = ?', whereArgs: [cuadreId]);
+    });
+
+    // update cache
+    final idx = _cache.indexWhere((c) => c.id == cuadreId);
+    if (idx != -1) {
+      final updated = _cache[idx].copyWith(estado: CuadreEstado.aprobado, updatedAt: DateTime.now());
+      _cache[idx] = updated;
+    }
   }
 }

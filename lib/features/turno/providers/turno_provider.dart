@@ -3,8 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../shared/models/cuadre_item.dart';
 import '../../../shared/models/movimiento.dart';
 import '../../../shared/models/producto.dart';
-import '../../inventario/providers/inventario_provider.dart';
+
 import '../data/turno_repository.dart';
+import '../../auth/providers/auth_provider.dart';
+import '../../movimientos/providers/movimiento_provider.dart';
+import 'package:uuid/uuid.dart';
 
 final turnoRepositoryProvider = Provider<TurnoRepository>((ref) {
   return TurnoRepository();
@@ -49,8 +52,7 @@ class TurnoState {
 
 class TurnoController extends Notifier<TurnoState> {
   TurnoRepository get _repo => ref.read(turnoRepositoryProvider);
-  InventarioController get _inventario =>
-      ref.read(inventarioControllerProvider.notifier);
+  
 
   @override
   TurnoState build() => TurnoState(
@@ -70,11 +72,27 @@ class TurnoController extends Notifier<TurnoState> {
   void agregarItem(Producto producto, int cantidad) {
     assert(cantidad > 0, 'La cantidad debe ser mayor a 0');
 
-    _inventario.applyMovimiento(
-      productoId: producto.id,
-      tipo: MovimientoTipo.salida,
-      cantidad: cantidad,
-    );
+    // Record movimiento (dependiente sale) but do NOT modify stock until
+    // the jefe aprueba el cuadre.
+    final currentUser = ref.read(authControllerProvider).user;
+    if (currentUser != null) {
+      final now = DateTime.now();
+      final mov = Movimiento(
+        id: const Uuid().v4(),
+        productoId: producto.id,
+        productoNombre: producto.nombre,
+        usuarioId: currentUser.id,
+        usuarioNombre: currentUser.nombre,
+        usuarioFotoUrl: currentUser.fotoUrl,
+        tipo: MovimientoTipo.salida,
+        cantidad: cantidad,
+        nota: 'Venta de turno',
+        fecha: now,
+        synced: false,
+        createdAt: now,
+      );
+      ref.read(movimientoRepositoryProvider).addMovimiento(mov);
+    }
 
     final idx = state.items.indexWhere((i) => i.productoId == producto.id);
     final newItems = [...state.items];
@@ -108,17 +126,30 @@ class TurnoController extends Notifier<TurnoState> {
     final existing = state.items[idx];
     final diferencia = nuevaCantidad - existing.cantidad;
 
-    if (diferencia > 0) {
-      _inventario.applyMovimiento(
-        productoId: productoId,
-        tipo: MovimientoTipo.salida,
-        cantidad: diferencia,
-      );
-    } else if (diferencia < 0) {
-      _inventario.restoreMovimiento(
-        productoId: productoId,
-        cantidad: -diferencia,
-      );
+    // Record movimiento for the delta (no stock change now)
+    final currentUser = ref.read(authControllerProvider).user;
+    if (currentUser != null) {
+      final now = DateTime.now();
+      if (diferencia != 0) {
+        // Record as a sale adjustment. We avoid creating 'entrada' movements
+        // for dependiente edits; negative quantities indicate a reduction
+        // (correction) of previously registered ventas.
+        final mov = Movimiento(
+          id: const Uuid().v4(),
+          productoId: productoId,
+          productoNombre: existing.productoNombre,
+          usuarioId: currentUser.id,
+          usuarioNombre: currentUser.nombre,
+          usuarioFotoUrl: currentUser.fotoUrl,
+          tipo: MovimientoTipo.salida,
+          cantidad: diferencia, // may be negative for reductions
+          nota: diferencia > 0 ? 'Ajuste en turno (incremento)' : 'Ajuste en turno (reducción)',
+          fecha: now,
+          synced: false,
+          createdAt: now,
+        );
+        ref.read(movimientoRepositoryProvider).addMovimiento(mov);
+      }
     }
 
     final newItems = [...state.items];
@@ -136,10 +167,28 @@ class TurnoController extends Notifier<TurnoState> {
     final idx = state.items.indexWhere((i) => i.productoId == productoId);
     if (idx == -1) return;
 
-    _inventario.restoreMovimiento(
-      productoId: productoId,
-      cantidad: state.items[idx].cantidad,
-    );
+    // Record a sale reduction movement (negative cantidad) for the removed
+    // quantity so it reduces the pending ventas count but is not treated as
+    // a physical entrada.
+    final currentUser = ref.read(authControllerProvider).user;
+    if (currentUser != null) {
+      final now = DateTime.now();
+      final mov = Movimiento(
+        id: const Uuid().v4(),
+        productoId: productoId,
+        productoNombre: state.items[idx].productoNombre,
+        usuarioId: currentUser.id,
+        usuarioNombre: currentUser.nombre,
+        usuarioFotoUrl: currentUser.fotoUrl,
+        tipo: MovimientoTipo.salida,
+        cantidad: -state.items[idx].cantidad,
+        nota: 'Eliminado del turno (reducción)',
+        fecha: now,
+        synced: false,
+        createdAt: now,
+      );
+      ref.read(movimientoRepositoryProvider).addMovimiento(mov);
+    }
 
     final newItems = [...state.items]..removeAt(idx);
     state = state.copyWith(items: newItems);

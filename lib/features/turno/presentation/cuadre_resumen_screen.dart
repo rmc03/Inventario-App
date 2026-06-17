@@ -11,6 +11,9 @@ import '../../../shared/widgets/qty_controls.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../cuadres/providers/cuadre_provider.dart';
 import '../providers/turno_provider.dart';
+import '../../inventario/providers/inventario_provider.dart';
+
+const double _kTrailingWidth = 92.0;
 
 class CuadreResumenScreen extends ConsumerWidget {
   const CuadreResumenScreen({super.key});
@@ -70,6 +73,29 @@ class CuadreResumenScreen extends ConsumerWidget {
   ) async {
     final user = ref.read(authControllerProvider).user;
     if (user == null || turno.items.isEmpty) return;
+
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('¿Enviar cuadre?'),
+        content: const Text(
+          'Se generará un cuadre pendiente para que el jefe lo revise. ' 
+          '¿Deseas enviarlo ahora?',
+        ),
+        actions: [
+          OutlinedButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Enviar'),
+          ),
+        ],
+      ),
+    );
+
+    if (ok != true) return;
 
     final error = ref
         .read(cuadreControllerProvider.notifier)
@@ -174,32 +200,44 @@ class _ResumenItemCard extends ConsumerWidget {
                       .read(turnoControllerProvider.notifier)
                       .actualizarCantidadItem(item.productoId, item.cantidad - 1)
                   : null,
-              onIncrement: () => ref
-                  .read(turnoControllerProvider.notifier)
-                  .actualizarCantidadItem(item.productoId, item.cantidad + 1),
+              onIncrement: () {
+                final producto = ref.read(inventarioControllerProvider.notifier).findProducto(item.productoId);
+                final available = producto?.stockActual ?? 0;
+                if (item.cantidad + 1 > available) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('La cantidad supera el stock disponible')),
+                  );
+                  return;
+                }
+                ref.read(turnoControllerProvider.notifier).actualizarCantidadItem(item.productoId, item.cantidad + 1);
+              },
             ),
             const SizedBox(width: 10),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text(
-                  formatCurrency(item.subtotal),
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        color: AppColors.primary,
-                      ),
-                ),
-                const SizedBox(height: 4),
-                GestureDetector(
-                  onTap: () => ref
-                      .read(turnoControllerProvider.notifier)
-                      .eliminarItem(item.productoId),
-                  child: const Icon(
-                    Icons.close_rounded,
-                    size: 18,
-                    color: AppColors.muted,
+            SizedBox(
+              width: _kTrailingWidth,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    formatCurrency(item.subtotal),
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          color: AppColors.primary,
+                        ),
                   ),
-                ),
-              ],
+                  const SizedBox(height: 4),
+                  GestureDetector(
+                    onTap: () => ref
+                        .read(turnoControllerProvider.notifier)
+                        .eliminarItem(item.productoId),
+                    child: const Icon(
+                      Icons.close_rounded,
+                      size: 18,
+                      color: AppColors.muted,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ],
         ),

@@ -1,5 +1,6 @@
+// ignore_for_file: unused_element_parameter
 import 'dart:io';
-import 'dart:math' as math;
+
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -166,8 +167,8 @@ class _ProductoFormScreenState extends ConsumerState<ProductoFormScreen> {
                       const _CardSeparator(),
                       _FormItem(
                         label: 'Categoría',
-                        child: DropdownButtonFormField<String>(
-                          value: effectiveCategoriaId,
+                          child: DropdownButtonFormField<String>(
+                            initialValue: effectiveCategoriaId,
                           decoration: InputDecoration(
                             filled: false,
                             fillColor: Colors.transparent,
@@ -357,7 +358,17 @@ class _ProductoFormScreenState extends ConsumerState<ProductoFormScreen> {
     );
 
     ref.read(inventarioControllerProvider.notifier).upsertProducto(producto);
-    context.go('/admin/inventario/productos/${producto.id}');
+
+    // Si estamos editando (venimos desde la pantalla de detalle), simplemente
+    // hacemos pop para volver a la pantalla de detalle que ya existe en la
+    // pila y se actualizará por el provider. Si es un nuevo producto,
+    // reemplazamos la ruta actual por la del detalle para mantener
+    // `/admin/inventario` en el historial (evitando perder la pila).
+    if (_isEditing) {
+      if (context.mounted) context.pop();
+    } else {
+      if (context.mounted) context.replace('/admin/inventario/productos/${producto.id}');
+    }
   }
 
   Future<void> _pickImage() async {

@@ -121,7 +121,7 @@ class AppTheme {
         centerTitle: false,
         titleTextStyle: TextStyle(
           color: AppColors.ink,
-          fontSize: 17,
+          fontSize: 20,
           fontWeight: FontWeight.w600,
           letterSpacing: -0.1,
         ),

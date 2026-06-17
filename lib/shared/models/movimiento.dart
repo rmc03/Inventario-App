@@ -25,6 +25,7 @@ class Movimiento {
     required this.productoNombre,
     required this.usuarioId,
     required this.usuarioNombre,
+    this.usuarioFotoUrl,
     required this.tipo,
     required this.cantidad,
     this.nota,
@@ -38,6 +39,7 @@ class Movimiento {
   final String productoNombre;
   final String usuarioId;
   final String usuarioNombre;
+  final String? usuarioFotoUrl;
   final MovimientoTipo tipo;
   final int cantidad;
   final String? nota;
@@ -52,6 +54,7 @@ class Movimiento {
       'producto_nombre': productoNombre,
       'usuario_id': usuarioId,
       'usuario_nombre': usuarioNombre,
+      'usuario_foto_url': usuarioFotoUrl,
       'tipo': tipo.name,
       'cantidad': cantidad,
       'nota': nota,
@@ -68,6 +71,7 @@ class Movimiento {
       productoNombre: (json['producto_nombre'] as String?) ?? 'Producto',
       usuarioId: json['usuario_id'] as String,
       usuarioNombre: (json['usuario_nombre'] as String?) ?? 'Usuario',
+      usuarioFotoUrl: json['usuario_foto_url'] as String?,
       tipo: MovimientoTipo.fromValue(json['tipo'] as String),
       cantidad: (json['cantidad'] as num).toInt(),
       nota: json['nota'] as String?,

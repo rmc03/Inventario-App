@@ -2,6 +2,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../shared/models/usuario.dart';
 import '../data/auth_repository.dart';
+import '../../../core/local_db/local_database.dart';
+import 'package:sqflite/sqflite.dart';
 
 final authRepositoryProvider = Provider<AuthRepository>((ref) {
   return AuthRepository();
@@ -57,13 +59,23 @@ class AuthController extends Notifier<AuthState> {
     }
 
     final repository = ref.read(authRepositoryProvider);
-    final user = repository.signIn(
+    final user = await repository.signIn(
       email: email,
       password: password,
       preferredRole: preferredRole,
     );
 
     state = AuthState(user: user);
+  }
+
+  /// Update user in state and persist to local DB.
+  Future<void> updateUser(Usuario user) async {
+    state = state.copyWith(user: user);
+    final db = await LocalDatabase.instance.database;
+    final map = user.toLocalMap();
+    // Ensure activo stored as int
+    map['activo'] = user.activo ? 1 : 0;
+    await db.insert('usuarios', map, conflictAlgorithm: ConflictAlgorithm.replace);
   }
 
   void signOut() {

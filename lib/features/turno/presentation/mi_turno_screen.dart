@@ -5,10 +5,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_theme.dart';
+import '../../inventario/providers/inventario_provider.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../shared/models/cuadre_item.dart';
 import '../../../shared/widgets/qty_controls.dart';
 import '../providers/turno_provider.dart';
+
+const double _kTrailingWidth = 92.0;
 
 class MiTurnoScreen extends ConsumerWidget {
   const MiTurnoScreen({super.key});
@@ -218,32 +221,44 @@ class _TurnoItemCard extends ConsumerWidget {
                         .read(turnoControllerProvider.notifier)
                         .actualizarCantidadItem(item.productoId, item.cantidad - 1)
                     : null,
-                onIncrement: () => ref
-                    .read(turnoControllerProvider.notifier)
-                    .actualizarCantidadItem(item.productoId, item.cantidad + 1),
+                onIncrement: () {
+                  final producto = ref.read(inventarioControllerProvider.notifier).findProducto(item.productoId);
+                  final available = producto?.stockActual ?? 0;
+                  if (item.cantidad + 1 > available) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('La cantidad supera el stock disponible')),
+                    );
+                    return;
+                  }
+                  ref.read(turnoControllerProvider.notifier).actualizarCantidadItem(item.productoId, item.cantidad + 1);
+                },
               ),
               const SizedBox(width: 10),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text(
-                    formatCurrency(item.subtotal),
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          color: AppColors.primary,
-                        ),
-                  ),
-                  const SizedBox(height: 4),
-                  GestureDetector(
-                    onTap: () => ref
-                        .read(turnoControllerProvider.notifier)
-                        .eliminarItem(item.productoId),
-                    child: const Icon(
-                      Icons.close_rounded,
-                      size: 18,
-                      color: AppColors.muted,
+              SizedBox(
+                width: _kTrailingWidth,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      formatCurrency(item.subtotal),
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            color: AppColors.primary,
+                          ),
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 4),
+                    GestureDetector(
+                      onTap: () => ref
+                          .read(turnoControllerProvider.notifier)
+                          .eliminarItem(item.productoId),
+                      child: const Icon(
+                        Icons.close_rounded,
+                        size: 18,
+                        color: AppColors.muted,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ],
           ),

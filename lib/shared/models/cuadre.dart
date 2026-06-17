@@ -23,6 +23,7 @@ class Cuadre {
     required this.id,
     required this.dependienteId,
     required this.dependienteNombre,
+    this.dependienteFotoUrl,
     required this.fechaTurno,
     this.items = const [],
     this.estado = CuadreEstado.pendiente,
@@ -35,6 +36,7 @@ class Cuadre {
   final String id;
   final String dependienteId;
   final String dependienteNombre;
+  final String? dependienteFotoUrl;
   final DateTime fechaTurno;
   final List<CuadreItem> items;
   final CuadreEstado estado;
@@ -59,6 +61,7 @@ class Cuadre {
     List<CuadreItem>? items,
     CuadreEstado? estado,
     String? comentarioJefe,
+    String? dependienteFotoUrl,
     DateTime? createdAt,
     DateTime? updatedAt,
     bool? synced,
@@ -71,6 +74,7 @@ class Cuadre {
         items: items ?? this.items,
         estado: estado ?? this.estado,
         comentarioJefe: comentarioJefe ?? this.comentarioJefe,
+        dependienteFotoUrl: dependienteFotoUrl ?? this.dependienteFotoUrl,
         createdAt: createdAt ?? this.createdAt,
         updatedAt: updatedAt ?? this.updatedAt,
         synced: synced ?? this.synced,
@@ -80,6 +84,7 @@ class Cuadre {
         'id': id,
         'dependiente_id': dependienteId,
         'dependiente_nombre': dependienteNombre,
+      'dependiente_foto_url': dependienteFotoUrl,
         'fecha_turno': fechaTurno.toIso8601String(),
         'total_entradas': 0,
         'total_salidas': totalSalidas,
@@ -97,6 +102,7 @@ class Cuadre {
       dependienteId: json['dependiente_id'] as String,
       dependienteNombre:
           (json['dependiente_nombre'] as String?) ?? 'Dependiente',
+      dependienteFotoUrl: json['dependiente_foto_url'] as String?,
       fechaTurno: DateTime.parse(json['fecha_turno'] as String),
       items: rawItems
               ?.map((i) => CuadreItem.fromJson(i as Map<String, dynamic>))

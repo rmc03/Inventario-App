@@ -9,7 +9,11 @@ import '../../../shared/models/cuadre.dart';
 import '../../../shared/models/cuadre_item.dart';
 import '../../../shared/widgets/qty_controls.dart';
 import '../../inventario/providers/inventario_provider.dart';
+import '../../auth/providers/auth_provider.dart';
+import '../../../shared/models/usuario.dart';
 import '../providers/cuadre_provider.dart';
+
+const double _kTrailingWidth = 92.0;
 
 class CuadreDetalleScreen extends ConsumerStatefulWidget {
   const CuadreDetalleScreen({super.key, required this.cuadreId});
@@ -39,6 +43,10 @@ class _CuadreDetalleScreenState extends ConsumerState<CuadreDetalleScreen> {
     }
 
     final isPendiente = cuadre.estado == CuadreEstado.pendiente;
+    final currentUser = ref.watch(authControllerProvider.select((s) => s.user));
+    final isOwner = currentUser != null && currentUser.id == cuadre.dependienteId;
+    final isAdmin = currentUser != null && currentUser.rol == UserRole.admin;
+    final canEdit = isPendiente && (isOwner || isAdmin);
 
     return Scaffold(
       appBar: AppBar(
@@ -49,7 +57,7 @@ class _CuadreDetalleScreenState extends ConsumerState<CuadreDetalleScreen> {
           tooltip: 'Volver',
         ),
         actions: [
-          if (isPendiente)
+          if (canEdit)
             IconButton(
               onPressed: () => setState(() => _editMode = !_editMode),
               icon: Icon(
@@ -216,11 +224,15 @@ class _ItemViewCard extends StatelessWidget {
                   ],
                 ),
               ),
-              Text(
-                formatCurrency(item.subtotal),
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      color: AppColors.primary,
-                    ),
+              SizedBox(
+                width: _kTrailingWidth,
+                child: Text(
+                  formatCurrency(item.subtotal),
+                  textAlign: TextAlign.right,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        color: AppColors.primary,
+                      ),
+                ),
               ),
             ],
           ),
@@ -276,32 +288,54 @@ class _ItemEditCard extends ConsumerWidget {
                           item.cantidad - 1,
                         )
                     : null,
-                onIncrement: () => ctrl.modificarCantidadItem(
-                  cuadreId,
-                  item.productoId,
-                  item.cantidad + 1,
-                ),
+                onIncrement: () {
+                  final producto = ref.read(inventarioControllerProvider.notifier).findProducto(item.productoId);
+                  final available = producto?.stockActual ?? 0;
+                  if (item.cantidad + 1 > available) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('La cantidad supera el stock disponible')),
+                    );
+                    return;
+                  }
+                  ctrl.modificarCantidadItem(
+                    cuadreId,
+                    item.productoId,
+                    item.cantidad + 1,
+                  );
+                },
               ),
               const SizedBox(width: 10),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  Text(
-                    formatCurrency(item.subtotal),
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          color: AppColors.primary,
+                  SizedBox(
+                    width: _kTrailingWidth,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          formatCurrency(item.subtotal),
+                          style: Theme.of(context)
+                              .textTheme
+                              .titleMedium
+                              ?.copyWith(
+                                color: AppColors.primary,
+                              ),
                         ),
-                  ),
-                  const SizedBox(height: 4),
-                  GestureDetector(
-                    onTap: () => ctrl.eliminarItemCuadre(
-                      cuadreId,
-                      item.productoId,
-                    ),
-                    child: const Icon(
-                      Icons.delete_outline_rounded,
-                      size: 18,
-                      color: AppColors.danger,
+                        const SizedBox(height: 4),
+                        GestureDetector(
+                          onTap: () => ctrl.eliminarItemCuadre(
+                            cuadreId,
+                            item.productoId,
+                          ),
+                          child: const Icon(
+                            Icons.delete_outline_rounded,
+                            size: 18,
+                            color: AppColors.danger,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ],
@@ -407,6 +441,12 @@ class _AddItemButton extends ConsumerWidget {
                       if (cant <= 0) return;
                       final p =
                           productos.firstWhere((p) => p.id == selectedId);
+                      if (cant > p.stockActual) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('La cantidad supera el stock disponible')),
+                        );
+                        return;
+                      }
                       onAdd(
                         CuadreItem(
                           productoId: p.id,

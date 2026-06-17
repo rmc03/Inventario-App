@@ -254,4 +254,10 @@ const _dependienteItems = [
     icon: Icons.today_outlined,
     activeIcon: Icons.today,
   ),
+  ShellItem(
+    path: '/dependiente/configuracion',
+    label: 'Ajustes',
+    icon: Icons.settings_outlined,
+    activeIcon: Icons.settings,
+  ),
 ];

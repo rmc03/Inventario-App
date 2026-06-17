@@ -3,22 +3,25 @@ import 'package:uuid/uuid.dart';
 
 import '../../../shared/models/cuadre.dart';
 import '../../../shared/models/cuadre_item.dart';
-import '../../../shared/models/movimiento.dart';
 import '../../../shared/models/usuario.dart';
 import '../../inventario/providers/inventario_provider.dart';
+import '../../../shared/models/movimiento.dart';
+import '../../movimientos/providers/movimiento_provider.dart';
 import '../data/cuadre_repository.dart';
+import '../data/sqlite_cuadre_repository.dart';
 
 final cuadreRepositoryProvider = Provider<CuadreRepository>((ref) {
   return CuadreRepository();
 });
+
+// Sold counts per product are computed from movements stream elsewhere.
 
 final cuadreControllerProvider =
     NotifierProvider<CuadreController, List<Cuadre>>(CuadreController.new);
 
 class CuadreController extends Notifier<List<Cuadre>> {
   CuadreRepository get _repo => ref.read(cuadreRepositoryProvider);
-  InventarioController get _inventario =>
-      ref.read(inventarioControllerProvider.notifier);
+  
 
   @override
   List<Cuadre> build() => _repo.fetchCuadres();
@@ -42,12 +45,14 @@ class CuadreController extends Notifier<List<Cuadre>> {
         id: const Uuid().v4(),
         dependienteId: dependiente.id,
         dependienteNombre: dependiente.nombre,
+        dependienteFotoUrl: dependiente.fotoUrl,
         fechaTurno: DateTime(now.year, now.month, now.day),
         items: List.unmodifiable(items),
         createdAt: now,
         updatedAt: now,
       ),
     );
+    // Movimientos are recorded by the Turno flow when items are added.
     state = _repo.fetchCuadres();
     return null;
   }
@@ -62,8 +67,67 @@ class CuadreController extends Notifier<List<Cuadre>> {
   // ─── Acciones del jefe ─────────────────────────────────────────────────────
 
   /// Aprueba el cuadre. El stock ya fue ajustado por el dependiente.
-  void confirmarCuadre(String id) {
+  Future<void> confirmarCuadre(String id) async {
+    // Find cuadre
+    final cuadre = findCuadre(id);
+    if (cuadre == null) return;
+
+    // If we have a Sqlite-backed repository, let it apply stock changes
+    // transactionally (it updates the productos table). Otherwise, for the
+    // in-memory repository we apply the movements to the inventory controller
+    // so the product repo reflects the new stock values.
+    if (_repo is SqliteCuadreRepository) {
+      try {
+        await (_repo as dynamic).approveCuadre(id);
+      } catch (_) {
+        // ignore errors for now
+      }
+      // refresh inventory (DB-backed implementation should pick up changes)
+      ref.invalidate(inventarioControllerProvider);
+    } else {
+      // Apply each item as a salida movement to the inventory controller.
+      final inv = ref.read(inventarioControllerProvider.notifier);
+      for (final item in cuadre.items) {
+        inv.applyMovimiento(
+          productoId: item.productoId,
+          tipo: MovimientoTipo.salida,
+          cantidad: item.cantidad,
+        );
+      }
+    }
+
+    // mark as aprobado in local cache
     _patchCuadre(id, estado: CuadreEstado.aprobado);
+
+    // Mark related salida movimientos for this dependiente/day as processed
+    // so the UI/history reflects that these ventas were applied.
+    try {
+      final movRepo = ref.read(movimientoRepositoryProvider);
+      final movimientos = await movRepo.fetchMovimientosForDate(cuadre.fechaTurno);
+      for (final m in movimientos) {
+        final note = (m.nota ?? '').toLowerCase();
+        final isTurnoNote = note.contains('turno') || note.contains('venta') || note.contains('reducción');
+        if (m.usuarioId == cuadre.dependienteId && m.tipo == MovimientoTipo.salida && !m.synced && isTurnoNote) {
+          final updated = Movimiento(
+            id: m.id,
+            productoId: m.productoId,
+            productoNombre: m.productoNombre,
+            usuarioId: m.usuarioId,
+            usuarioNombre: m.usuarioNombre,
+            usuarioFotoUrl: m.usuarioFotoUrl,
+            tipo: m.tipo,
+            cantidad: m.cantidad,
+            nota: m.nota,
+            fecha: m.fecha,
+            synced: true,
+            createdAt: m.createdAt,
+          );
+          movRepo.updateMovimiento(updated);
+        }
+      }
+    } catch (_) {
+      // non-fatal; movement sync will occur later
+    }
   }
 
   /// Rechaza el cuadre y restaura todo el stock de sus ítems.
@@ -71,13 +135,7 @@ class CuadreController extends Notifier<List<Cuadre>> {
     final cuadre = findCuadre(id);
     if (cuadre == null) return;
 
-    for (final item in cuadre.items) {
-      _inventario.restoreMovimiento(
-        productoId: item.productoId,
-        cantidad: item.cantidad,
-      );
-    }
-
+    // No stock modifications needed since stock is applied only on approval.
     _patchCuadre(id, estado: CuadreEstado.rechazado, comentarioJefe: comentario);
   }
 
@@ -95,20 +153,8 @@ class CuadreController extends Notifier<List<Cuadre>> {
     if (idx == -1) return;
 
     final item = cuadre.items[idx];
-    final diferencia = nuevaCantidad - item.cantidad;
-
-    if (diferencia > 0) {
-      _inventario.applyMovimiento(
-        productoId: productoId,
-        tipo: MovimientoTipo.salida,
-        cantidad: diferencia,
-      );
-    } else if (diferencia < 0) {
-      _inventario.restoreMovimiento(
-        productoId: productoId,
-        cantidad: -diferencia,
-      );
-    }
+    // Jefe edits shouldn't create movimientos here; movimientos are produced
+    // by dependiente's Turno actions.
 
     final newItems = [...cuadre.items];
     if (nuevaCantidad <= 0) {
@@ -124,16 +170,7 @@ class CuadreController extends Notifier<List<Cuadre>> {
     final cuadre = findCuadre(cuadreId);
     if (cuadre == null) return;
 
-    final item = cuadre.items.firstWhere(
-      (i) => i.productoId == productoId,
-      orElse: () => throw StateError('Ítem no encontrado en el cuadre'),
-    );
-
-    _inventario.restoreMovimiento(
-      productoId: productoId,
-      cantidad: item.cantidad,
-    );
-
+    // Removing item from cuadre; no stock changes until approval.
     _patchItems(
       cuadreId,
       cuadre.items.where((i) => i.productoId != productoId).toList(),
@@ -143,13 +180,7 @@ class CuadreController extends Notifier<List<Cuadre>> {
   void agregarItemCuadre(String cuadreId, CuadreItem newItem) {
     final cuadre = findCuadre(cuadreId);
     if (cuadre == null) return;
-
-    _inventario.applyMovimiento(
-      productoId: newItem.productoId,
-      tipo: MovimientoTipo.salida,
-      cantidad: newItem.cantidad,
-    );
-
+    // Add item to cuadre; stock not changed until approval.
     final idx = cuadre.items.indexWhere(
       (i) => i.productoId == newItem.productoId,
     );

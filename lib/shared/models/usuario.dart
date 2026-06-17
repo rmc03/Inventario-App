@@ -32,6 +32,7 @@ class Usuario {
     required this.nombre,
     required this.rol,
     this.activo = true,
+    this.fotoUrl,
     required this.createdAt,
   });
 
@@ -40,7 +41,28 @@ class Usuario {
   final String nombre;
   final UserRole rol;
   final bool activo;
+  final String? fotoUrl;
   final DateTime createdAt;
+
+  Usuario copyWith({
+    String? id,
+    String? email,
+    String? nombre,
+    UserRole? rol,
+    bool? activo,
+    String? fotoUrl,
+    DateTime? createdAt,
+  }) {
+    return Usuario(
+      id: id ?? this.id,
+      email: email ?? this.email,
+      nombre: nombre ?? this.nombre,
+      rol: rol ?? this.rol,
+      activo: activo ?? this.activo,
+      fotoUrl: fotoUrl ?? this.fotoUrl,
+      createdAt: createdAt ?? this.createdAt,
+    );
+  }
 
   Map<String, dynamic> toJson() {
     return {
@@ -49,6 +71,7 @@ class Usuario {
       'nombre': nombre,
       'rol': rol.name,
       'activo': activo,
+      'foto_url': fotoUrl,
       'created_at': createdAt.toIso8601String(),
     };
   }
@@ -60,6 +83,7 @@ class Usuario {
       nombre: json['nombre'] as String,
       rol: UserRole.fromValue(json['rol'] as String),
       activo: (json['activo'] as bool?) ?? true,
+      fotoUrl: json['foto_url'] as String?,
       createdAt: DateTime.parse(json['created_at'] as String),
     );
   }
@@ -67,6 +91,15 @@ class Usuario {
   Map<String, dynamic> toLocalMap() => toJson();
 
   factory Usuario.fromLocalMap(Map<String, dynamic> map) {
-    return Usuario.fromJson(map);
+    final createdAt = map['created_at'] as String?;
+    return Usuario(
+      id: map['id'] as String,
+      email: map['email'] as String,
+      nombre: map['nombre'] as String,
+      rol: UserRole.fromValue(map['rol'] as String),
+      activo: (map['activo'] as int?) == 1 || (map['activo'] as bool?) == true,
+      fotoUrl: map['foto_url'] as String?,
+      createdAt: createdAt != null ? DateTime.parse(createdAt) : DateTime.now(),
+    );
   }
 }

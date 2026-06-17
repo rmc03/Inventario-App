@@ -100,7 +100,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: '/admin/configuracion',
-            builder: (context, state) => const ConfiguracionScreen(),
+            builder: (context, state) => const ConfiguracionScreen(isAdmin: true),
           ),
         ],
       ),
@@ -122,6 +122,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/dependiente/turno/resumen',
             builder: (context, state) => const CuadreResumenScreen(),
+          ),
+          GoRoute(
+            path: '/dependiente/configuracion',
+            builder: (context, state) => const ConfiguracionScreen(isAdmin: false),
           ),
         ],
       ),

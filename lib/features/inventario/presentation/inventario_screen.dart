@@ -11,6 +11,7 @@ import '../../turno/providers/turno_provider.dart';
 import '../../../shared/widgets/product_photo.dart';
 import '../../../shared/widgets/stat_card.dart';
 import '../providers/inventario_provider.dart';
+import '../../movimientos/providers/movimiento_provider.dart';
 
 class InventarioScreen extends ConsumerWidget {
   const InventarioScreen({super.key, required this.isAdmin});
@@ -352,6 +353,28 @@ class _ProductTile extends ConsumerWidget {
                         '${producto.stockActual} uds.',
                         style: Theme.of(context).textTheme.bodyMedium,
                       ),
+                      const SizedBox(width: AppSpacing.sm),
+                      // Mostrar vendidos hoy si existen
+                      Builder(builder: (context) {
+                        final soldAsync = ref.watch(currentCuadreSalesProvider);
+                        final sold = soldAsync.value?[producto.id] ?? 0;
+                        if (sold > 0) {
+                          final soldLabel = sold == 1 ? '1 vendido hoy' : '$sold vendidos hoy';
+                          return Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            margin: const EdgeInsets.only(left: AppSpacing.sm),
+                            decoration: BoxDecoration(
+                              color: AppColors.warning.withValues(alpha: 0.08),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              soldLabel,
+                              style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.warning),
+                            ),
+                          );
+                        }
+                        return const SizedBox.shrink();
+                      }),
                       if (producto.tieneStockBajo) ...[
                         const SizedBox(width: AppSpacing.sm),
                         Icon(
