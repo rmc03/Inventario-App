@@ -1,8 +1,8 @@
-// ignore_for_file: unused_element_parameter
+// ignore_for_file: unused_element_parameter, use_build_context_synchronously
 import 'dart:io';
 
-
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -13,11 +13,31 @@ import '../../../core/theme/app_dimens.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../shared/models/categoria.dart';
 import '../../../shared/models/producto.dart';
+import '../../../shared/widgets/category_name_dialog.dart';
 import '../../../shared/widgets/product_photo.dart';
 import '../providers/inventario_provider.dart';
 
 const _maxImageBytes = 5 * 1024 * 1024;
 const _defaultStockMinimo = 3;
+
+final _defaultCategoryCreatedAt = DateTime.utc(2024);
+final List<Categoria> _defaultCategorias = List.unmodifiable([
+  Categoria(
+    id: 'cat-comp',
+    nombre: 'Computadoras',
+    createdAt: _defaultCategoryCreatedAt,
+  ),
+  Categoria(
+    id: 'cat-perif',
+    nombre: 'Periféricos',
+    createdAt: _defaultCategoryCreatedAt,
+  ),
+  Categoria(
+    id: 'cat-mueb',
+    nombre: 'Muebles',
+    createdAt: _defaultCategoryCreatedAt,
+  ),
+]);
 
 class ProductoFormScreen extends ConsumerStatefulWidget {
   const ProductoFormScreen({super.key, this.productId});
@@ -37,6 +57,7 @@ class _ProductoFormScreenState extends ConsumerState<ProductoFormScreen> {
   String? _fotoUrl;
   String? _nombreError;
   Producto? _producto;
+  int _categoriaDropdownVersion = 0;
 
   bool get _isEditing => widget.productId != null;
 
@@ -91,16 +112,14 @@ class _ProductoFormScreenState extends ConsumerState<ProductoFormScreen> {
   Widget build(BuildContext context) {
     final inventario = ref.watch(inventarioControllerProvider);
 
-    final hardcodedCategorias = [
-      Categoria(id: 'cat-comp', nombre: 'Computadoras', createdAt: DateTime.now()),
-      Categoria(id: 'cat-perif', nombre: 'Periféricos', createdAt: DateTime.now()),
-      Categoria(id: 'cat-mueb', nombre: 'Muebles', createdAt: DateTime.now()),
-    ];
     final allCategorias = [
-      ...hardcodedCategorias,
-      ...inventario.categorias.where((dbCat) => !hardcodedCategorias.any((hc) => hc.nombre == dbCat.nombre)),
+      ..._defaultCategorias,
+      ...inventario.categorias.where(
+        (dbCat) => !_defaultCategorias.any((hc) => hc.nombre == dbCat.nombre),
+      ),
     ];
-    final hasValidSelection = _categoriaId == null || allCategorias.any((c) => c.id == _categoriaId);
+    final hasValidSelection =
+        _categoriaId == null || allCategorias.any((c) => c.id == _categoriaId);
     final effectiveCategoriaId = hasValidSelection ? _categoriaId : null;
 
     final dropdownBorder = OutlineInputBorder(
@@ -167,8 +186,8 @@ class _ProductoFormScreenState extends ConsumerState<ProductoFormScreen> {
                       const _CardSeparator(),
                       _FormItem(
                         label: 'Categoría',
-                          child: DropdownButtonFormField<String>(
-                            initialValue: effectiveCategoriaId,
+                        child: DropdownButtonFormField<String>(
+                          initialValue: effectiveCategoriaId,
                           decoration: InputDecoration(
                             filled: false,
                             fillColor: Colors.transparent,
@@ -183,7 +202,9 @@ class _ProductoFormScreenState extends ConsumerState<ProductoFormScreen> {
                             ),
                             errorBorder: OutlineInputBorder(
                               borderRadius: AppRadii.smBorder,
-                              borderSide: const BorderSide(color: AppColors.danger),
+                              borderSide: const BorderSide(
+                                color: AppColors.danger,
+                              ),
                             ),
                             focusedErrorBorder: OutlineInputBorder(
                               borderRadius: AppRadii.smBorder,
@@ -198,22 +219,27 @@ class _ProductoFormScreenState extends ConsumerState<ProductoFormScreen> {
                               vertical: AppSpacing.md,
                             ),
                             hintText: 'Seleccionar categoría',
-                            hintStyle: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                              color: AppColors.muted.withValues(alpha: 0.72),
-                              fontWeight: FontWeight.w400,
-                            ),
+                            hintStyle: Theme.of(context).textTheme.bodyLarge
+                                ?.copyWith(
+                                  color: AppColors.muted.withValues(
+                                    alpha: 0.72,
+                                  ),
+                                  fontWeight: FontWeight.w400,
+                                ),
                           ),
                           icon: const Icon(
                             Icons.keyboard_arrow_down_rounded,
                             color: AppColors.muted,
                             size: 22,
                           ),
-                          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                            color: AppColors.ink,
-                            fontWeight: FontWeight.w500,
-                          ),
+                          style: Theme.of(context).textTheme.bodyLarge
+                              ?.copyWith(
+                                color: AppColors.ink,
+                                fontWeight: FontWeight.w500,
+                              ),
                           dropdownColor: AppColors.surface,
                           borderRadius: AppRadii.mdBorder,
+                          key: ValueKey(_categoriaDropdownVersion),
                           items: [
                             ...allCategorias.map(
                               (cat) => DropdownMenuItem(
@@ -233,9 +259,7 @@ class _ProductoFormScreenState extends ConsumerState<ProductoFormScreen> {
                                   const SizedBox(width: AppSpacing.sm),
                                   Text(
                                     'Crear nueva categoría',
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .bodyLarge
+                                    style: Theme.of(context).textTheme.bodyLarge
                                         ?.copyWith(
                                           color: AppColors.primary,
                                           fontWeight: FontWeight.w600,
@@ -247,7 +271,17 @@ class _ProductoFormScreenState extends ConsumerState<ProductoFormScreen> {
                           ],
                           onChanged: (value) {
                             if (value == '__create_new__') {
-                              _showCreateCategoryDialog(context, ref);
+                              // Schedule dialog after the current frame completes.
+                              // This allows the dropdown menu to fully close and all
+                              // its overlay dependents to be cleaned up before the dialog
+                              // opens, preventing Flutter assertion errors.
+                              SchedulerBinding.instance.addPostFrameCallback((
+                                _,
+                              ) {
+                                if (!mounted) return;
+                                setState(() => _categoriaDropdownVersion++);
+                                _showCreateCategoryDialog(context, ref);
+                              });
                             } else {
                               setState(() => _categoriaId = value);
                             }
@@ -365,9 +399,13 @@ class _ProductoFormScreenState extends ConsumerState<ProductoFormScreen> {
     // reemplazamos la ruta actual por la del detalle para mantener
     // `/admin/inventario` en el historial (evitando perder la pila).
     if (_isEditing) {
-      if (context.mounted) context.pop();
+      if (context.mounted) {
+        context.pop();
+      }
     } else {
-      if (context.mounted) context.replace('/admin/inventario/productos/${producto.id}');
+      if (context.mounted) {
+        context.replace('/admin/inventario/productos/${producto.id}');
+      }
     }
   }
 
@@ -407,69 +445,15 @@ class _ProductoFormScreenState extends ConsumerState<ProductoFormScreen> {
     BuildContext context,
     WidgetRef ref,
   ) async {
-    final controller = TextEditingController();
     final name = await showDialog<String>(
       context: context,
-      builder: (dialogContext) {
-        String? errorText;
-        return StatefulBuilder(
-          builder: (context, setDialogState) {
-            return AlertDialog(
-              title: const Text('Nueva categoría'),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  TextField(
-                    controller: controller,
-                    autofocus: true,
-                    textCapitalization: TextCapitalization.words,
-                    decoration: InputDecoration(
-                      labelText: 'Nombre',
-                      errorText: errorText,
-                    ),
-                    onChanged: (_) {
-                      if (errorText != null) {
-                        setDialogState(() => errorText = null);
-                      }
-                    },
-                  ),
-                ],
-              ),
-              actions: [
-                OutlinedButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: const Text('Cancelar'),
-                ),
-                ElevatedButton(
-                  onPressed: () {
-                    final value = controller.text.trim();
-                    if (value.isEmpty) {
-                      setDialogState(
-                        () => errorText = 'El nombre es obligatorio',
-                      );
-                      return;
-                    }
-                    final isDuplicate = ref
-                        .read(inventarioControllerProvider.notifier)
-                        .existsCategoriaConNombre(value);
-                    if (isDuplicate) {
-                      setDialogState(
-                        () => errorText =
-                            'Ya existe una categoría con este nombre',
-                      );
-                      return;
-                    }
-                    Navigator.of(context).pop(value);
-                  },
-                  child: const Text('Guardar'),
-                ),
-              ],
-            );
-          },
-        );
-      },
+      builder: (_) => CategoryNameDialog(
+        title: 'Nueva categoría',
+        categoryExists: (value) => ref
+            .read(inventarioControllerProvider.notifier)
+            .existsCategoriaConNombre(value),
+      ),
     );
-    controller.dispose();
 
     if (name != null && name.isNotEmpty) {
       final categoria = Categoria(
@@ -534,9 +518,7 @@ class _ProductPhotoComposer extends StatelessWidget {
                   hasImage
                       ? 'Puedes cambiarla o quitarla antes de guardar.'
                       : 'Opcional. JPG, PNG o WebP. Máx. 5 MB.',
-                  style: Theme.of(
-                    context,
-                  ).textTheme.bodyMedium?.copyWith(
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     color: const Color(0xFF636366),
                   ),
                 ),
@@ -573,10 +555,7 @@ class _ProductPhotoComposer extends StatelessWidget {
       ),
       child: ClipRRect(
         borderRadius: AppRadii.lgBorder,
-        child: InkWell(
-          onTap: !hasImage ? onPick : null,
-          child: content,
-        ),
+        child: InkWell(onTap: !hasImage ? onPick : null, child: content),
       ),
     );
   }
@@ -590,9 +569,7 @@ class _PhotoPlaceholder extends StatelessWidget {
     return DecoratedBox(
       decoration: const BoxDecoration(color: AppColors.surfaceSecondary),
       child: CustomPaint(
-        painter: const _DashedRoundedRectPainter(
-          borderRadius: AppRadii.md,
-        ),
+        painter: const _DashedRoundedRectPainter(borderRadius: AppRadii.md),
         child: Center(
           child: Icon(
             Icons.add_a_photo_outlined,
@@ -713,7 +690,8 @@ class _PlainTextEditor extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isMultiline = (maxLines ?? 1) > 1 || (minLines ?? 1) > 1;
-    final resolvedKeyboardType = keyboardType ??
+    final resolvedKeyboardType =
+        keyboardType ??
         (isMultiline ? TextInputType.multiline : TextInputType.text);
 
     final border = OutlineInputBorder(
@@ -743,10 +721,7 @@ class _PlainTextEditor extends StatelessWidget {
         enabledBorder: border,
         focusedBorder: OutlineInputBorder(
           borderRadius: AppRadii.smBorder,
-          borderSide: const BorderSide(
-            color: AppColors.primary,
-            width: 1.5,
-          ),
+          borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: AppRadii.smBorder,
@@ -766,9 +741,9 @@ class _PlainTextEditor extends StatelessWidget {
           color: AppColors.danger,
           fontWeight: FontWeight.w600,
         ),
-        counterStyle: Theme.of(context).textTheme.bodyMedium?.copyWith(
-          color: const Color(0xFF636366),
-        ),
+        counterStyle: Theme.of(
+          context,
+        ).textTheme.bodyMedium?.copyWith(color: const Color(0xFF636366)),
         hintText: hintText,
         hintStyle: Theme.of(context).textTheme.bodyLarge?.copyWith(
           color: AppColors.muted.withValues(alpha: 0.72),
@@ -778,8 +753,6 @@ class _PlainTextEditor extends StatelessWidget {
     );
   }
 }
-
-
 
 class _CardSeparator extends StatelessWidget {
   const _CardSeparator();
@@ -860,10 +833,9 @@ class _DashedRoundedRectPainter extends CustomPainter {
     );
 
     final path = Path()
-      ..addRRect(RRect.fromRectAndRadius(
-        rect,
-        Radius.circular(borderRadius - 1),
-      ));
+      ..addRRect(
+        RRect.fromRectAndRadius(rect, Radius.circular(borderRadius - 1)),
+      );
 
     for (final pathMetric in path.computeMetrics()) {
       final length = pathMetric.length;
@@ -872,7 +844,10 @@ class _DashedRoundedRectPainter extends CustomPainter {
       double distance = 0.0;
 
       while (distance < length) {
-        final dashPath = pathMetric.extractPath(distance, distance + dashLength);
+        final dashPath = pathMetric.extractPath(
+          distance,
+          distance + dashLength,
+        );
         canvas.drawPath(dashPath, paint);
         distance += dashLength + gapLength;
       }

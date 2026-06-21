@@ -10,6 +10,7 @@ import 'package:path/path.dart' as p;
 import '../../../core/local_db/local_database.dart';
 import '../../../shared/models/usuario.dart';
 import '../../../shared/models/categoria.dart';
+import '../../../shared/widgets/category_name_dialog.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../inventario/providers/inventario_provider.dart';
 
@@ -63,7 +64,8 @@ class ConfiguracionScreen extends ConsumerWidget {
                     ),
                     if (!isAdmin)
                       IconButton(
-                        onPressed: () => _showEditProfileDialog(context, ref, user),
+                        onPressed: () =>
+                            _showEditProfileDialog(context, ref, user),
                         icon: const Icon(Icons.edit_rounded),
                         tooltip: 'Editar perfil',
                       ),
@@ -77,7 +79,9 @@ class ConfiguracionScreen extends ConsumerWidget {
                 child: ListTile(
                   leading: const Icon(Icons.lock_outline),
                   title: const Text('Cambiar contraseña'),
-                  subtitle: const Text('Cambia tu contraseña de acceso (simulado)'),
+                  subtitle: const Text(
+                    'Cambia tu contraseña de acceso (simulado)',
+                  ),
                   trailing: const Icon(Icons.chevron_right_rounded),
                   onTap: () => _showChangePasswordDialog(context),
                 ),
@@ -85,7 +89,14 @@ class ConfiguracionScreen extends ConsumerWidget {
             ],
             if (isAdmin) ...[
               const SizedBox(height: 18),
-              Text('USUARIOS', style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600, color: AppColors.muted, letterSpacing: 0.5)),
+              Text(
+                'USUARIOS',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.muted,
+                  letterSpacing: 0.5,
+                ),
+              ),
               const SizedBox(height: 10),
               Card(
                 child: ListTile(
@@ -103,7 +114,11 @@ class ConfiguracionScreen extends ConsumerWidget {
                 Expanded(
                   child: Text(
                     'CATEGORÍAS',
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600, color: AppColors.muted, letterSpacing: 0.5),
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.muted,
+                      letterSpacing: 0.5,
+                    ),
                   ),
                 ),
                 if (isAdmin)
@@ -123,11 +138,8 @@ class ConfiguracionScreen extends ConsumerWidget {
                   leading: const Icon(Icons.category_outlined),
                   trailing: isAdmin
                       ? IconButton(
-                          onPressed: () => _confirmDeleteCategoria(
-                            context,
-                            ref,
-                            categoria,
-                          ),
+                          onPressed: () =>
+                              _confirmDeleteCategoria(context, ref, categoria),
                           icon: const Icon(Icons.delete_outline_rounded),
                           color: AppColors.danger,
                           tooltip: 'Eliminar',
@@ -144,70 +156,15 @@ class ConfiguracionScreen extends ConsumerWidget {
   }
 
   Future<void> _showCategoryDialog(BuildContext context, WidgetRef ref) async {
-    final controller = TextEditingController();
     final name = await showDialog<String>(
       context: context,
-      builder: (dialogContext) {
-        String? errorText;
-        return StatefulBuilder(
-          builder: (context, setDialogState) {
-            return AlertDialog(
-              title: const Text('Crear categoría'),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  TextField(
-                    controller: controller,
-                    autofocus: true,
-                    textCapitalization: TextCapitalization.words,
-                    decoration: InputDecoration(
-                      labelText: 'Nombre',
-                      errorText: errorText,
-                    ),
-                    onChanged: (_) {
-                      if (errorText != null) {
-                        setDialogState(() => errorText = null);
-                      }
-                    },
-                  ),
-                ],
-              ),
-              actions: [
-                OutlinedButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: const Text('Cancelar'),
-                ),
-                ElevatedButton(
-                  onPressed: () {
-                    final value = controller.text.trim();
-                    if (value.isEmpty) {
-                      setDialogState(
-                        () => errorText = 'El nombre es obligatorio',
-                      );
-                      return;
-                    }
-                    final isDuplicate = ref
-                        .read(inventarioControllerProvider.notifier)
-                        .existsCategoriaConNombre(value);
-                    if (isDuplicate) {
-                      setDialogState(
-                        () => errorText =
-                            'Ya existe una categoría con este nombre',
-                      );
-                      return;
-                    }
-                    Navigator.of(context).pop(value);
-                  },
-                  child: const Text('Guardar'),
-                ),
-              ],
-            );
-          },
-        );
-      },
+      builder: (_) => CategoryNameDialog(
+        title: 'Crear categoría',
+        categoryExists: (value) => ref
+            .read(inventarioControllerProvider.notifier)
+            .existsCategoriaConNombre(value),
+      ),
     );
-    controller.dispose();
 
     if (name != null && name.isNotEmpty) {
       ref
@@ -264,7 +221,11 @@ class ConfiguracionScreen extends ConsumerWidget {
     }
   }
 
-  Future<void> _showEditProfileDialog(BuildContext context, WidgetRef ref, Usuario? user) async {
+  Future<void> _showEditProfileDialog(
+    BuildContext context,
+    WidgetRef ref,
+    Usuario? user,
+  ) async {
     if (user == null) return;
     final nameCtrl = TextEditingController(text: user.nombre);
     final emailCtrl = TextEditingController(text: user.email);
@@ -287,24 +248,43 @@ class ConfiguracionScreen extends ConsumerWidget {
                   const SizedBox(height: 8),
                   TextField(
                     controller: emailCtrl,
-                    decoration: InputDecoration(labelText: 'Email', errorText: errorText),
+                    decoration: InputDecoration(
+                      labelText: 'Email',
+                      errorText: errorText,
+                    ),
                     keyboardType: TextInputType.emailAddress,
                   ),
                 ],
               ),
               actions: [
-                OutlinedButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('Cancelar')),
-                ElevatedButton(onPressed: () {
-                  final newName = nameCtrl.text.trim();
-                  final newEmail = emailCtrl.text.trim();
-                  if (newName.isEmpty || newEmail.isEmpty || !newEmail.contains('@')) {
-                    setState(() => errorText = 'Introduce un nombre y un email válidos');
-                    return;
-                  }
-                  final updated = user.copyWith(nombre: newName, email: newEmail);
-                  ref.read(authControllerProvider.notifier).updateUser(updated);
-                  Navigator.of(context).pop(true);
-                }, child: const Text('Guardar')),
+                OutlinedButton(
+                  onPressed: () => Navigator.of(context).pop(false),
+                  child: const Text('Cancelar'),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    final newName = nameCtrl.text.trim();
+                    final newEmail = emailCtrl.text.trim();
+                    if (newName.isEmpty ||
+                        newEmail.isEmpty ||
+                        !newEmail.contains('@')) {
+                      setState(
+                        () => errorText =
+                            'Introduce un nombre y un email válidos',
+                      );
+                      return;
+                    }
+                    final updated = user.copyWith(
+                      nombre: newName,
+                      email: newEmail,
+                    );
+                    ref
+                        .read(authControllerProvider.notifier)
+                        .updateUser(updated);
+                    Navigator.of(context).pop(true);
+                  },
+                  child: const Text('Guardar'),
+                ),
               ],
             );
           },
@@ -314,7 +294,11 @@ class ConfiguracionScreen extends ConsumerWidget {
     nameCtrl.dispose();
     emailCtrl.dispose();
     if (result ?? false) {
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Perfil actualizado')));
+      if (context.mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Perfil actualizado')));
+      }
     }
   }
 
@@ -334,24 +318,51 @@ class ConfiguracionScreen extends ConsumerWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   // Old password kept for UX only; not validated in local demo
-                  TextField(controller: oldCtrl, obscureText: true, decoration: const InputDecoration(labelText: 'Contraseña actual')),
+                  TextField(
+                    controller: oldCtrl,
+                    obscureText: true,
+                    decoration: const InputDecoration(
+                      labelText: 'Contraseña actual',
+                    ),
+                  ),
                   const SizedBox(height: 8),
-                  TextField(controller: newCtrl, obscureText: true, decoration: const InputDecoration(labelText: 'Nueva contraseña')),
+                  TextField(
+                    controller: newCtrl,
+                    obscureText: true,
+                    decoration: const InputDecoration(
+                      labelText: 'Nueva contraseña',
+                    ),
+                  ),
                   const SizedBox(height: 8),
-                  TextField(controller: confirmCtrl, obscureText: true, decoration: InputDecoration(labelText: 'Confirmar', errorText: errorText)),
+                  TextField(
+                    controller: confirmCtrl,
+                    obscureText: true,
+                    decoration: InputDecoration(
+                      labelText: 'Confirmar',
+                      errorText: errorText,
+                    ),
+                  ),
                 ],
               ),
               actions: [
-                OutlinedButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('Cancelar')),
-                ElevatedButton(onPressed: () {
-                  final n = newCtrl.text;
-                  final c = confirmCtrl.text;
-                  if (n.isEmpty || n != c) {
-                    setState(() => errorText = 'Las contraseñas no coinciden');
-                    return;
-                  }
-                  Navigator.of(context).pop(true);
-                }, child: const Text('Cambiar')),
+                OutlinedButton(
+                  onPressed: () => Navigator.of(context).pop(false),
+                  child: const Text('Cancelar'),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    final n = newCtrl.text;
+                    final c = confirmCtrl.text;
+                    if (n.isEmpty || n != c) {
+                      setState(
+                        () => errorText = 'Las contraseñas no coinciden',
+                      );
+                      return;
+                    }
+                    Navigator.of(context).pop(true);
+                  },
+                  child: const Text('Cambiar'),
+                ),
               ],
             );
           },
@@ -362,7 +373,15 @@ class ConfiguracionScreen extends ConsumerWidget {
     newCtrl.dispose();
     confirmCtrl.dispose();
     if (result ?? false) {
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Cambio simulado: integra con Supabase para guardar contraseña')));
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Cambio simulado: integra con Supabase para guardar contraseña',
+            ),
+          ),
+        );
+      }
     }
   }
 }
@@ -380,15 +399,20 @@ class _ProfileAvatarState extends ConsumerState<_ProfileAvatar> {
   final ImagePicker _picker = ImagePicker();
 
   Future<void> _pickAndSave() async {
-    final xfile = await _picker.pickImage(source: ImageSource.gallery, imageQuality: 80);
+    final xfile = await _picker.pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 80,
+    );
     if (xfile == null) return;
 
     final appDir = await LocalDatabase.instance.appDocsDir;
-    final filename = 'user_${widget.user?.id ?? const Uuid().v4()}${p.extension(xfile.path)}';
+    final filename =
+        'user_${widget.user?.id ?? const Uuid().v4()}${p.extension(xfile.path)}';
     final dest = File(p.join(appDir.path, filename));
     await File(xfile.path).copy(dest.path);
 
-    final updated = widget.user?.copyWith(fotoUrl: dest.path) ??
+    final updated =
+        widget.user?.copyWith(fotoUrl: dest.path) ??
         Usuario(
           id: const Uuid().v4(),
           email: 'unknown',
@@ -399,7 +423,7 @@ class _ProfileAvatarState extends ConsumerState<_ProfileAvatar> {
         );
 
     await ref.read(authControllerProvider.notifier).updateUser(updated);
-    setState(() {});
+    if (mounted) setState(() {});
   }
 
   @override
@@ -413,13 +437,9 @@ class _ProfileAvatarState extends ConsumerState<_ProfileAvatar> {
         child: Icon(Icons.person),
       );
     } else if (url.startsWith('http')) {
-      avatar = CircleAvatar(
-        backgroundImage: NetworkImage(url),
-      );
+      avatar = CircleAvatar(backgroundImage: NetworkImage(url));
     } else {
-      avatar = CircleAvatar(
-        backgroundImage: FileImage(File(url)),
-      );
+      avatar = CircleAvatar(backgroundImage: FileImage(File(url)));
     }
 
     return GestureDetector(
@@ -431,10 +451,7 @@ class _ProfileAvatarState extends ConsumerState<_ProfileAvatar> {
           const CircleAvatar(
             radius: 10,
             backgroundColor: Colors.white,
-            child: Icon(
-              Icons.camera_alt_rounded,
-              size: 14,
-            ),
+            child: Icon(Icons.camera_alt_rounded, size: 14),
           ),
         ],
       ),

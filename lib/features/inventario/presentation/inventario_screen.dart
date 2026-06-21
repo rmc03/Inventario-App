@@ -13,6 +13,12 @@ import '../../../shared/widgets/stat_card.dart';
 import '../providers/inventario_provider.dart';
 import '../../movimientos/providers/movimiento_provider.dart';
 
+final _emptyCategoria = Categoria(
+  id: '',
+  nombre: '',
+  createdAt: DateTime.utc(2024),
+);
+
 class InventarioScreen extends ConsumerWidget {
   const InventarioScreen({super.key, required this.isAdmin});
 
@@ -35,148 +41,159 @@ class InventarioScreen extends ConsumerWidget {
           : null,
       body: SafeArea(
         top: false,
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(
-            AppSpacing.xl,
-            AppSpacing.sm,
-            AppSpacing.xl,
-            AppSpacing.xxl,
-          ),
-          children: [
-            // ─── Barra de búsqueda tipo pill ────────────────────────────────
-            Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    onChanged: ref
-                        .read(inventarioControllerProvider.notifier)
-                        .setSearch,
-                    decoration: const InputDecoration(
-                      hintText: 'Buscar producto...',
-                      prefixIcon: Icon(Icons.search_rounded),
-                      border: OutlineInputBorder(
-                        borderRadius: AppRadii.pillBorder,
-                        borderSide: BorderSide(color: AppColors.line),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: AppRadii.pillBorder,
-                        borderSide: BorderSide(color: AppColors.line),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: AppRadii.pillBorder,
-                        borderSide: BorderSide(
-                          color: AppColors.primary,
-                          width: 1.5,
+        child: CustomScrollView(
+          slivers: [
+            // ─── Barra de búsqueda tipo pill ────────────────────────────
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.xl,
+                  AppSpacing.sm,
+                  AppSpacing.xl,
+                  0,
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        onChanged: ref
+                            .read(inventarioControllerProvider.notifier)
+                            .setSearch,
+                        decoration: const InputDecoration(
+                          hintText: 'Buscar producto...',
+                          prefixIcon: Icon(Icons.search_rounded),
+                          border: OutlineInputBorder(
+                            borderRadius: AppRadii.pillBorder,
+                            borderSide: BorderSide(color: AppColors.line),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: AppRadii.pillBorder,
+                            borderSide: BorderSide(color: AppColors.line),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: AppRadii.pillBorder,
+                            borderSide: BorderSide(
+                              color: AppColors.primary,
+                              width: 1.5,
+                            ),
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                ),
-                const SizedBox(width: AppSpacing.sm),
-                IconButton.filledTonal(
-                  onPressed: () => _showFilterSheet(context, ref),
-                  icon: const Icon(Icons.tune_rounded),
-                  tooltip: 'Filtrar y Ordenar',
-                ),
-              ],
-            ),
-            // ─── Chips de filtros activos ───────────────────────────────────
-            if (state.categoriaId != null ||
-                state.soloStockBajo ||
-                state.sortBy != ProductoSortBy.nombreAsc) ...[
-              const SizedBox(height: AppSpacing.sm),
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(
-                  children: [
-                    if (state.categoriaId != null) ...[
-                      InputChip(
-                        label: Text(
-                          state.categorias
-                              .firstWhere(
-                                (c) => c.id == state.categoriaId,
-                                orElse: () => Categoria(
-                                  id: '',
-                                  nombre: '',
-                                  createdAt: DateTime.now(),
-                                ),
-                              )
-                              .nombre,
-                        ),
-                        onDeleted: () => ref
-                            .read(inventarioControllerProvider.notifier)
-                            .setCategoria(null),
-                      ),
-                      const SizedBox(width: AppSpacing.sm),
-                    ],
-                    if (state.soloStockBajo) ...[
-                      InputChip(
-                        label: const Text('Solo stock bajo'),
-                        onDeleted: () => ref
-                            .read(inventarioControllerProvider.notifier)
-                            .setSoloStockBajo(false),
-                      ),
-                      const SizedBox(width: AppSpacing.sm),
-                    ],
-                    if (state.sortBy != ProductoSortBy.nombreAsc) ...[
-                      InputChip(
-                        label: Text('Orden: ${state.sortBy.label}'),
-                        onDeleted: () => ref
-                            .read(inventarioControllerProvider.notifier)
-                            .setSortBy(ProductoSortBy.nombreAsc),
-                      ),
-                      const SizedBox(width: AppSpacing.sm),
-                    ],
+                    const SizedBox(width: AppSpacing.sm),
+                    IconButton.filledTonal(
+                      onPressed: () => _showFilterSheet(context, ref),
+                      icon: const Icon(Icons.tune_rounded),
+                      tooltip: 'Filtrar y Ordenar',
+                    ),
                   ],
                 ),
               ),
-            ],
-            const SizedBox(height: AppSpacing.xl),
-            // ─── Stats ─────────────────────────────────────────────────────
-            Row(
-              children: [
-                Consumer(
-                  builder: (context, ref, _) {
-                    final total = ref.watch(
-                      inventarioControllerProvider.select(
-                        (s) => s.totalProductos,
-                      ),
-                    );
-                    return StatCard(
-                      label: 'Total productos',
-                      value: total.toString(),
-                      tint: AppColors.primary,
-                    );
-                  },
-                ),
-                const SizedBox(width: AppSpacing.sm),
-                Consumer(
-                  builder: (context, ref, _) {
-                    final valor = ref.watch(
-                      inventarioControllerProvider.select((s) => s.valorTotal),
-                    );
-                    return StatCard(
-                      label: 'Valor total',
-                      value: formatCurrency(valor),
-                      tint: AppColors.success,
-                    );
-                  },
-                ),
-              ],
             ),
-            const SizedBox(height: AppSpacing.xl),
-            // ─── Lista de productos ────────────────────────────────────────
-            if (productos.isEmpty)
-              const _EmptyInventory()
-            else
-              for (final producto in productos) ...[
-                _ProductTile(
-                  key: ValueKey(producto.id),
-                  producto: producto,
-                  isAdmin: isAdmin,
+            // ─── Chips de filtros activos ─────────────────────────────
+            if (state.categoriaId != null ||
+                state.soloStockBajo ||
+                state.sortBy != ProductoSortBy.nombreAsc)
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.xl,
+                    AppSpacing.sm,
+                    AppSpacing.xl,
+                    0,
+                  ),
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: [
+                        if (state.categoriaId != null) ...[
+                          InputChip(
+                            label: Text(
+                              state.categorias
+                                  .firstWhere(
+                                    (c) => c.id == state.categoriaId,
+                                    orElse: () => _emptyCategoria,
+                                  )
+                                  .nombre,
+                            ),
+                            onDeleted: () => ref
+                                .read(inventarioControllerProvider.notifier)
+                                .setCategoria(null),
+                          ),
+                          const SizedBox(width: AppSpacing.sm),
+                        ],
+                        if (state.soloStockBajo) ...[
+                          InputChip(
+                            label: const Text('Solo stock bajo'),
+                            onDeleted: () => ref
+                                .read(inventarioControllerProvider.notifier)
+                                .setSoloStockBajo(false),
+                          ),
+                          const SizedBox(width: AppSpacing.sm),
+                        ],
+                        if (state.sortBy != ProductoSortBy.nombreAsc) ...[
+                          InputChip(
+                            label: Text('Orden: ${state.sortBy.label}'),
+                            onDeleted: () => ref
+                                .read(inventarioControllerProvider.notifier)
+                                .setSortBy(ProductoSortBy.nombreAsc),
+                          ),
+                          const SizedBox(width: AppSpacing.sm),
+                        ],
+                      ],
+                    ),
+                  ),
                 ),
-                const _ListSeparator(),
-              ],
+              ),
+            const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.xl)),
+            // ─── Stats ────────────────────────────────────────────────
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
+                child: Row(
+                  children: [
+                    StatCard(
+                      label: 'Total productos',
+                      value: state.totalProductos.toString(),
+                      tint: AppColors.primary,
+                    ),
+                    const SizedBox(width: AppSpacing.sm),
+                    StatCard(
+                      label: 'Valor total',
+                      value: formatCurrency(state.valorTotal),
+                      tint: AppColors.success,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.xl)),
+            // ─── Lista de productos (lazy-loaded) ────────────────────
+            if (productos.isEmpty)
+              const SliverToBoxAdapter(child: _EmptyInventory())
+            else
+              SliverList.builder(
+                itemCount: productos.length,
+                itemBuilder: (context, index) {
+                  final producto = productos[index];
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.xl,
+                    ),
+                    child: Column(
+                      children: [
+                        _ProductTile(
+                          key: ValueKey(producto.id),
+                          producto: producto,
+                          isAdmin: isAdmin,
+                        ),
+                        const _ListSeparator(),
+                      ],
+                    ),
+                  );
+                },
+              ),
+            const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.xxl)),
           ],
         ),
       ),
@@ -323,100 +340,120 @@ class _ProductTile extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return InkWell(
-      onTap: isAdmin
-          ? () => context.push('/admin/inventario/productos/${producto.id}')
-          : () => _handleDependienteTap(context, ref, producto),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.sm,
-          vertical: AppSpacing.md,
-        ),
-        child: Row(
-          children: [
-            ProductPhoto(url: producto.fotoUrl, size: 56),
-            const SizedBox(width: AppSpacing.md),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+    // RepaintBoundary aísla la rasterización de cada tile (foto + contador
+    // de ventas en vivo) del resto de la lista, evitando repintar toda la
+    // pantalla cuando cambia el "vendidos hoy" de un solo producto.
+    return RepaintBoundary(
+      child: InkWell(
+        onTap: isAdmin
+            ? () => context.push('/admin/inventario/productos/${producto.id}')
+            : () => _handleDependienteTap(context, ref, producto),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.sm,
+            vertical: AppSpacing.md,
+          ),
+          child: Row(
+            children: [
+              ProductPhoto(url: producto.fotoUrl, size: 56),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      producto.nombre,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    const SizedBox(height: 2),
+                    Row(
+                      children: [
+                        Text(
+                          '${producto.stockActual} uds.',
+                          style: Theme.of(context).textTheme.bodyMedium,
+                        ),
+                        const SizedBox(width: AppSpacing.sm),
+                        // Mostrar vendidos hoy si existen
+                        Builder(
+                          builder: (context) {
+                            final sold = ref.watch(
+                              currentCuadreSalesProvider.select(
+                                (sales) => sales.value?[producto.id] ?? 0,
+                              ),
+                            );
+                            if (sold > 0) {
+                              final soldLabel = sold == 1
+                                  ? '1 vendido hoy'
+                                  : '$sold vendidos hoy';
+                              return Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 4,
+                                ),
+                                margin: const EdgeInsets.only(
+                                  left: AppSpacing.sm,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: AppColors.warning.withValues(
+                                    alpha: 0.08,
+                                  ),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Text(
+                                  soldLabel,
+                                  style: Theme.of(context).textTheme.bodySmall
+                                      ?.copyWith(color: AppColors.warning),
+                                ),
+                              );
+                            }
+                            return const SizedBox.shrink();
+                          },
+                        ),
+                        if (producto.tieneStockBajo) ...[
+                          const SizedBox(width: AppSpacing.sm),
+                          Icon(
+                            Icons.warning_amber_rounded,
+                            size: 14,
+                            color: AppColors.danger,
+                          ),
+                          Text(
+                            ' Stock bajo',
+                            style: Theme.of(context).textTheme.bodyMedium
+                                ?.copyWith(
+                                  color: AppColors.danger,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Text(
-                    producto.nombre,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.titleMedium,
+                    formatCurrency(producto.precio),
+                    style: Theme.of(
+                      context,
+                    ).textTheme.titleMedium?.copyWith(color: AppColors.primary),
                   ),
-                  const SizedBox(height: 2),
-                  Row(
-                    children: [
-                      Text(
-                        '${producto.stockActual} uds.',
-                        style: Theme.of(context).textTheme.bodyMedium,
-                      ),
-                      const SizedBox(width: AppSpacing.sm),
-                      // Mostrar vendidos hoy si existen
-                      Builder(builder: (context) {
-                        final soldAsync = ref.watch(currentCuadreSalesProvider);
-                        final sold = soldAsync.value?[producto.id] ?? 0;
-                        if (sold > 0) {
-                          final soldLabel = sold == 1 ? '1 vendido hoy' : '$sold vendidos hoy';
-                          return Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                            margin: const EdgeInsets.only(left: AppSpacing.sm),
-                            decoration: BoxDecoration(
-                              color: AppColors.warning.withValues(alpha: 0.08),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Text(
-                              soldLabel,
-                              style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.warning),
-                            ),
-                          );
-                        }
-                        return const SizedBox.shrink();
-                      }),
-                      if (producto.tieneStockBajo) ...[
-                        const SizedBox(width: AppSpacing.sm),
-                        Icon(
-                          Icons.warning_amber_rounded,
-                          size: 14,
-                          color: AppColors.danger,
-                        ),
-                        Text(
-                          ' Stock bajo',
-                          style: Theme.of(context).textTheme.bodyMedium
-                              ?.copyWith(
-                                color: AppColors.danger,
-                                fontWeight: FontWeight.w500,
-                              ),
-                        ),
-                      ],
-                    ],
+                  const SizedBox(height: 8),
+                  Icon(
+                    isAdmin
+                        ? Icons.chevron_right_rounded
+                        : Icons.add_circle_outline_rounded,
+                    color: AppColors.muted,
+                    size: 22,
                   ),
                 ],
               ),
-            ),
-            const SizedBox(width: AppSpacing.sm),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text(
-                  formatCurrency(producto.precio),
-                  style: Theme.of(
-                    context,
-                  ).textTheme.titleMedium?.copyWith(color: AppColors.primary),
-                ),
-                const SizedBox(height: 8),
-                Icon(
-                  isAdmin
-                      ? Icons.chevron_right_rounded
-                      : Icons.add_circle_outline_rounded,
-                  color: AppColors.muted,
-                  size: 22,
-                ),
-              ],
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

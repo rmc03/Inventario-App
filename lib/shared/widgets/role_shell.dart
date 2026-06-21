@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -38,33 +37,29 @@ class RoleShell extends ConsumerWidget {
           ],
         ),
         bottomNavigationBar: showNavigation
-            ? ClipRect(
-                child: BackdropFilter(
-                  filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-                  child: SafeArea(
-                    top: false,
-                    child: BottomNavigationBar(
-                      currentIndex: selectedIndex,
-                      onTap: (index) => context.go(items[index].path),
-                      type: BottomNavigationBarType.fixed,
-                      selectedLabelStyle: const TextStyle(
-                        fontWeight: FontWeight.w600,
-                        fontSize: 11,
-                      ),
-                      unselectedLabelStyle: const TextStyle(
-                        fontWeight: FontWeight.w500,
-                        fontSize: 11,
-                      ),
-                      items: [
-                        for (final item in items)
-                          BottomNavigationBarItem(
-                            icon: Icon(item.icon),
-                            activeIcon: Icon(item.activeIcon),
-                            label: item.label,
-                          ),
-                      ],
-                    ),
+            ? SafeArea(
+                top: false,
+                child: BottomNavigationBar(
+                  currentIndex: selectedIndex,
+                  onTap: (index) => context.go(items[index].path),
+                  type: BottomNavigationBarType.fixed,
+                  backgroundColor: Theme.of(context).colorScheme.surface,
+                  selectedLabelStyle: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 11,
                   ),
+                  unselectedLabelStyle: const TextStyle(
+                    fontWeight: FontWeight.w500,
+                    fontSize: 11,
+                  ),
+                  items: [
+                    for (final item in items)
+                      BottomNavigationBarItem(
+                        icon: Icon(item.icon),
+                        activeIcon: Icon(item.activeIcon),
+                        label: item.label,
+                      ),
+                  ],
                 ),
               )
             : null,
@@ -193,10 +188,7 @@ class _PopGuardState extends State<_PopGuard> {
 
   @override
   Widget build(BuildContext context) {
-    return PopScope(
-      canPop: !widget.isRootTab,
-      child: widget.child,
-    );
+    return PopScope(canPop: !widget.isRootTab, child: widget.child);
   }
 }
 

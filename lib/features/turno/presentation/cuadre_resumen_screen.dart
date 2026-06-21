@@ -1,5 +1,3 @@
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -79,7 +77,7 @@ class CuadreResumenScreen extends ConsumerWidget {
       builder: (ctx) => AlertDialog(
         title: const Text('¿Enviar cuadre?'),
         content: const Text(
-          'Se generará un cuadre pendiente para que el jefe lo revise. ' 
+          'Se generará un cuadre pendiente para que el jefe lo revise. '
           '¿Deseas enviarlo ahora?',
         ),
         actions: [
@@ -151,9 +149,9 @@ class _ResumenHeader extends StatelessWidget {
             child: Text(
               'Revisar antes de enviar',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: AppColors.warning,
-                    fontWeight: FontWeight.w800,
-                  ),
+                color: AppColors.warning,
+                fontWeight: FontWeight.w800,
+              ),
             ),
           ),
         ),
@@ -197,19 +195,28 @@ class _ResumenItemCard extends ConsumerWidget {
               cantidad: item.cantidad,
               onDecrement: item.cantidad > 1
                   ? () => ref
-                      .read(turnoControllerProvider.notifier)
-                      .actualizarCantidadItem(item.productoId, item.cantidad - 1)
+                        .read(turnoControllerProvider.notifier)
+                        .actualizarCantidadItem(
+                          item.productoId,
+                          item.cantidad - 1,
+                        )
                   : null,
               onIncrement: () {
-                final producto = ref.read(inventarioControllerProvider.notifier).findProducto(item.productoId);
+                final producto = ref
+                    .read(inventarioControllerProvider.notifier)
+                    .findProducto(item.productoId);
                 final available = producto?.stockActual ?? 0;
                 if (item.cantidad + 1 > available) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('La cantidad supera el stock disponible')),
+                    const SnackBar(
+                      content: Text('La cantidad supera el stock disponible'),
+                    ),
                   );
                   return;
                 }
-                ref.read(turnoControllerProvider.notifier).actualizarCantidadItem(item.productoId, item.cantidad + 1);
+                ref
+                    .read(turnoControllerProvider.notifier)
+                    .actualizarCantidadItem(item.productoId, item.cantidad + 1);
               },
             ),
             const SizedBox(width: 10),
@@ -221,9 +228,9 @@ class _ResumenItemCard extends ConsumerWidget {
                 children: [
                   Text(
                     formatCurrency(item.subtotal),
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          color: AppColors.primary,
-                        ),
+                    style: Theme.of(
+                      context,
+                    ).textTheme.titleMedium?.copyWith(color: AppColors.primary),
                   ),
                   const SizedBox(height: 4),
                   GestureDetector(
@@ -245,7 +252,6 @@ class _ResumenItemCard extends ConsumerWidget {
     );
   }
 }
-
 
 class _ResumenTotal extends StatelessWidget {
   const _ResumenTotal({required this.turno});
@@ -269,17 +275,17 @@ class _ResumenTotal extends StatelessWidget {
             const SizedBox(height: 2),
             Text(
               'Total de ventas',
-              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
+              style: Theme.of(
+                context,
+              ).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w700),
             ),
           ],
         ),
         Text(
           formatCurrency(turno.valorTotal),
-          style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                color: AppColors.primary,
-              ),
+          style: Theme.of(
+            context,
+          ).textTheme.headlineMedium?.copyWith(color: AppColors.primary),
         ),
       ],
     );
@@ -311,35 +317,30 @@ class _ConfirmBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ClipRect(
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            color: AppColors.surface.withValues(alpha: 0.85),
-            border: Border(top: BorderSide(color: AppColors.line)),
-          ),
-          child: SafeArea(
-            top: false,
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
-              child: SizedBox(
-                height: 54,
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: enabled ? onConfirm : null,
-                  icon: const Icon(Icons.send_rounded),
-                  label: const Text('Confirmar y enviar'),
-                  style: ElevatedButton.styleFrom(
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    textStyle: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 0,
-                    ),
-                  ),
+    return DecoratedBox(
+      decoration: const BoxDecoration(
+        color: AppColors.surface,
+        border: Border(top: BorderSide(color: AppColors.line)),
+      ),
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
+          child: SizedBox(
+            height: 54,
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: enabled ? onConfirm : null,
+              icon: const Icon(Icons.send_rounded),
+              label: const Text('Confirmar y enviar'),
+              style: ElevatedButton.styleFrom(
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                textStyle: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 0,
                 ),
               ),
             ),

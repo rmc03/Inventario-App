@@ -36,10 +36,18 @@ class ProductPhoto extends StatelessWidget {
       return _placeholder();
     }
 
+    // Decode at 2× the display size for retina sharpness — avoids full-res
+    // decode which can waste 40-50× more texture memory on a 56×56 display.
+    final cacheSize = (size * 2).ceil();
+
     if (!_isNetworkUrl(imageUrl)) {
       return Image.file(
         File(imageUrl),
         fit: BoxFit.cover,
+        width: size,
+        height: size,
+        cacheWidth: cacheSize,
+        cacheHeight: cacheSize,
         errorBuilder: (context, error, stackTrace) => _placeholder(),
       );
     }
@@ -47,6 +55,8 @@ class ProductPhoto extends StatelessWidget {
     return CachedNetworkImage(
       imageUrl: imageUrl,
       fit: BoxFit.cover,
+      memCacheWidth: cacheSize,
+      memCacheHeight: cacheSize,
       placeholder: (context, url) => const Center(
         child: SizedBox.square(
           dimension: 18,

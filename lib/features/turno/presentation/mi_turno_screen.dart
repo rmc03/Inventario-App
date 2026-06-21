@@ -1,5 +1,3 @@
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -67,9 +65,9 @@ class _SinTurnoView extends ConsumerWidget {
               const SizedBox(height: 8),
               Text(
                 'Aún no has iniciado tu turno',
-                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      color: AppColors.muted,
-                    ),
+                style: Theme.of(
+                  context,
+                ).textTheme.bodyLarge?.copyWith(color: AppColors.muted),
                 textAlign: TextAlign.center,
               ),
               const Spacer(),
@@ -115,9 +113,9 @@ class _TurnoActivoView extends StatelessWidget {
               child: Center(
                 child: Text(
                   'Desde ${timeFormatter.format(turno.horaInicio!)}',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: AppColors.muted,
-                      ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodyMedium?.copyWith(color: AppColors.muted),
                 ),
               ),
             ),
@@ -165,9 +163,9 @@ class _EmptyItems extends StatelessWidget {
             const SizedBox(height: 12),
             Text(
               'Sin ventas aún',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    color: AppColors.muted,
-                  ),
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(color: AppColors.muted),
             ),
             const SizedBox(height: 6),
             Text(
@@ -218,19 +216,31 @@ class _TurnoItemCard extends ConsumerWidget {
                 cantidad: item.cantidad,
                 onDecrement: item.cantidad > 1
                     ? () => ref
-                        .read(turnoControllerProvider.notifier)
-                        .actualizarCantidadItem(item.productoId, item.cantidad - 1)
+                          .read(turnoControllerProvider.notifier)
+                          .actualizarCantidadItem(
+                            item.productoId,
+                            item.cantidad - 1,
+                          )
                     : null,
                 onIncrement: () {
-                  final producto = ref.read(inventarioControllerProvider.notifier).findProducto(item.productoId);
+                  final producto = ref
+                      .read(inventarioControllerProvider.notifier)
+                      .findProducto(item.productoId);
                   final available = producto?.stockActual ?? 0;
                   if (item.cantidad + 1 > available) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('La cantidad supera el stock disponible')),
+                      const SnackBar(
+                        content: Text('La cantidad supera el stock disponible'),
+                      ),
                     );
                     return;
                   }
-                  ref.read(turnoControllerProvider.notifier).actualizarCantidadItem(item.productoId, item.cantidad + 1);
+                  ref
+                      .read(turnoControllerProvider.notifier)
+                      .actualizarCantidadItem(
+                        item.productoId,
+                        item.cantidad + 1,
+                      );
                 },
               ),
               const SizedBox(width: 10),
@@ -243,8 +253,8 @@ class _TurnoItemCard extends ConsumerWidget {
                     Text(
                       formatCurrency(item.subtotal),
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            color: AppColors.primary,
-                          ),
+                        color: AppColors.primary,
+                      ),
                     ),
                     const SizedBox(height: 4),
                     GestureDetector(
@@ -268,7 +278,6 @@ class _TurnoItemCard extends ConsumerWidget {
   }
 }
 
-
 class _TotalBar extends StatelessWidget {
   const _TotalBar({required this.turno});
 
@@ -277,56 +286,51 @@ class _TotalBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isEmpty = turno.items.isEmpty;
-    return ClipRect(
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            color: AppColors.surface.withValues(alpha: 0.85),
-            border: const Border(top: BorderSide(color: AppColors.line)),
-          ),
-          child: SafeArea(
-            top: false,
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          '${turno.items.length} '
-                          '${turno.items.length == 1 ? 'producto' : 'productos'}',
-                          style: Theme.of(context).textTheme.bodyMedium,
-                        ),
-                        Text(
-                          formatCurrency(turno.valorTotal),
-                          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                                color: AppColors.primary,
-                              ),
-                        ),
-                      ],
+    return DecoratedBox(
+      decoration: const BoxDecoration(
+        color: AppColors.surface,
+        border: Border(top: BorderSide(color: AppColors.line)),
+      ),
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      '${turno.items.length} '
+                      '${turno.items.length == 1 ? 'producto' : 'productos'}',
+                      style: Theme.of(context).textTheme.bodyMedium,
                     ),
-                  ),
-                  const SizedBox(width: 16),
-                  ElevatedButton.icon(
-                    onPressed: isEmpty
-                        ? null
-                        : () => context.push('/dependiente/turno/resumen'),
-                    icon: const Icon(Icons.send_rounded, size: 18),
-                    label: const Text('Enviar cuadre'),
-                    style: ElevatedButton.styleFrom(
-                      minimumSize: const Size(0, 50),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                    Text(
+                      formatCurrency(turno.valorTotal),
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        color: AppColors.primary,
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
+              const SizedBox(width: 16),
+              ElevatedButton.icon(
+                onPressed: isEmpty
+                    ? null
+                    : () => context.push('/dependiente/turno/resumen'),
+                icon: const Icon(Icons.send_rounded, size: 18),
+                label: const Text('Enviar cuadre'),
+                style: ElevatedButton.styleFrom(
+                  minimumSize: const Size(0, 50),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       ),
@@ -372,9 +376,9 @@ class _CuadreEnviadoView extends StatelessWidget {
                 const SizedBox(height: 8),
                 Text(
                   'Pendiente de revisión por el jefe.',
-                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                        color: AppColors.muted,
-                      ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodyLarge?.copyWith(color: AppColors.muted),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 6),
