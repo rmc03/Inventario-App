@@ -7,7 +7,6 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../shared/models/producto.dart';
 import '../../../shared/models/categoria.dart';
-import '../../turno/providers/turno_provider.dart';
 import '../../../shared/widgets/product_photo.dart';
 import '../../../shared/widgets/stat_card.dart';
 import '../providers/inventario_provider.dart';
@@ -347,7 +346,7 @@ class _ProductTile extends ConsumerWidget {
       child: InkWell(
         onTap: isAdmin
             ? () => context.push('/admin/inventario/productos/${producto.id}')
-            : () => _handleDependienteTap(context, ref, producto),
+            : null,
         child: Padding(
           padding: const EdgeInsets.symmetric(
             horizontal: AppSpacing.sm,
@@ -443,13 +442,12 @@ class _ProductTile extends ConsumerWidget {
                     ).textTheme.titleMedium?.copyWith(color: AppColors.primary),
                   ),
                   const SizedBox(height: 8),
-                  Icon(
-                    isAdmin
-                        ? Icons.chevron_right_rounded
-                        : Icons.add_circle_outline_rounded,
-                    color: AppColors.muted,
-                    size: 22,
-                  ),
+                  if (isAdmin)
+                    const Icon(
+                      Icons.chevron_right_rounded,
+                      color: AppColors.muted,
+                      size: 22,
+                    ),
                 ],
               ),
             ],
@@ -457,42 +455,6 @@ class _ProductTile extends ConsumerWidget {
         ),
       ),
     );
-  }
-
-  void _handleDependienteTap(
-    BuildContext context,
-    WidgetRef ref,
-    Producto producto,
-  ) {
-    final turno = ref.read(turnoControllerProvider);
-    if (!turno.estaActivo) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Inicia tu turno para registrar ventas')),
-      );
-      return;
-    }
-    _showAgregarCuadreSheet(context, ref, producto);
-  }
-
-  void _showAgregarCuadreSheet(
-    BuildContext context,
-    WidgetRef ref,
-    Producto producto,
-  ) async {
-    final cantidad = await showModalBottomSheet<int>(
-      context: context,
-      isScrollControlled: true,
-      showDragHandle: true,
-      builder: (sheetCtx) => _AgregarCuadreSheet(producto: producto),
-    );
-
-    // The bottom sheet is fully dismissed and removed from the tree.
-    // Now it is safe to mutate providers.
-    if (cantidad != null && cantidad > 0) {
-      ref
-          .read(turnoControllerProvider.notifier)
-          .agregarItem(producto, cantidad);
-    }
   }
 }
 
@@ -505,99 +467,6 @@ class _ListSeparator extends StatelessWidget {
     return const Padding(
       padding: EdgeInsets.symmetric(horizontal: AppSpacing.sm),
       child: Divider(height: 1, indent: 72),
-    );
-  }
-}
-
-// ─── Bottom sheet: agregar al cuadre ───────────────────────────────────────
-
-class _AgregarCuadreSheet extends StatefulWidget {
-  const _AgregarCuadreSheet({required this.producto});
-
-  final Producto producto;
-
-  @override
-  State<_AgregarCuadreSheet> createState() => _AgregarCuadreSheetState();
-}
-
-class _AgregarCuadreSheetState extends State<_AgregarCuadreSheet> {
-  final _cantidadController = TextEditingController(text: '1');
-
-  @override
-  void dispose() {
-    _cantidadController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final producto = widget.producto;
-
-    return SafeArea(
-      child: Padding(
-        padding: EdgeInsets.fromLTRB(
-          AppSpacing.xl,
-          0,
-          AppSpacing.xl,
-          MediaQuery.of(context).viewInsets.bottom + AppSpacing.xl,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Agregar al cuadre',
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            Text(producto.nombre, style: Theme.of(context).textTheme.bodyLarge),
-            const SizedBox(height: 2),
-            Text(
-              'Stock disponible: ${producto.stockActual} unidades',
-              style: Theme.of(context).textTheme.bodyMedium,
-            ),
-            const SizedBox(height: AppSpacing.xl),
-            TextField(
-              controller: _cantidadController,
-              autofocus: true,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(
-                labelText: 'Cantidad vendida',
-                prefixIcon: Icon(Icons.numbers_rounded),
-              ),
-            ),
-            const SizedBox(height: AppSpacing.xl),
-            ElevatedButton.icon(
-              onPressed: () {
-                final cantidad =
-                    int.tryParse(_cantidadController.text.trim()) ?? 0;
-                if (cantidad <= 0) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Ingresa una cantidad mayor a 0'),
-                    ),
-                  );
-                  return;
-                }
-                if (cantidad > producto.stockActual) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('La cantidad supera el stock disponible'),
-                    ),
-                  );
-                  return;
-                }
-                Navigator.of(context).pop(cantidad);
-              },
-              icon: const Icon(Icons.add_shopping_cart_rounded),
-              label: const Text('Agregar al cuadre'),
-              style: ElevatedButton.styleFrom(
-                minimumSize: const Size(double.infinity, 52),
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }

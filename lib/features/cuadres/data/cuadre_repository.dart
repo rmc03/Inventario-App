@@ -1,5 +1,6 @@
 import '../../../shared/models/cuadre.dart';
 import '../../../shared/models/cuadre_item.dart';
+import '../../../shared/models/venta.dart';
 
 class CuadreRepository {
   CuadreRepository()
@@ -9,18 +10,28 @@ class CuadreRepository {
             dependienteId: '00000000-0000-4000-9000-000000000002',
             dependienteNombre: 'Dependiente Demo',
             fechaTurno: DateTime.now().subtract(const Duration(days: 1)),
-            items: const [
-              CuadreItem(
-                productoId: 'prod-keyboard',
-                productoNombre: 'Teclado Inalámbrico Logitech',
-                cantidad: 5,
-                precioUnitario: 45,
-              ),
-              CuadreItem(
-                productoId: 'prod-mouse',
-                productoNombre: 'Mouse Óptico HP',
-                cantidad: 3,
-                precioUnitario: 18,
+            ventas: [
+              Venta(
+                id: 'venta-demo-001',
+                dependienteId: '00000000-0000-4000-9000-000000000002',
+                dependienteNombre: 'Dependiente Demo',
+                fecha: DateTime.now().subtract(const Duration(days: 1)),
+                estado: VentaEstado.completada,
+                createdAt: DateTime.now().subtract(const Duration(days: 1)),
+                items: const [
+                  CuadreItem(
+                    productoId: 'prod-keyboard',
+                    productoNombre: 'Teclado Inalámbrico Logitech',
+                    cantidad: 5,
+                    precioUnitario: 45,
+                  ),
+                  CuadreItem(
+                    productoId: 'prod-mouse',
+                    productoNombre: 'Mouse Óptico HP',
+                    cantidad: 3,
+                    precioUnitario: 18,
+                  ),
+                ],
               ),
             ],
             estado: CuadreEstado.aprobado,

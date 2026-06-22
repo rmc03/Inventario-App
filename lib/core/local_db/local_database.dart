@@ -19,7 +19,7 @@ class LocalDatabase {
     final dbPath = await getDatabasesPath();
     final database = await openDatabase(
       p.join(dbPath, 'inventario_app.db'),
-      version: 6,
+      version: 7,
       onCreate: (db, version) async {
         await db.execute('''
 CREATE TABLE productos (
@@ -136,6 +136,11 @@ CREATE TABLE IF NOT EXISTS usuarios (
         if (oldVersion < 6) {
           try {
             await db.execute('CREATE INDEX IF NOT EXISTS idx_movimientos_producto_fecha ON movimientos(producto_id, fecha)');
+          } catch (_) {}
+        }
+        if (oldVersion < 7) {
+          try {
+            await db.execute('ALTER TABLE cuadres ADD COLUMN ventas_json TEXT');
           } catch (_) {}
         }
       },

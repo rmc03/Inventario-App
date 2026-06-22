@@ -1,39 +1,22 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../shared/models/cuadre.dart';
-import '../../../shared/models/cuadre_item.dart';
-import '../../../shared/widgets/qty_controls.dart';
-import '../../inventario/providers/inventario_provider.dart';
-import '../../auth/providers/auth_provider.dart';
-import '../../../shared/models/usuario.dart';
+import '../../../shared/models/venta.dart';
 import '../providers/cuadre_provider.dart';
 
-const double _kTrailingWidth = 92.0;
-
-class CuadreDetalleScreen extends ConsumerStatefulWidget {
+class CuadreDetalleScreen extends ConsumerWidget {
   const CuadreDetalleScreen({super.key, required this.cuadreId});
 
   final String cuadreId;
 
   @override
-  ConsumerState<CuadreDetalleScreen> createState() =>
-      _CuadreDetalleScreenState();
-}
-
-class _CuadreDetalleScreenState extends ConsumerState<CuadreDetalleScreen> {
-  bool _editMode = false;
-
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final cuadres = ref.watch(cuadreControllerProvider);
-    final cuadre = cuadres
-        .where((c) => c.id == widget.cuadreId)
-        .firstOrNull;
+    final cuadre = cuadres.where((c) => c.id == cuadreId).firstOrNull;
 
     if (cuadre == null) {
       return Scaffold(
@@ -43,10 +26,6 @@ class _CuadreDetalleScreenState extends ConsumerState<CuadreDetalleScreen> {
     }
 
     final isPendiente = cuadre.estado == CuadreEstado.pendiente;
-    final currentUser = ref.watch(authControllerProvider.select((s) => s.user));
-    final isOwner = currentUser != null && currentUser.id == cuadre.dependienteId;
-    final isAdmin = currentUser != null && currentUser.rol == UserRole.admin;
-    final canEdit = isPendiente && (isOwner || isAdmin);
 
     return Scaffold(
       appBar: AppBar(
@@ -56,16 +35,6 @@ class _CuadreDetalleScreenState extends ConsumerState<CuadreDetalleScreen> {
           icon: const Icon(Icons.arrow_back_rounded),
           tooltip: 'Volver',
         ),
-        actions: [
-          if (canEdit)
-            IconButton(
-              onPressed: () => setState(() => _editMode = !_editMode),
-              icon: Icon(
-                _editMode ? Icons.close_rounded : Icons.edit_rounded,
-              ),
-              tooltip: _editMode ? 'Cancelar edición' : 'Modificar',
-            ),
-        ],
       ),
       body: SafeArea(
         top: false,
@@ -77,36 +46,23 @@ class _CuadreDetalleScreenState extends ConsumerState<CuadreDetalleScreen> {
                 children: [
                   _DetalleHeader(cuadre: cuadre),
                   const SizedBox(height: 20),
-                  if (_editMode) ...[
-                    for (final item in cuadre.items) ...[
-                      _ItemEditCard(
-                        cuadreId: cuadre.id,
-                        item: item,
-                      ),
-                      const SizedBox(height: 10),
-                    ],
-                    _AddItemButton(
-                      cuadreId: cuadre.id,
-                      onAdd: (item) => ref
-                          .read(cuadreControllerProvider.notifier)
-                          .agregarItemCuadre(cuadre.id, item),
-                    ),
-                  ] else ...[
-                    for (final item in cuadre.items) ...[
-                      _ItemViewCard(item: item),
-                      const SizedBox(height: 10),
-                    ],
-                  ],
-                  if (cuadre.items.isEmpty)
+                  
+                  if (cuadre.ventas.isEmpty)
                     Card(
                       child: Padding(
                         padding: const EdgeInsets.all(18),
                         child: Text(
-                          'Sin ítems en este cuadre.',
+                          'Sin ventas en este cuadre.',
                           style: Theme.of(context).textTheme.bodyMedium,
                         ),
                       ),
-                    ),
+                    )
+                  else
+                    for (final venta in cuadre.ventas) ...[
+                      _VentaViewCard(venta: venta),
+                      const SizedBox(height: 10),
+                    ],
+                    
                   const SizedBox(height: 12),
                   const Divider(),
                   const SizedBox(height: 12),
@@ -119,7 +75,7 @@ class _CuadreDetalleScreenState extends ConsumerState<CuadreDetalleScreen> {
                 ],
               ),
             ),
-            if (isPendiente && !_editMode) _AccionesBar(cuadreId: cuadre.id),
+            if (isPendiente) _AccionesBar(cuadreId: cuadre.id),
           ],
         ),
       ),
@@ -195,281 +151,58 @@ class _EstadoBadge extends StatelessWidget {
 
 // ─── Ítems vista ──────────────────────────────────────────────────────────────
 
-class _ItemViewCard extends StatelessWidget {
-  const _ItemViewCard({required this.item});
+class _VentaViewCard extends StatelessWidget {
+  const _VentaViewCard({required this.venta});
 
-  final CuadreItem item;
+  final Venta venta;
 
   @override
   Widget build(BuildContext context) {
-    return RepaintBoundary(
-      child: Card(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-          child: Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      item.productoNombre,
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      '${item.cantidad} unid. × ${formatCurrency(item.precioUnitario)}',
-                      style: Theme.of(context).textTheme.bodyMedium,
-                    ),
-                  ],
+    return Card(
+      child: Theme(
+        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+        child: ExpansionTile(
+          tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+          childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+          title: Text(
+            'Venta a las ${timeFormatter.format(venta.fecha)}',
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
+          subtitle: Text(
+            '${venta.items.length} ${venta.items.length == 1 ? 'producto' : 'productos'}',
+            style: Theme.of(context).textTheme.bodyMedium,
+          ),
+          trailing: Text(
+            formatCurrency(venta.total),
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  color: AppColors.primary,
                 ),
-              ),
-              SizedBox(
-                width: _kTrailingWidth,
-                child: Text(
-                  formatCurrency(item.subtotal),
-                  textAlign: TextAlign.right,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        color: AppColors.primary,
+          ),
+          children: [
+            const Divider(height: 1),
+            const SizedBox(height: 12),
+            for (final item in venta.items)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        '${item.cantidad}x ${item.productoNombre}',
+                        style: Theme.of(context).textTheme.bodyMedium,
                       ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-// ─── Ítems edición ────────────────────────────────────────────────────────────
-
-class _ItemEditCard extends ConsumerWidget {
-  const _ItemEditCard({required this.cuadreId, required this.item});
-
-  final String cuadreId;
-  final CuadreItem item;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final ctrl = ref.read(cuadreControllerProvider.notifier);
-
-    return RepaintBoundary(
-      child: Card(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(14, 10, 8, 10),
-          child: Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      item.productoNombre,
-                      style: Theme.of(context).textTheme.titleMedium,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
                     ),
-                    const SizedBox(height: 2),
                     Text(
-                      '${formatCurrency(item.precioUnitario)} c/u',
+                      formatCurrency(item.subtotal),
                       style: Theme.of(context).textTheme.bodyMedium,
                     ),
                   ],
                 ),
               ),
-              const SizedBox(width: 10),
-              QtyControls(
-                cantidad: item.cantidad,
-                onDecrement: item.cantidad > 1
-                    ? () => ctrl.modificarCantidadItem(
-                          cuadreId,
-                          item.productoId,
-                          item.cantidad - 1,
-                        )
-                    : null,
-                onIncrement: () {
-                  final producto = ref.read(inventarioControllerProvider.notifier).findProducto(item.productoId);
-                  final available = producto?.stockActual ?? 0;
-                  if (item.cantidad + 1 > available) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('La cantidad supera el stock disponible')),
-                    );
-                    return;
-                  }
-                  ctrl.modificarCantidadItem(
-                    cuadreId,
-                    item.productoId,
-                    item.cantidad + 1,
-                  );
-                },
-              ),
-              const SizedBox(width: 10),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  SizedBox(
-                    width: _kTrailingWidth,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          formatCurrency(item.subtotal),
-                          style: Theme.of(context)
-                              .textTheme
-                              .titleMedium
-                              ?.copyWith(
-                                color: AppColors.primary,
-                              ),
-                        ),
-                        const SizedBox(height: 4),
-                        GestureDetector(
-                          onTap: () => ctrl.eliminarItemCuadre(
-                            cuadreId,
-                            item.productoId,
-                          ),
-                          child: const Icon(
-                            Icons.delete_outline_rounded,
-                            size: 18,
-                            color: AppColors.danger,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
+          ],
         ),
       ),
     );
-  }
-}
-
-
-// ─── Botón agregar ítem ───────────────────────────────────────────────────────
-
-class _AddItemButton extends ConsumerWidget {
-  const _AddItemButton({required this.cuadreId, required this.onAdd});
-
-  final String cuadreId;
-  final void Function(CuadreItem) onAdd;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return OutlinedButton.icon(
-      onPressed: () => _showAddItemSheet(context, ref),
-      icon: const Icon(Icons.add_rounded),
-      label: const Text('Agregar producto'),
-      style: OutlinedButton.styleFrom(
-        minimumSize: const Size(double.infinity, 50),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      ),
-    );
-  }
-
-  void _showAddItemSheet(BuildContext context, WidgetRef ref) {
-    final productos = ref
-        .read(inventarioControllerProvider)
-        .productos
-        .where((p) => p.activo)
-        .toList();
-
-    String? selectedId;
-    final cantidadCtrl = TextEditingController(text: '1');
-
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      showDragHandle: true,
-      builder: (ctx) => StatefulBuilder(
-        builder: (context, setSheet) {
-          return SafeArea(
-            child: Padding(
-              padding: EdgeInsets.fromLTRB(
-                20,
-                0,
-                20,
-                MediaQuery.of(context).viewInsets.bottom + 20,
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Agregar producto al cuadre',
-                    style: Theme.of(context).textTheme.titleLarge,
-                  ),
-                  const SizedBox(height: 16),
-                  DropdownButtonFormField<String>(
-                    initialValue: selectedId,
-                    decoration: const InputDecoration(labelText: 'Producto'),
-                    hint: const Text('Selecciona un producto'),
-                    isExpanded: true,
-                    menuMaxHeight: 300,
-                    items: productos
-                        .map(
-                          (p) => DropdownMenuItem(
-                            value: p.id,
-                            child: Text(
-                              p.nombre,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        )
-                        .toList(),
-                    onChanged: (v) => setSheet(() => selectedId = v),
-                  ),
-                  const SizedBox(height: 14),
-                  TextField(
-                    controller: cantidadCtrl,
-                    keyboardType: TextInputType.number,
-                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                    decoration: const InputDecoration(
-                      labelText: 'Cantidad',
-                      prefixIcon: Icon(Icons.numbers_rounded),
-                    ),
-                  ),
-                  const SizedBox(height: 18),
-                  ElevatedButton.icon(
-                    onPressed: () {
-                      if (selectedId == null) return;
-                      final cant =
-                          int.tryParse(cantidadCtrl.text.trim()) ?? 0;
-                      if (cant <= 0) return;
-                      final p =
-                          productos.firstWhere((p) => p.id == selectedId);
-                      if (cant > p.stockActual) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('La cantidad supera el stock disponible')),
-                        );
-                        return;
-                      }
-                      onAdd(
-                        CuadreItem(
-                          productoId: p.id,
-                          productoNombre: p.nombre,
-                          cantidad: cant,
-                          precioUnitario: p.precio,
-                        ),
-                      );
-                      Navigator.of(context).pop();
-                    },
-                    icon: const Icon(Icons.add_rounded),
-                    label: const Text('Agregar'),
-                    style: ElevatedButton.styleFrom(
-                      minimumSize: const Size(double.infinity, 50),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          );
-        },
-      ),
-    ).whenComplete(cantidadCtrl.dispose);
   }
 }
 
@@ -489,8 +222,7 @@ class _DetalleTotales extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              '${cuadre.items.length} '
-              '${cuadre.items.length == 1 ? 'producto' : 'productos'} · '
+              '${cuadre.ventas.length} ${cuadre.ventas.length == 1 ? 'venta' : 'ventas'} · '
               '${cuadre.totalSalidas} unidades',
               style: Theme.of(context).textTheme.bodyMedium,
             ),
@@ -664,8 +396,8 @@ class _AccionesBar extends ConsumerWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 const Text(
-                  '¿Estás seguro? El stock se restaurará '
-                  'a los valores previos al turno.',
+                  '¿Estás seguro? Las ventas de este cuadre '
+                  'serán canceladas y el stock revertido.',
                 ),
                 const SizedBox(height: 14),
                 TextField(

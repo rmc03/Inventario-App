@@ -3,13 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_theme.dart';
-import '../../inventario/providers/inventario_provider.dart';
 import '../../../core/utils/formatters.dart';
-import '../../../shared/models/cuadre_item.dart';
-import '../../../shared/widgets/qty_controls.dart';
+import '../../../shared/models/venta.dart';
+import '../../ventas/providers/venta_provider.dart';
 import '../providers/turno_provider.dart';
-
-const double _kTrailingWidth = 92.0;
 
 class MiTurnoScreen extends ConsumerWidget {
   const MiTurnoScreen({super.key});
@@ -19,7 +16,7 @@ class MiTurnoScreen extends ConsumerWidget {
     final turno = ref.watch(turnoControllerProvider);
 
     if (turno.estaActivo) {
-      return _TurnoActivoView(turno: turno);
+      return const _TurnoActivoView();
     } else if (turno.cuadreEnviadoHoy) {
       return const _CuadreEnviadoView();
     } else {
@@ -65,9 +62,7 @@ class _SinTurnoView extends ConsumerWidget {
               const SizedBox(height: 8),
               Text(
                 'Aún no has iniciado tu turno',
-                style: Theme.of(
-                  context,
-                ).textTheme.bodyLarge?.copyWith(color: AppColors.muted),
+                style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: AppColors.muted),
                 textAlign: TextAlign.center,
               ),
               const Spacer(),
@@ -75,8 +70,7 @@ class _SinTurnoView extends ConsumerWidget {
                 height: 58,
                 width: double.infinity,
                 child: ElevatedButton.icon(
-                  onPressed: () =>
-                      ref.read(turnoControllerProvider.notifier).iniciarTurno(),
+                  onPressed: () => ref.read(turnoControllerProvider.notifier).iniciarTurno(),
                   icon: const Icon(Icons.play_arrow_rounded),
                   label: const Text('Iniciar turno'),
                   style: ElevatedButton.styleFrom(
@@ -96,50 +90,120 @@ class _SinTurnoView extends ConsumerWidget {
 
 // ─── Estado 2: Turno activo ───────────────────────────────────────────────────
 
-class _TurnoActivoView extends StatelessWidget {
-  const _TurnoActivoView({required this.turno});
-
-  final TurnoState turno;
+class _TurnoActivoView extends ConsumerWidget {
+  const _TurnoActivoView();
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final turno = ref.watch(turnoControllerProvider);
+    final ventas = ref.watch(ventasDelTurnoProvider);
+    final totalTurno = ventas.fold(0.0, (sum, v) => sum + v.total);
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Mi turno'),
         actions: [
           if (turno.horaInicio != null)
             Padding(
-              padding: const EdgeInsets.only(right: 16),
+              padding: const EdgeInsets.only(right: 8),
               child: Center(
-                child: Text(
-                  'Desde ${timeFormatter.format(turno.horaInicio!)}',
-                  style: Theme.of(
-                    context,
-                  ).textTheme.bodyMedium?.copyWith(color: AppColors.muted),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 8,
+                      height: 8,
+                      decoration: const BoxDecoration(
+                        color: AppColors.success,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      'Turno activo • ${timeFormatter.format(turno.horaInicio!)}',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppColors.muted),
+                    ),
+                  ],
                 ),
               ),
             ),
+          const SizedBox(width: 8),
         ],
+      ),
+      floatingActionButton: Builder(
+        builder: (context) {
+          final isWide = MediaQuery.of(context).size.width >= 360;
+          return isWide
+              ? FloatingActionButton.extended(
+                  onPressed: () => context.push('/dependiente/turno/nueva-venta'),
+                  icon: const Icon(Icons.add_shopping_cart_rounded),
+                  label: const Text('Nueva venta'),
+                )
+              : FloatingActionButton(
+                  onPressed: () => context.push('/dependiente/turno/nueva-venta'),
+                  tooltip: 'Nueva venta',
+                  child: const Icon(Icons.add_shopping_cart_rounded),
+                );
+        },
       ),
       body: SafeArea(
         top: false,
         child: Column(
           children: [
+            // Stats summary
+            if (ventas.isNotEmpty)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                color: AppColors.surface,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      '${ventasLabel(ventas.length)} completada${ventas.length == 1 ? '' : 's'}',
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                    Text(
+                      formatCurrency(totalTurno),
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            color: AppColors.primary,
+                            fontWeight: FontWeight.w700,
+                          ),
+                    ),
+                  ],
+                ),
+              ),
+            if (ventas.isNotEmpty) const Divider(height: 1),
+
             Expanded(
-              child: turno.items.isEmpty
+              child: ventas.isEmpty
                   ? const _EmptyItems()
                   : ListView.separated(
-                      padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
-                      itemCount: turno.items.length,
+                      padding: const EdgeInsets.fromLTRB(20, 16, 20, 80), // padding bottom for FAB
+                      itemCount: ventas.length,
                       separatorBuilder: (_, _) => const SizedBox(height: 10),
-                      itemBuilder: (context, i) =>
-                          _TurnoItemCard(item: turno.items[i]),
+                      itemBuilder: (context, i) => _VentaCard(venta: ventas[i]),
                     ),
             ),
-            _TotalBar(turno: turno),
           ],
         ),
       ),
+bottomNavigationBar: (turno.estaActivo && ventas.isNotEmpty)
+          ? Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+              child: SizedBox(
+                height: 56,
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () => context.push('/dependiente/turno/resumen'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.danger,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                  child: const Text('Cerrar Turno y Enviar Cuadre'),
+                ),
+              ),
+            )
+          : null,
     );
   }
 }
@@ -163,13 +227,11 @@ class _EmptyItems extends StatelessWidget {
             const SizedBox(height: 12),
             Text(
               'Sin ventas aún',
-              style: Theme.of(
-                context,
-              ).textTheme.titleMedium?.copyWith(color: AppColors.muted),
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(color: AppColors.muted),
             ),
             const SizedBox(height: 6),
             Text(
-              'Ve al inventario y toca un producto\npara añadirlo al cuadre.',
+              'Toca en "Nueva venta" para atender a un cliente.',
               style: Theme.of(context).textTheme.bodyMedium,
               textAlign: TextAlign.center,
             ),
@@ -180,155 +242,58 @@ class _EmptyItems extends StatelessWidget {
   }
 }
 
-class _TurnoItemCard extends ConsumerWidget {
-  const _TurnoItemCard({required this.item});
+class _VentaCard extends StatelessWidget {
+  const _VentaCard({required this.venta});
 
-  final CuadreItem item;
+  final Venta venta;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return RepaintBoundary(
-      child: Card(
+  Widget build(BuildContext context) {
+    return Card(
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: () => context.push('/dependiente/turno/venta/${venta.id}', extra: venta),
         child: Padding(
           padding: const EdgeInsets.fromLTRB(16, 14, 12, 14),
           child: Row(
             children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withValues(alpha: 0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.shopping_cart_rounded, color: AppColors.primary, size: 20),
+              ),
+              const SizedBox(width: 14),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      item.productoNombre,
+                      'Venta a las ${timeFormatter.format(venta.fecha)}',
                       style: Theme.of(context).textTheme.titleMedium,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      '${formatCurrency(item.precioUnitario)} c/u',
+                      articulosLabel(venta.totalUnidades),
                       style: Theme.of(context).textTheme.bodyMedium,
                     ),
                   ],
                 ),
               ),
-              const SizedBox(width: 10),
-              QtyControls(
-                cantidad: item.cantidad,
-                onDecrement: item.cantidad > 1
-                    ? () => ref
-                          .read(turnoControllerProvider.notifier)
-                          .actualizarCantidadItem(
-                            item.productoId,
-                            item.cantidad - 1,
-                          )
-                    : null,
-                onIncrement: () {
-                  final producto = ref
-                      .read(inventarioControllerProvider.notifier)
-                      .findProducto(item.productoId);
-                  final available = producto?.stockActual ?? 0;
-                  if (item.cantidad + 1 > available) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('La cantidad supera el stock disponible'),
-                      ),
-                    );
-                    return;
-                  }
-                  ref
-                      .read(turnoControllerProvider.notifier)
-                      .actualizarCantidadItem(
-                        item.productoId,
-                        item.cantidad + 1,
-                      );
-                },
-              ),
-              const SizedBox(width: 10),
-              SizedBox(
-                width: _kTrailingWidth,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      formatCurrency(item.subtotal),
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        color: AppColors.primary,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    GestureDetector(
-                      onTap: () => ref
-                          .read(turnoControllerProvider.notifier)
-                          .eliminarItem(item.productoId),
-                      child: const Icon(
-                        Icons.close_rounded,
-                        size: 18,
-                        color: AppColors.muted,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _TotalBar extends StatelessWidget {
-  const _TotalBar({required this.turno});
-
-  final TurnoState turno;
-
-  @override
-  Widget build(BuildContext context) {
-    final isEmpty = turno.items.isEmpty;
-    return DecoratedBox(
-      decoration: const BoxDecoration(
-        color: AppColors.surface,
-        border: Border(top: BorderSide(color: AppColors.line)),
-      ),
-      child: SafeArea(
-        top: false,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
-          child: Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      '${turno.items.length} '
-                      '${turno.items.length == 1 ? 'producto' : 'productos'}',
-                      style: Theme.of(context).textTheme.bodyMedium,
-                    ),
-                    Text(
-                      formatCurrency(turno.valorTotal),
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        color: AppColors.primary,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 16),
-              ElevatedButton.icon(
-                onPressed: isEmpty
-                    ? null
-                    : () => context.push('/dependiente/turno/resumen'),
-                icon: const Icon(Icons.send_rounded, size: 18),
-                label: const Text('Enviar cuadre'),
-                style: ElevatedButton.styleFrom(
-                  minimumSize: const Size(0, 50),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    formatCurrency(venta.total),
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          color: AppColors.primary,
+                        ),
                   ),
-                ),
+                  const SizedBox(height: 4),
+                  const Icon(Icons.chevron_right_rounded, color: AppColors.muted, size: 20),
+                ],
               ),
             ],
           ),
@@ -376,9 +341,7 @@ class _CuadreEnviadoView extends StatelessWidget {
                 const SizedBox(height: 8),
                 Text(
                   'Pendiente de revisión por el jefe.',
-                  style: Theme.of(
-                    context,
-                  ).textTheme.bodyLarge?.copyWith(color: AppColors.muted),
+                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: AppColors.muted),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 6),
