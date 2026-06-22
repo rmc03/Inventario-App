@@ -1,4 +1,5 @@
 import 'cuadre_item.dart';
+import 'venta.dart';
 
 enum CuadreEstado {
   pendiente,
@@ -25,7 +26,7 @@ class Cuadre {
     required this.dependienteNombre,
     this.dependienteFotoUrl,
     required this.fechaTurno,
-    this.items = const [],
+    this.ventas = const [],
     this.estado = CuadreEstado.pendiente,
     this.comentarioJefe,
     required this.createdAt,
@@ -38,27 +39,30 @@ class Cuadre {
   final String dependienteNombre;
   final String? dependienteFotoUrl;
   final DateTime fechaTurno;
-  final List<CuadreItem> items;
+  final List<Venta> ventas;
   final CuadreEstado estado;
   final String? comentarioJefe;
   final DateTime createdAt;
   final DateTime updatedAt;
   final bool synced;
 
+  /// Ítems aplanados de todas las ventas (para retrocompatibilidad).
+  List<CuadreItem> get items => ventas.expand((v) => v.items).toList();
+
   /// Total de unidades vendidas.
   int get totalSalidas =>
-      items.fold(0, (sum, item) => sum + item.cantidad);
+      ventas.fold(0, (sum, venta) => sum + venta.totalUnidades);
 
   /// Valor monetario total del cuadre.
   double get valorTotal =>
-      items.fold(0.0, (sum, item) => sum + item.subtotal);
+      ventas.fold(0.0, (sum, venta) => sum + venta.total);
 
   Cuadre copyWith({
     String? id,
     String? dependienteId,
     String? dependienteNombre,
     DateTime? fechaTurno,
-    List<CuadreItem>? items,
+    List<Venta>? ventas,
     CuadreEstado? estado,
     String? comentarioJefe,
     String? dependienteFotoUrl,
@@ -71,7 +75,7 @@ class Cuadre {
         dependienteId: dependienteId ?? this.dependienteId,
         dependienteNombre: dependienteNombre ?? this.dependienteNombre,
         fechaTurno: fechaTurno ?? this.fechaTurno,
-        items: items ?? this.items,
+        ventas: ventas ?? this.ventas,
         estado: estado ?? this.estado,
         comentarioJefe: comentarioJefe ?? this.comentarioJefe,
         dependienteFotoUrl: dependienteFotoUrl ?? this.dependienteFotoUrl,
@@ -88,7 +92,7 @@ class Cuadre {
         'fecha_turno': fechaTurno.toIso8601String(),
         'total_entradas': 0,
         'total_salidas': totalSalidas,
-        'items': items.map((i) => i.toJson()).toList(),
+        'ventas': ventas.map((v) => v.toJson()).toList(),
         'estado': estado.name,
         'comentario_jefe': comentarioJefe,
         'created_at': createdAt.toIso8601String(),
@@ -96,7 +100,6 @@ class Cuadre {
       };
 
   factory Cuadre.fromJson(Map<String, dynamic> json) {
-    final rawItems = json['items'] as List<dynamic>?;
     return Cuadre(
       id: json['id'] as String,
       dependienteId: json['dependiente_id'] as String,
@@ -104,8 +107,8 @@ class Cuadre {
           (json['dependiente_nombre'] as String?) ?? 'Dependiente',
       dependienteFotoUrl: json['dependiente_foto_url'] as String?,
       fechaTurno: DateTime.parse(json['fecha_turno'] as String),
-      items: rawItems
-              ?.map((i) => CuadreItem.fromJson(i as Map<String, dynamic>))
+      ventas: (json['ventas'] as List<dynamic>?)
+              ?.map((v) => Venta.fromJson(v as Map<String, dynamic>))
               .toList() ??
           [],
       estado: CuadreEstado.fromValue(

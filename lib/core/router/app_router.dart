@@ -13,6 +13,10 @@ import '../../features/inventario/presentation/producto_form_screen.dart';
 import '../../features/movimientos/presentation/movimientos_screen.dart';
 import '../../features/turno/presentation/cuadre_resumen_screen.dart';
 import '../../features/turno/presentation/mi_turno_screen.dart';
+import '../../features/ventas/presentation/nueva_venta_screen.dart';
+import '../../features/ventas/presentation/confirmar_pago_screen.dart';
+import '../../features/ventas/presentation/venta_detalle_screen.dart';
+import '../../shared/models/venta.dart';
 import '../../shared/widgets/error_page.dart';
 import '../../shared/models/usuario.dart';
 import '../../shared/widgets/role_shell.dart';
@@ -122,6 +126,21 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/dependiente/turno/resumen',
             builder: (context, state) => const CuadreResumenScreen(),
+          ),
+          GoRoute(
+            path: '/dependiente/turno/nueva-venta',
+            builder: (context, state) => const NuevaVentaScreen(),
+          ),
+          GoRoute(
+            path: '/dependiente/turno/confirmar-pago',
+            builder: (context, state) => const ConfirmarPagoScreen(),
+          ),
+          GoRoute(
+            path: '/dependiente/turno/venta/:id',
+            builder: (context, state) {
+              final venta = state.extra as Venta;
+              return VentaDetalleScreen(venta: venta);
+            },
           ),
           GoRoute(
             path: '/dependiente/configuracion',

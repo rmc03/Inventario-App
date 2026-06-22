@@ -1,8 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 
+import '../../../shared/models/venta.dart';
+
 import '../../../shared/models/cuadre.dart';
-import '../../../shared/models/cuadre_item.dart';
 import '../../../shared/models/usuario.dart';
 import '../../inventario/providers/inventario_provider.dart';
 import '../../../shared/models/movimiento.dart';
@@ -28,11 +29,11 @@ class CuadreController extends Notifier<List<Cuadre>> {
 
   // ─── Creación ──────────────────────────────────────────────────────────────
 
-  /// Crea un cuadre pendiente con los ítems del turno del dependiente.
+  /// Crea un cuadre pendiente con las ventas del turno del dependiente.
   /// Retorna `null` si tuvo éxito o un mensaje de error.
   String? crearCuadrePendiente({
     required Usuario dependiente,
-    required List<CuadreItem> items,
+    required List<Venta> ventas,
   }) {
     if (_repo.existsCuadreHoy(dependiente.id)) {
       return 'Ya existe un cuadre para hoy. '
@@ -47,12 +48,11 @@ class CuadreController extends Notifier<List<Cuadre>> {
         dependienteNombre: dependiente.nombre,
         dependienteFotoUrl: dependiente.fotoUrl,
         fechaTurno: DateTime(now.year, now.month, now.day),
-        items: List.unmodifiable(items),
+        ventas: List.unmodifiable(ventas),
         createdAt: now,
         updatedAt: now,
       ),
     );
-    // Movimientos are recorded by the Turno flow when items are added.
     state = _repo.fetchCuadres();
     return null;
   }
@@ -66,47 +66,27 @@ class CuadreController extends Notifier<List<Cuadre>> {
 
   // ─── Acciones del jefe ─────────────────────────────────────────────────────
 
-  /// Aprueba el cuadre. El stock ya fue ajustado por el dependiente.
+  /// Aprueba el cuadre. El stock ya fue ajustado por el dependiente durante las ventas.
   Future<void> confirmarCuadre(String id) async {
-    // Find cuadre
     final cuadre = findCuadre(id);
     if (cuadre == null) return;
 
-    // If we have a Sqlite-backed repository, let it apply stock changes
-    // transactionally (it updates the productos table). Otherwise, for the
-    // in-memory repository we apply the movements to the inventory controller
-    // so the product repo reflects the new stock values.
     if (_repo is SqliteCuadreRepository) {
       try {
         await (_repo as dynamic).approveCuadre(id);
-      } catch (_) {
-        // ignore errors for now
-      }
-      // refresh inventory (DB-backed implementation should pick up changes)
-      ref.invalidate(inventarioControllerProvider);
-    } else {
-      // Apply each item as a salida movement to the inventory controller.
-      final inv = ref.read(inventarioControllerProvider.notifier);
-      for (final item in cuadre.items) {
-        inv.applyMovimiento(
-          productoId: item.productoId,
-          tipo: MovimientoTipo.salida,
-          cantidad: item.cantidad,
-        );
-      }
+      } catch (_) {}
     }
 
     // mark as aprobado in local cache
     _patchCuadre(id, estado: CuadreEstado.aprobado);
 
     // Mark related salida movimientos for this dependiente/day as processed
-    // so the UI/history reflects that these ventas were applied.
     try {
       final movRepo = ref.read(movimientoRepositoryProvider);
       final movimientos = await movRepo.fetchMovimientosForDate(cuadre.fechaTurno);
       for (final m in movimientos) {
         final note = (m.nota ?? '').toLowerCase();
-        final isTurnoNote = note.contains('turno') || note.contains('venta') || note.contains('reducción');
+        final isTurnoNote = note.contains('venta pos');
         if (m.usuarioId == cuadre.dependienteId && m.tipo == MovimientoTipo.salida && !m.synced && isTurnoNote) {
           final updated = Movimiento(
             id: m.id,
@@ -125,77 +105,47 @@ class CuadreController extends Notifier<List<Cuadre>> {
           movRepo.updateMovimiento(updated);
         }
       }
-    } catch (_) {
-      // non-fatal; movement sync will occur later
-    }
+    } catch (_) {}
   }
 
-  /// Rechaza el cuadre y restaura todo el stock de sus ítems.
+  /// Rechaza el cuadre y restaura todo el stock de las ventas.
   void rechazarCuadre(String id, String comentario) {
     final cuadre = findCuadre(id);
     if (cuadre == null) return;
 
-    // No stock modifications needed since stock is applied only on approval.
+    // Restaurar el stock de cada venta del cuadre
+    final inv = ref.read(inventarioControllerProvider.notifier);
+    final movRepo = ref.read(movimientoRepositoryProvider);
+
+    for (final venta in cuadre.ventas) {
+      for (final item in venta.items) {
+        // Registrar movimiento de entrada compensatorio
+        movRepo.addMovimiento(
+          Movimiento(
+            id: const Uuid().v4(),
+            productoId: item.productoId,
+            productoNombre: item.productoNombre,
+            usuarioId: cuadre.dependienteId,
+            usuarioNombre: cuadre.dependienteNombre,
+            usuarioFotoUrl: cuadre.dependienteFotoUrl,
+            tipo: MovimientoTipo.entrada,
+            cantidad: item.cantidad, // La entrada es positiva
+            fecha: DateTime.now(),
+            nota: 'Reversión Venta POS #${venta.id.substring(0, 8)} (Cuadre rechazado)',
+            createdAt: DateTime.now(),
+          ),
+        );
+
+        // Restaurar en el inventario
+        inv.applyMovimiento(
+          productoId: item.productoId,
+          tipo: MovimientoTipo.entrada,
+          cantidad: item.cantidad,
+        );
+      }
+    }
+
     _patchCuadre(id, estado: CuadreEstado.rechazado, comentarioJefe: comentario);
-  }
-
-  // ─── Modificación de ítems por el jefe ─────────────────────────────────────
-
-  void modificarCantidadItem(
-    String cuadreId,
-    String productoId,
-    int nuevaCantidad,
-  ) {
-    final cuadre = findCuadre(cuadreId);
-    if (cuadre == null) return;
-
-    final idx = cuadre.items.indexWhere((i) => i.productoId == productoId);
-    if (idx == -1) return;
-
-    final item = cuadre.items[idx];
-    // Jefe edits shouldn't create movimientos here; movimientos are produced
-    // by dependiente's Turno actions.
-
-    final newItems = [...cuadre.items];
-    if (nuevaCantidad <= 0) {
-      newItems.removeAt(idx);
-    } else {
-      newItems[idx] = item.copyWith(cantidad: nuevaCantidad);
-    }
-
-    _patchItems(cuadreId, newItems);
-  }
-
-  void eliminarItemCuadre(String cuadreId, String productoId) {
-    final cuadre = findCuadre(cuadreId);
-    if (cuadre == null) return;
-
-    // Removing item from cuadre; no stock changes until approval.
-    _patchItems(
-      cuadreId,
-      cuadre.items.where((i) => i.productoId != productoId).toList(),
-    );
-  }
-
-  void agregarItemCuadre(String cuadreId, CuadreItem newItem) {
-    final cuadre = findCuadre(cuadreId);
-    if (cuadre == null) return;
-    // Add item to cuadre; stock not changed until approval.
-    final idx = cuadre.items.indexWhere(
-      (i) => i.productoId == newItem.productoId,
-    );
-    final newItems = [...cuadre.items];
-
-    if (idx == -1) {
-      newItems.add(newItem);
-    } else {
-      final existing = newItems[idx];
-      newItems[idx] = existing.copyWith(
-        cantidad: existing.cantidad + newItem.cantidad,
-      );
-    }
-
-    _patchItems(cuadreId, newItems);
   }
 
   // ─── Helpers privados ──────────────────────────────────────────────────────
@@ -217,12 +167,5 @@ class CuadreController extends Notifier<List<Cuadre>> {
     state = _repo.fetchCuadres();
   }
 
-  void _patchItems(String cuadreId, List<CuadreItem> items) {
-    final cuadre = findCuadre(cuadreId);
-    if (cuadre == null) return;
-    _repo.updateCuadre(
-      cuadre.copyWith(items: items, updatedAt: DateTime.now()),
-    );
-    state = _repo.fetchCuadres();
-  }
+
 }

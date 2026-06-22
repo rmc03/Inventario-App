@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:io';
-import 'package:uuid/uuid.dart';
 
 import '../../../core/theme/app_dimens.dart';
 import '../../../core/theme/app_theme.dart';
@@ -25,58 +24,13 @@ class _MovimientoCardItem extends _MovimientoItem {
   final Movimiento movimiento;
 }
 
-/// Agrega movimientos del mismo minuto (mismo producto/tipo/usuario) en uno
-/// solo sumando cantidades. Se usa fuera de `build()` para no recalcular
-/// (ni regenerar UUIDs) en cada frame.
-List<Movimiento> _aggregateByMinute(List<Movimiento> list) {
-  final Map<String, Movimiento> acc = {};
-  for (final m in list) {
-    final truncated = DateTime(
-      m.fecha.year, m.fecha.month, m.fecha.day, m.fecha.hour, m.fecha.minute,
-    );
-    final key =
-        '${m.productoId}|${m.tipo.name}|${m.usuarioId}|${truncated.toIso8601String()}';
-    final prev = acc[key];
-    if (prev == null) {
-      acc[key] = Movimiento(
-        id: const Uuid().v4(),
-        productoId: m.productoId,
-        productoNombre: m.productoNombre,
-        usuarioId: m.usuarioId,
-        usuarioNombre: m.usuarioNombre,
-        usuarioFotoUrl: m.usuarioFotoUrl,
-        tipo: m.tipo,
-        cantidad: m.cantidad,
-        nota: m.nota,
-        fecha: truncated,
-        synced: m.synced,
-        createdAt: m.createdAt,
-      );
-    } else {
-      acc[key] = Movimiento(
-        id: prev.id,
-        productoId: prev.productoId,
-        productoNombre: prev.productoNombre,
-        usuarioId: prev.usuarioId,
-        usuarioNombre: prev.usuarioNombre,
-        usuarioFotoUrl: prev.usuarioFotoUrl,
-        tipo: prev.tipo,
-        cantidad: prev.cantidad + m.cantidad,
-        nota: prev.nota ?? m.nota,
-        fecha: prev.fecha,
-        synced: prev.synced && m.synced,
-        createdAt:
-            prev.createdAt.isBefore(m.createdAt) ? prev.createdAt : m.createdAt,
-      );
-    }
-  }
-  return acc.values.toList()..sort((a, b) => b.fecha.compareTo(a.fecha));
+class _VentaCardItem extends _MovimientoItem {
+  const _VentaCardItem(this.ventaId, this.movimientos);
+  final String ventaId;
+  final List<Movimiento> movimientos;
 }
 
-/// Construye la lista plana de items a renderizar (cabeceras de día + tarjetas)
-/// a partir de los movimientos ya filtrados por tipo.
 List<_MovimientoItem> _buildFlatItems(List<Movimiento> movimientos) {
-  // Agrupar por día.
   final Map<DateTime, List<Movimiento>> grouped = {};
   for (final m in movimientos) {
     final day = DateTime(m.fecha.year, m.fecha.month, m.fecha.day);
@@ -86,11 +40,21 @@ List<_MovimientoItem> _buildFlatItems(List<Movimiento> movimientos) {
 
   final List<_MovimientoItem> items = [];
   for (final day in days) {
-    final dayList = grouped[day]!
-      ..sort((a, b) => b.fecha.compareTo(a.fecha));
+    final dayList = grouped[day]!..sort((a, b) => b.fecha.compareTo(a.fecha));
     items.add(_DayHeaderItem(day));
-    for (final m in _aggregateByMinute(dayList)) {
-      items.add(_MovimientoCardItem(m));
+
+    final processedSales = <String>{};
+    for (final m in dayList) {
+      if (m.tipo == MovimientoTipo.salida && m.nota != null && m.nota!.startsWith('Venta POS')) {
+        final ventaId = m.nota!;
+        if (!processedSales.contains(ventaId)) {
+          processedSales.add(ventaId);
+          final saleItems = dayList.where((x) => x.nota == ventaId).toList();
+          items.add(_VentaCardItem(ventaId, saleItems));
+        }
+      } else {
+        items.add(_MovimientoCardItem(m));
+      }
     }
   }
   return items;
@@ -229,6 +193,21 @@ class _MovimientosScreenState extends ConsumerState<MovimientosScreen> {
                           ],
                         ),
                       ),
+                    _VentaCardItem(:final ventaId, :final movimientos) => Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppSpacing.xl,
+                        ),
+                        child: Column(
+                          children: [
+                            _VentaCard(
+                              key: ValueKey(ventaId),
+                              ventaId: ventaId,
+                              movimientos: movimientos,
+                            ),
+                            const Divider(),
+                          ],
+                        ),
+                      ),
                   };
                 },
               ),
@@ -353,3 +332,82 @@ class _UsuarioAvatar extends StatelessWidget {
     return CircleAvatar(radius: 20, backgroundImage: image);
   }
 }
+
+class _VentaCard extends StatelessWidget {
+  const _VentaCard({super.key, required this.ventaId, required this.movimientos});
+
+  final String ventaId;
+  final List<Movimiento> movimientos;
+
+  @override
+  Widget build(BuildContext context) {
+    if (movimientos.isEmpty) return const SizedBox.shrink();
+    
+    final first = movimientos.first;
+    final totalUnits = movimientos.fold(0, (sum, m) => sum + m.cantidad.abs());
+
+    return Card(
+      child: Theme(
+        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+        child: ExpansionTile(
+          tilePadding: const EdgeInsets.fromLTRB(14, 4, 14, 4),
+          childrenPadding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
+          leading: DecoratedBox(
+            decoration: BoxDecoration(
+              color: AppColors.primary.withValues(alpha: 0.10),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: const Padding(
+              padding: EdgeInsets.all(10),
+              child: Icon(
+                Icons.shopping_cart_rounded,
+                color: AppColors.primary,
+              ),
+            ),
+          ),
+          title: Text(
+            'Venta (POS)',
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
+          subtitle: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SizedBox(height: 4),
+              Text(
+                '$totalUnits unidades',
+                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                      color: AppColors.primary,
+                      fontWeight: FontWeight.w800,
+                    ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                '${first.usuarioNombre} · ${compactDateFormatter.format(first.fecha)} ${timeFormatter.format(first.fecha)}',
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
+            ],
+          ),
+          children: [
+            const Divider(height: 1),
+            const SizedBox(height: 12),
+            for (final m in movimientos)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        '${m.cantidad.abs()}x ${m.productoNombre}',
+                        style: Theme.of(context).textTheme.bodyMedium,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+

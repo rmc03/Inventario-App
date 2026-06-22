@@ -63,7 +63,7 @@ class RoleShell extends ConsumerWidget {
                 ),
               )
             : null,
-        floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
+        floatingActionButtonLocation: FloatingActionButtonLocation.endDocked,
       ),
     );
   }
@@ -235,16 +235,16 @@ const _adminItems = [
 
 const _dependienteItems = [
   ShellItem(
-    path: '/dependiente/inventario',
-    label: 'Inventario',
-    icon: Icons.inventory_2_outlined,
-    activeIcon: Icons.inventory_2,
-  ),
-  ShellItem(
     path: '/dependiente/turno',
     label: 'Mi turno',
     icon: Icons.today_outlined,
     activeIcon: Icons.today,
+  ),
+  ShellItem(
+    path: '/dependiente/inventario',
+    label: 'Inventario',
+    icon: Icons.inventory_2_outlined,
+    activeIcon: Icons.inventory_2,
   ),
   ShellItem(
     path: '/dependiente/configuracion',

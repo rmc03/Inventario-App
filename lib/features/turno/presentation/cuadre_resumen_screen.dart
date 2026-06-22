@@ -4,14 +4,11 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/formatters.dart';
-import '../../../shared/models/cuadre_item.dart';
-import '../../../shared/widgets/qty_controls.dart';
+import '../../../shared/models/venta.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../cuadres/providers/cuadre_provider.dart';
 import '../providers/turno_provider.dart';
-import '../../inventario/providers/inventario_provider.dart';
-
-const double _kTrailingWidth = 92.0;
+import '../../ventas/providers/venta_provider.dart';
 
 class CuadreResumenScreen extends ConsumerWidget {
   const CuadreResumenScreen({super.key});
@@ -19,6 +16,7 @@ class CuadreResumenScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final turno = ref.watch(turnoControllerProvider);
+    final ventas = ref.watch(ventasDelTurnoProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -39,24 +37,24 @@ class CuadreResumenScreen extends ConsumerWidget {
                 children: [
                   _ResumenHeader(turno: turno),
                   const SizedBox(height: 16),
-                  if (turno.items.isEmpty)
+                  if (ventas.isEmpty)
                     const _EmptyResumen()
                   else ...[
-                    for (final item in turno.items) ...[
-                      _ResumenItemCard(item: item),
+                    for (final venta in ventas) ...[
+                      _ResumenVentaCard(venta: venta),
                       const SizedBox(height: 10),
                     ],
                     const SizedBox(height: 6),
                     const Divider(),
                     const SizedBox(height: 12),
-                    _ResumenTotal(turno: turno),
+                    _ResumenTotal(ventas: ventas),
                   ],
                 ],
               ),
             ),
             _ConfirmBar(
-              enabled: turno.items.isNotEmpty,
-              onConfirm: () => _confirmarEnvio(context, ref, turno),
+              enabled: ventas.isNotEmpty,
+              onConfirm: () => _confirmarEnvio(context, ref, ventas),
             ),
           ],
         ),
@@ -67,10 +65,10 @@ class CuadreResumenScreen extends ConsumerWidget {
   Future<void> _confirmarEnvio(
     BuildContext context,
     WidgetRef ref,
-    TurnoState turno,
+    List<Venta> ventas,
   ) async {
     final user = ref.read(authControllerProvider).user;
-    if (user == null || turno.items.isEmpty) return;
+    if (user == null || ventas.isEmpty) return;
 
     final ok = await showDialog<bool>(
       context: context,
@@ -97,7 +95,7 @@ class CuadreResumenScreen extends ConsumerWidget {
 
     final error = ref
         .read(cuadreControllerProvider.notifier)
-        .crearCuadrePendiente(dependiente: user, items: turno.items);
+        .crearCuadrePendiente(dependiente: user, ventas: ventas);
 
     if (error != null) {
       if (!context.mounted) return;
@@ -107,6 +105,7 @@ class CuadreResumenScreen extends ConsumerWidget {
       return;
     }
 
+    ref.read(ventasDelTurnoProvider.notifier).clearVentas();
     ref.read(turnoControllerProvider.notifier).enviarCuadre();
     if (context.mounted) context.go('/dependiente/turno');
   }
@@ -160,92 +159,54 @@ class _ResumenHeader extends StatelessWidget {
   }
 }
 
-class _ResumenItemCard extends ConsumerWidget {
-  const _ResumenItemCard({required this.item});
+class _ResumenVentaCard extends StatelessWidget {
+  const _ResumenVentaCard({required this.venta});
 
-  final CuadreItem item;
+  final Venta venta;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     return Card(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 14, 12, 14),
-        child: Row(
+      child: Theme(
+        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+        child: ExpansionTile(
+          tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+          childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+          title: Text(
+            'Venta a las ${timeFormatter.format(venta.fecha)}',
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
+          subtitle: Text(
+            '${venta.items.length} ${venta.items.length == 1 ? 'producto' : 'productos'}',
+            style: Theme.of(context).textTheme.bodyMedium,
+          ),
+          trailing: Text(
+            formatCurrency(venta.total),
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  color: AppColors.primary,
+                ),
+          ),
           children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    item.productoNombre,
-                    style: Theme.of(context).textTheme.titleMedium,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    '${formatCurrency(item.precioUnitario)} c/u',
-                    style: Theme.of(context).textTheme.bodyMedium,
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 10),
-            QtyControls(
-              cantidad: item.cantidad,
-              onDecrement: item.cantidad > 1
-                  ? () => ref
-                        .read(turnoControllerProvider.notifier)
-                        .actualizarCantidadItem(
-                          item.productoId,
-                          item.cantidad - 1,
-                        )
-                  : null,
-              onIncrement: () {
-                final producto = ref
-                    .read(inventarioControllerProvider.notifier)
-                    .findProducto(item.productoId);
-                final available = producto?.stockActual ?? 0;
-                if (item.cantidad + 1 > available) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('La cantidad supera el stock disponible'),
+            const Divider(height: 1),
+            const SizedBox(height: 12),
+            for (final item in venta.items)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        '${item.cantidad}x ${item.productoNombre}',
+                        style: Theme.of(context).textTheme.bodyMedium,
+                      ),
                     ),
-                  );
-                  return;
-                }
-                ref
-                    .read(turnoControllerProvider.notifier)
-                    .actualizarCantidadItem(item.productoId, item.cantidad + 1);
-              },
-            ),
-            const SizedBox(width: 10),
-            SizedBox(
-              width: _kTrailingWidth,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    formatCurrency(item.subtotal),
-                    style: Theme.of(
-                      context,
-                    ).textTheme.titleMedium?.copyWith(color: AppColors.primary),
-                  ),
-                  const SizedBox(height: 4),
-                  GestureDetector(
-                    onTap: () => ref
-                        .read(turnoControllerProvider.notifier)
-                        .eliminarItem(item.productoId),
-                    child: const Icon(
-                      Icons.close_rounded,
-                      size: 18,
-                      color: AppColors.muted,
+                    Text(
+                      formatCurrency(item.subtotal),
+                      style: Theme.of(context).textTheme.bodyMedium,
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
           ],
         ),
       ),
@@ -254,12 +215,15 @@ class _ResumenItemCard extends ConsumerWidget {
 }
 
 class _ResumenTotal extends StatelessWidget {
-  const _ResumenTotal({required this.turno});
+  const _ResumenTotal({required this.ventas});
 
-  final TurnoState turno;
+  final List<Venta> ventas;
 
   @override
   Widget build(BuildContext context) {
+    final total = ventas.fold(0.0, (sum, v) => sum + v.total);
+    final totalUnidades = ventas.fold(0, (sum, v) => sum + v.totalUnidades);
+
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -267,25 +231,19 @@ class _ResumenTotal extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              '${turno.items.length} '
-              '${turno.items.length == 1 ? 'producto' : 'productos'} · '
-              '${turno.totalUnidades} unidades',
+              '${ventasLabel(ventas.length)} · $totalUnidades unidades',
               style: Theme.of(context).textTheme.bodyMedium,
             ),
             const SizedBox(height: 2),
             Text(
               'Total de ventas',
-              style: Theme.of(
-                context,
-              ).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w700),
+              style: Theme.of(context).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w700),
             ),
           ],
         ),
         Text(
-          formatCurrency(turno.valorTotal),
-          style: Theme.of(
-            context,
-          ).textTheme.headlineMedium?.copyWith(color: AppColors.primary),
+          formatCurrency(total),
+          style: Theme.of(context).textTheme.headlineMedium?.copyWith(color: AppColors.primary),
         ),
       ],
     );
@@ -301,7 +259,7 @@ class _EmptyResumen extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.all(20),
         child: Text(
-          'No hay ítems en el cuadre.',
+          'No hay ventas en este turno.',
           style: Theme.of(context).textTheme.bodyMedium,
         ),
       ),

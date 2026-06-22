@@ -3,6 +3,7 @@ import 'dart:convert';
 import '../../../core/local_db/local_database.dart';
 import '../../../shared/models/cuadre.dart';
 import '../../../shared/models/cuadre_item.dart';
+import '../../../shared/models/venta.dart';
 
 class SqliteCuadreRepository {
   SqliteCuadreRepository(this._db);
@@ -66,6 +67,7 @@ class SqliteCuadreRepository {
       'estado': cuadre.estado.name,
       'comentario_jefe': cuadre.comentarioJefe,
       'items_json': jsonEncode(cuadre.items.map((i) => i.toJson()).toList()),
+      'ventas_json': jsonEncode(cuadre.ventas.map((v) => v.toJson()).toList()),
       'synced': cuadre.synced ? 1 : 0,
       'created_at': cuadre.createdAt.toIso8601String(),
       'updated_at': cuadre.updatedAt.toIso8601String(),
@@ -80,6 +82,27 @@ class SqliteCuadreRepository {
             .toList()
         : <CuadreItem>[];
 
+    final ventasJson = row['ventas_json'] as String?;
+    final ventas = ventasJson != null
+        ? (jsonDecode(ventasJson) as List<dynamic>)
+            .map((v) => Venta.fromJson(v as Map<String, dynamic>))
+            .toList()
+        : items.isEmpty
+            ? <Venta>[]
+            : [
+                Venta(
+                  id: 'legacy-${row['id']}',
+                  dependienteId: row['dependiente_id'] as String,
+                  dependienteNombre:
+                      (row['dependiente_nombre'] as String?) ?? 'Dependiente',
+                  dependienteFotoUrl: row['dependiente_foto_url'] as String?,
+                  fecha: DateTime.parse(row['fecha_turno'] as String),
+                  createdAt: DateTime.parse(row['created_at'] as String),
+                  items: items,
+                  estado: VentaEstado.completada,
+                ),
+              ];
+
     return Cuadre(
       id: row['id'] as String,
       dependienteId: row['dependiente_id'] as String,
@@ -87,7 +110,7 @@ class SqliteCuadreRepository {
           (row['dependiente_nombre'] as String?) ?? 'Dependiente',
       dependienteFotoUrl: row['dependiente_foto_url'] as String?,
       fechaTurno: DateTime.parse(row['fecha_turno'] as String),
-      items: items,
+      ventas: ventas,
       estado: CuadreEstado.fromValue(
         (row['estado'] as String?) ?? 'pendiente',
       ),
