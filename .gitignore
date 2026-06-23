@@ -55,3 +55,7 @@ supabase/
 
 # Node.js
 node_modules/
+
+# OpenCode agent skills (local IDE config)
+.agents/
+.commandcode/
