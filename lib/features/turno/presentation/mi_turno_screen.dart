@@ -187,6 +187,21 @@ class _TurnoActivoView extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Card resumen compacta (fija)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.xl,
+                12,
+                AppSpacing.xl,
+                8,
+              ),
+              child: _ResumenDelDiaCard(
+                totalVentas: totalTurno,
+                cantidadVentas: ventas.length,
+                cantidadArticulos: totalArticulos,
+              ),
+            ),
+
             // Badge de turno activo
             if (turno.horaInicio != null)
               Padding(
@@ -194,49 +209,10 @@ class _TurnoActivoView extends ConsumerWidget {
                   AppSpacing.xl,
                   0,
                   AppSpacing.xl,
-                  AppSpacing.md,
+                  16,
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: AppSpacing.md,
-                        vertical: 6,
-                      ),
-                      decoration: BoxDecoration(
-                        color: AppColors.success.withValues(alpha: 0.10),
-                        borderRadius: AppRadii.pillBorder,
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Container(
-                            width: 8,
-                            height: 8,
-                            decoration: const BoxDecoration(
-                              color: AppColors.success,
-                              shape: BoxShape.circle,
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            'Turno activo',
-                            style: Theme.of(context).textTheme.bodyMedium
-                                ?.copyWith(
-                                  color: AppColors.success,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: AppSpacing.xs),
-                    Text(
-                      'Desde ${timeFormatter.format(turno.horaInicio!)}',
-                      style: Theme.of(context).textTheme.bodyMedium,
-                    ),
-                  ],
+                child: _BadgeChip(
+                  horaInicio: turno.horaInicio!,
                 ),
               ),
 
@@ -249,40 +225,32 @@ class _TurnoActivoView extends ConsumerWidget {
                     0,
                   ),
                 children: [
-                  // Card resumen azul
-                  _ResumenDelDiaCard(
-                    totalVentas: totalTurno,
-                    cantidadVentas: ventas.length,
-                    cantidadArticulos: totalArticulos,
-                  ),
-                  const SizedBox(height: AppSpacing.xxl),
-
-                  // Historial de ventas
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Historial de ventas',
-                        style: Theme.of(context).textTheme.titleMedium,
-                      ),
-                      TextButton(
-                        onPressed: () {},
-                        child: const Text('Ver todas'),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: AppSpacing.sm),
-
-                  if (ventas.isEmpty)
-                    const _EmptyItems()
-                  else
+                  if (ventas.isNotEmpty) ...[
+                    // Historial de ventas
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Historial de ventas',
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
+                        TextButton(
+                          onPressed: () {},
+                          child: const Text('Ver todas'),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
                     ...List.generate(ventas.length, (i) {
                       return Padding(
                         padding: const EdgeInsets.only(bottom: AppSpacing.md),
                         child: _VentaCard(venta: ventas[i]),
                       );
                     }),
+                  ],
 
+                  if (ventas.isEmpty)
+                    const _EmptyItems(),
                 ],
               ),
             ),
@@ -333,64 +301,55 @@ class _ResumenDelDiaCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(AppSpacing.xl),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [AppColors.primary, AppColors.primaryDark],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
+        color: AppColors.surface,
+        borderRadius: AppRadii.mdBorder,
+        border: const Border(
+          left: BorderSide(color: AppColors.primary, width: 4),
         ),
-        borderRadius: AppRadii.lgBorder,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.20),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.attach_money_rounded,
-                  color: Colors.white,
-                  size: 22,
-                ),
-              ),
-              const SizedBox(width: AppSpacing.md),
-              Text(
-                'Ventas de hoy',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Colors.white.withValues(alpha: 0.85),
-                ),
-              ),
-            ],
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primary.withValues(alpha: 0.08),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
           ),
-          const SizedBox(height: AppSpacing.md),
-          Text(
-            formatCurrency(totalVentas),
-            style: Theme.of(context).textTheme.headlineLarge?.copyWith(
-              color: Colors.white,
-              fontWeight: FontWeight.w800,
+        ],
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Ventas de hoy',
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  formatCurrency(totalVentas),
+                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                    color: AppColors.primary,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ],
             ),
           ),
-          const SizedBox(height: AppSpacing.lg),
-          Row(
-            children: [
-              _ResumenMetrica(
-                icon: Icons.shopping_cart_rounded,
-                valor: '$cantidadVentas',
-                label: 'Ventas completadas',
-              ),
-              const SizedBox(width: AppSpacing.xxl),
-              _ResumenMetrica(
-                icon: Icons.inventory_2_outlined,
-                valor: '$cantidadArticulos',
-                label: 'Artículos vendidos',
-              ),
-            ],
+          _CompactMetrica(
+            valor: '$cantidadVentas',
+            label: 'ventas',
+          ),
+          const SizedBox(width: 16),
+          SizedBox(
+            height: 36,
+            child: VerticalDivider(width: 1, color: AppColors.line),
+          ),
+          const SizedBox(width: 16),
+          _CompactMetrica(
+            valor: '$cantidadArticulos',
+            label: 'unidades',
           ),
         ],
       ),
@@ -398,42 +357,70 @@ class _ResumenDelDiaCard extends StatelessWidget {
   }
 }
 
-class _ResumenMetrica extends StatelessWidget {
-  const _ResumenMetrica({
-    required this.icon,
+class _CompactMetrica extends StatelessWidget {
+  const _CompactMetrica({
     required this.valor,
     required this.label,
   });
 
-  final IconData icon;
   final String valor;
   final String label;
 
   @override
   Widget build(BuildContext context) {
-    return Row(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(icon, color: Colors.white.withValues(alpha: 0.80), size: 18),
-        const SizedBox(width: AppSpacing.sm),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              valor,
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                color: Colors.white,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-            Text(
-              label,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: Colors.white.withValues(alpha: 0.70),
-              ),
-            ),
-          ],
+        Text(
+          valor,
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+        Text(
+          label,
+          style: Theme.of(context).textTheme.bodyMedium,
         ),
       ],
+    );
+  }
+}
+
+class _BadgeChip extends StatelessWidget {
+  const _BadgeChip({required this.horaInicio});
+
+  final DateTime horaInicio;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceSecondary,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 6,
+            height: 6,
+            decoration: const BoxDecoration(
+              color: AppColors.success,
+              shape: BoxShape.circle,
+            ),
+          ),
+          const SizedBox(width: 6),
+          Text(
+            'Turno activo \u00b7 Desde ${timeFormatter.format(horaInicio)}',
+            style: const TextStyle(
+              fontSize: 12,
+              color: AppColors.success,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -445,23 +432,23 @@ class _EmptyItems extends StatelessWidget {
   Widget build(BuildContext context) {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(32),
+        padding: const EdgeInsets.fromLTRB(16, 32, 16, 16),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(
               Icons.shopping_bag_outlined,
-              size: 48,
+              size: 40,
               color: AppColors.muted.withValues(alpha: 0.4),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 10),
             Text(
               'Sin ventas aún',
               style: Theme.of(
                 context,
               ).textTheme.titleMedium?.copyWith(color: AppColors.muted),
             ),
-            const SizedBox(height: 6),
+            const SizedBox(height: 4),
             Text(
               'Toca en "Nueva venta" para atender a un cliente.',
               style: Theme.of(context).textTheme.bodyMedium,
