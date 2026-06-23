@@ -30,6 +30,20 @@ class _VentaCardItem extends _MovimientoItem {
   final List<Movimiento> movimientos;
 }
 
+class _ProductoAgrupado {
+  final String productoId;
+  final String productoNombre;
+  final int totalUnidades;
+  final List<Movimiento> movimientos;
+
+  _ProductoAgrupado({
+    required this.productoId,
+    required this.productoNombre,
+    required this.totalUnidades,
+    required this.movimientos,
+  });
+}
+
 List<_MovimientoItem> _buildFlatItems(List<Movimiento> movimientos) {
   final Map<DateTime, List<Movimiento>> grouped = {};
   for (final m in movimientos) {
@@ -45,7 +59,9 @@ List<_MovimientoItem> _buildFlatItems(List<Movimiento> movimientos) {
 
     final processedSales = <String>{};
     for (final m in dayList) {
-      if (m.tipo == MovimientoTipo.salida && m.nota != null && m.nota!.startsWith('Venta POS')) {
+      if (m.tipo == MovimientoTipo.salida &&
+          m.nota != null &&
+          m.nota!.startsWith('Venta POS')) {
         final ventaId = m.nota!;
         if (!processedSales.contains(ventaId)) {
           processedSales.add(ventaId);
@@ -60,6 +76,34 @@ List<_MovimientoItem> _buildFlatItems(List<Movimiento> movimientos) {
   return items;
 }
 
+List<_ProductoAgrupado> _agruparPorProducto(List<Movimiento> movimientos) {
+  final map = <String, _ProductoAgrupado>{};
+  for (final m in movimientos) {
+    final existing = map[m.productoId];
+    if (existing != null) {
+      map[m.productoId] = _ProductoAgrupado(
+        productoId: m.productoId,
+        productoNombre: m.productoNombre,
+        totalUnidades: existing.totalUnidades + m.cantidad.abs(),
+        movimientos: [...existing.movimientos, m],
+      );
+    } else {
+      map[m.productoId] = _ProductoAgrupado(
+        productoId: m.productoId,
+        productoNombre: m.productoNombre,
+        totalUnidades: m.cantidad.abs(),
+        movimientos: [m],
+      );
+    }
+  }
+  final result = map.values.toList()
+    ..sort((a, b) => b.totalUnidades.compareTo(a.totalUnidades));
+  for (final p in result) {
+    p.movimientos.sort((a, b) => b.fecha.compareTo(a.fecha));
+  }
+  return result;
+}
+
 class MovimientosScreen extends ConsumerStatefulWidget {
   const MovimientosScreen({super.key});
 
@@ -69,23 +113,23 @@ class MovimientosScreen extends ConsumerStatefulWidget {
 
 class _MovimientosScreenState extends ConsumerState<MovimientosScreen> {
   MovimientoTipo? _tipo;
+  bool _mostrarProductos = true;
 
-  // Caché de la agregación: solo se recalcula cuando cambia la lista fuente
-  // o el filtro activo. Evita regenerar UUIDs y reagrupar en cada rebuild.
   List<Movimiento>? _cachedSource;
   MovimientoTipo? _cachedTipo;
-  late List<_MovimientoItem> _flatItems;
+  late List<_MovimientoItem> _ventasItems;
+  late List<_ProductoAgrupado> _productosItems;
 
-  List<_MovimientoItem> _resolveItems(List<Movimiento> source) {
+  void _resolveItems(List<Movimiento> source) {
     if (!identical(source, _cachedSource) || _tipo != _cachedTipo) {
       final filtered = _tipo == null
           ? source
           : source.where((m) => m.tipo == _tipo).toList();
-      _flatItems = _buildFlatItems(filtered);
+      _ventasItems = _buildFlatItems(filtered);
+      _productosItems = _agruparPorProducto(filtered);
       _cachedSource = source;
       _cachedTipo = _tipo;
     }
-    return _flatItems;
   }
 
   String _dateHeader(DateTime day) {
@@ -100,118 +144,224 @@ class _MovimientosScreenState extends ConsumerState<MovimientosScreen> {
   @override
   Widget build(BuildContext context) {
     final source = ref.watch(movimientoControllerProvider);
-    final items = _resolveItems(source);
+    _resolveItems(source);
 
     return Scaffold(
       appBar: AppBar(title: const Text('Movimientos')),
       body: SafeArea(
         top: false,
-        child: CustomScrollView(
-          slivers: [
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(
-                  AppSpacing.xl, AppSpacing.sm, AppSpacing.xl, 0,
-                ),
-                child: SegmentedButton<MovimientoTipo?>(
-                  segments: const [
-                    ButtonSegment(value: null, label: Text('Todos')),
-                    ButtonSegment(
-                        value: MovimientoTipo.entrada, label: Text('Entradas')),
-                    ButtonSegment(
-                        value: MovimientoTipo.salida, label: Text('Salidas')),
-                  ],
-                  selected: {_tipo},
-                  onSelectionChanged: (value) =>
-                      setState(() => _tipo = value.first),
-                  style: SegmentedButton.styleFrom(
-                    selectedBackgroundColor:
-                        AppColors.primary.withValues(alpha: 0.12),
+        child: Column(
+          children: [
+            // ── Toggle ──
+            Padding(
+              padding: const EdgeInsets.fromLTRB(AppSpacing.xl, AppSpacing.sm, AppSpacing.xl, 0),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: _ToggleOption(
+                      label: 'Productos',
+                      icon: Icons.inventory_2_rounded,
+                      selected: _mostrarProductos,
+                      onTap: () => setState(() => _mostrarProductos = true),
+                    ),
                   ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _ToggleOption(
+                      label: 'Por ventas',
+                      icon: Icons.receipt_long_rounded,
+                      selected: !_mostrarProductos,
+                      onTap: () => setState(() => _mostrarProductos = false),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+
+            // ── Filtro ──
+            Padding(
+              padding: const EdgeInsets.fromLTRB(AppSpacing.xl, 0, AppSpacing.xl, 0),
+              child: SegmentedButton<MovimientoTipo?>(
+                segments: const [
+                  ButtonSegment(value: null, label: Text('Todos')),
+                  ButtonSegment(
+                    value: MovimientoTipo.entrada,
+                    label: Text('Entradas'),
+                  ),
+                  ButtonSegment(
+                    value: MovimientoTipo.salida,
+                    label: Text('Salidas'),
+                  ),
+                ],
+                selected: {_tipo},
+                onSelectionChanged: (value) =>
+                    setState(() => _tipo = value.first),
+                style: SegmentedButton.styleFrom(
+                  selectedBackgroundColor:
+                      AppColors.primary.withValues(alpha: 0.12),
                 ),
               ),
             ),
-            const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.md)),
-            if (items.isEmpty)
-              const SliverFillRemaining(
-                hasScrollBody: false,
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    SizedBox(height: 60),
-                    Text('No hay movimientos'),
-                  ],
-                ),
-              )
-            else
-              SliverList.builder(
-                itemCount: items.length,
-                itemBuilder: (context, index) {
-                  final item = items[index];
-                  return switch (item) {
-                    _DayHeaderItem(:final day) => Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: AppSpacing.xl,
-                        ),
-                        child: Column(
-                          children: [
-                            const SizedBox(height: AppSpacing.sm),
-                            Center(
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 6,
-                                ),
-                                margin:
-                                    const EdgeInsets.symmetric(vertical: 8),
-                                decoration: BoxDecoration(
-                                  color:
-                                      AppColors.muted.withValues(alpha: 0.06),
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Text(
-                                  _dateHeader(day),
-                                  style: Theme.of(context).textTheme.labelLarge,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: AppSpacing.sm),
-                          ],
-                        ),
-                      ),
-                    _MovimientoCardItem(:final movimiento) => Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: AppSpacing.xl,
-                        ),
-                        child: Column(
-                          children: [
-                            _MovimientoCard(
-                              key: ValueKey(movimiento.id),
-                              movimiento: movimiento,
-                            ),
-                            const Divider(),
-                          ],
-                        ),
-                      ),
-                    _VentaCardItem(:final ventaId, :final movimientos) => Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: AppSpacing.xl,
-                        ),
-                        child: Column(
-                          children: [
-                            _VentaCard(
-                              key: ValueKey(ventaId),
-                              ventaId: ventaId,
-                              movimientos: movimientos,
-                            ),
-                            const Divider(),
-                          ],
-                        ),
-                      ),
-                  };
-                },
+            const SizedBox(height: AppSpacing.md),
+
+            // ── Contenido ──
+            Expanded(
+              child: _mostrarProductos
+                  ? _buildProductosView(context)
+                  : _buildVentasView(context),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildVentasView(BuildContext context) {
+    final items = _ventasItems;
+    if (items.isEmpty) {
+      return const Center(child: Text('No hay movimientos'));
+    }
+    return ListView.builder(
+      padding: const EdgeInsets.only(bottom: AppSpacing.xl),
+      itemCount: items.length,
+      itemBuilder: (context, index) {
+        final item = items[index];
+        return switch (item) {
+          _DayHeaderItem(:final day) => Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.xl,
               ),
-            const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.xl)),
+              child: Column(
+                children: [
+                  const SizedBox(height: AppSpacing.sm),
+                  Center(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 6,
+                      ),
+                      margin: const EdgeInsets.symmetric(vertical: 8),
+                      decoration: BoxDecoration(
+                        color: AppColors.muted.withValues(alpha: 0.06),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        _dateHeader(day),
+                        style: Theme.of(context).textTheme.labelLarge,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                ],
+              ),
+            ),
+          _MovimientoCardItem(:final movimiento) => Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.xl,
+              ),
+              child: Column(
+                children: [
+                  _MovimientoCard(
+                    key: ValueKey(movimiento.id),
+                    movimiento: movimiento,
+                  ),
+                  const Divider(),
+                ],
+              ),
+            ),
+          _VentaCardItem(:final ventaId, :final movimientos) => Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.xl,
+              ),
+              child: Column(
+                children: [
+                  _VentaCard(
+                    key: ValueKey(ventaId),
+                    ventaId: ventaId,
+                    movimientos: movimientos,
+                  ),
+                  const Divider(),
+                ],
+              ),
+            ),
+        };
+      },
+    );
+  }
+
+  Widget _buildProductosView(BuildContext context) {
+    final items = _productosItems;
+    if (items.isEmpty) {
+      return const Center(child: Text('No hay movimientos'));
+    }
+    return ListView.builder(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.xl,
+        0,
+        AppSpacing.xl,
+        AppSpacing.xl,
+      ),
+      itemCount: items.length,
+      itemBuilder: (context, index) {
+        final p = items[index];
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 10),
+          child: _ProductoMovimientoCard(producto: p),
+        );
+      },
+    );
+  }
+}
+
+// ─── Subwidgets ───────────────────────────────────────────────────────────────
+
+class _ToggleOption extends StatelessWidget {
+  const _ToggleOption({
+    required this.label,
+    required this.icon,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final IconData icon;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        decoration: BoxDecoration(
+          color: selected
+              ? AppColors.primary.withValues(alpha: 0.08)
+              : AppColors.surfaceSecondary,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: selected ? AppColors.primary : AppColors.line,
+            width: selected ? 1.5 : 1,
+          ),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              icon,
+              size: 18,
+              color: selected ? AppColors.primary : AppColors.muted,
+            ),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                color: selected ? AppColors.primary : AppColors.ink,
+                fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+              ),
+            ),
           ],
         ),
       ),
@@ -227,17 +377,13 @@ class _MovimientoCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isEntrada = movimiento.tipo == MovimientoTipo.entrada;
-    // Detect pending sales (created by Turno flow). We classify as pending
-    // when nota mentions 'turno' or 'pendiente'. This avoids confusing
-    // pending ventas with confirmed 'salida' stock adjustments.
     final notaLower = movimiento.nota?.toLowerCase() ?? '';
-    final isPendingSale = !isEntrada && (
-      notaLower.contains('turno') ||
-      notaLower.contains('pendiente') ||
-      notaLower.contains('ajust') ||
-      notaLower.contains('reducc') ||
-      movimiento.cantidad < 0
-    );
+    final isPendingSale = !isEntrada &&
+        (notaLower.contains('turno') ||
+            notaLower.contains('pendiente') ||
+            notaLower.contains('ajust') ||
+            notaLower.contains('reducc') ||
+            movimiento.cantidad < 0);
     final color = isEntrada
         ? AppColors.success
         : (isPendingSale ? AppColors.warning : AppColors.danger);
@@ -278,9 +424,12 @@ class _MovimientoCard extends StatelessWidget {
                       final qty = movimiento.cantidad.abs();
                       final baseLabel = isEntrada
                           ? movimiento.tipo.label
-                          : (isPendingSale ? 'Venta (Pendiente)' : movimiento.tipo.label);
-                      final suffix = movimiento.cantidad < 0 ? ' (reducción)' : '';
-                      return '$baseLabel · $qty unidades$suffix';
+                          : (isPendingSale
+                              ? 'Venta (Pendiente)'
+                              : movimiento.tipo.label);
+                      final suffix =
+                          movimiento.cantidad < 0 ? ' (reducción)' : '';
+                      return '$baseLabel \u00b7 $qty unidades$suffix';
                     })(),
                     style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                       color: color,
@@ -289,10 +438,9 @@ class _MovimientoCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    // Omitir el nombre del usuario en entradas (solo muestra fecha/hora)
                     movimiento.tipo == MovimientoTipo.entrada
                         ? '${compactDateFormatter.format(movimiento.fecha)} ${timeFormatter.format(movimiento.fecha)}'
-                        : '${movimiento.usuarioNombre} · ${compactDateFormatter.format(movimiento.fecha)} ${timeFormatter.format(movimiento.fecha)}',
+                        : '${movimiento.usuarioNombre} \u00b7 ${compactDateFormatter.format(movimiento.fecha)} ${timeFormatter.format(movimiento.fecha)}',
                     style: Theme.of(context).textTheme.bodyMedium,
                   ),
                   if (movimiento.nota != null) ...[
@@ -315,15 +463,12 @@ class _MovimientoCard extends StatelessWidget {
   }
 }
 
-/// Avatar de usuario con caché de resolución de imagen a tamaño pequeño,
-/// para no decodificar fotos a resolución completa en un círculo de 40px.
 class _UsuarioAvatar extends StatelessWidget {
   const _UsuarioAvatar({required this.url});
   final String url;
 
   @override
   Widget build(BuildContext context) {
-    // 40px de radio = 80px diámetro → decodificamos a ~160px para retina.
     const cacheSize = 160;
     final image = url.startsWith('http')
         ? ResizeImage(NetworkImage(url), width: cacheSize, height: cacheSize)
@@ -334,7 +479,11 @@ class _UsuarioAvatar extends StatelessWidget {
 }
 
 class _VentaCard extends StatelessWidget {
-  const _VentaCard({super.key, required this.ventaId, required this.movimientos});
+  const _VentaCard({
+    super.key,
+    required this.ventaId,
+    required this.movimientos,
+  });
 
   final String ventaId;
   final List<Movimiento> movimientos;
@@ -342,7 +491,7 @@ class _VentaCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (movimientos.isEmpty) return const SizedBox.shrink();
-    
+
     final first = movimientos.first;
     final totalUnits = movimientos.fold(0, (sum, m) => sum + m.cantidad.abs());
 
@@ -376,13 +525,13 @@ class _VentaCard extends StatelessWidget {
               Text(
                 '$totalUnits unidades',
                 style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      color: AppColors.primary,
-                      fontWeight: FontWeight.w800,
-                    ),
+                  color: AppColors.primary,
+                  fontWeight: FontWeight.w800,
+                ),
               ),
               const SizedBox(height: 4),
               Text(
-                '${first.usuarioNombre} · ${compactDateFormatter.format(first.fecha)} ${timeFormatter.format(first.fecha)}',
+                '${first.usuarioNombre} \u00b7 ${compactDateFormatter.format(first.fecha)} ${timeFormatter.format(first.fecha)}',
                 style: Theme.of(context).textTheme.bodyMedium,
               ),
             ],
@@ -411,3 +560,136 @@ class _VentaCard extends StatelessWidget {
   }
 }
 
+class _ProductoMovimientoCard extends StatelessWidget {
+  const _ProductoMovimientoCard({required this.producto});
+
+  final _ProductoAgrupado producto;
+
+  @override
+  Widget build(BuildContext context) {
+    final totalEntradas = producto.movimientos
+        .where((m) => m.tipo == MovimientoTipo.entrada)
+        .fold(0, (s, m) => s + m.cantidad.abs());
+    final totalSalidas = producto.movimientos
+        .where((m) => m.tipo == MovimientoTipo.salida)
+        .fold(0, (s, m) => s + m.cantidad.abs());
+
+    return Card(
+      child: Theme(
+        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+        child: ExpansionTile(
+          tilePadding: const EdgeInsets.fromLTRB(14, 4, 14, 4),
+          childrenPadding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
+          leading: Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: AppColors.primary.withValues(alpha: 0.10),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: const Icon(
+              Icons.inventory_2_rounded,
+              color: AppColors.primary,
+              size: 20,
+            ),
+          ),
+          title: Text(
+            producto.productoNombre,
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
+          subtitle: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SizedBox(height: 4),
+              Row(
+                children: [
+                  Text(
+                    '${producto.totalUnidades} unidades',
+                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                      color: AppColors.primary,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  if (totalEntradas > 0) ...[
+                    const SizedBox(width: 10),
+                    Text(
+                      '+$totalEntradas',
+                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                        color: AppColors.success,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ],
+                  if (totalSalidas > 0) ...[
+                    const SizedBox(width: 6),
+                    Text(
+                      '-$totalSalidas',
+                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                        color: AppColors.danger,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+              const SizedBox(height: 4),
+              Text(
+                '${producto.movimientos.length} ${producto.movimientos.length == 1 ? 'movimiento' : 'movimientos'}',
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
+            ],
+          ),
+          children: [
+            const Divider(height: 1),
+            const SizedBox(height: 12),
+            for (final m in producto.movimientos)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 8,
+                      height: 8,
+                      decoration: BoxDecoration(
+                        color: m.tipo == MovimientoTipo.entrada
+                            ? AppColors.success
+                            : AppColors.danger,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      '${m.cantidad.abs()}',
+                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    Expanded(
+                      child: Text(
+                        m.tipo == MovimientoTipo.entrada ? 'Entrada' : 'Salida',
+                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                          color: m.tipo == MovimientoTipo.entrada
+                              ? AppColors.success
+                              : AppColors.danger,
+                        ),
+                      ),
+                    ),
+                    Text(
+                      '${compactDateFormatter.format(m.fecha)} ${timeFormatter.format(m.fecha)}',
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      m.usuarioNombre,
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                  ],
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}

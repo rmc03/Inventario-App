@@ -1,6 +1,7 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../shared/models/pago.dart';
 import '../providers/venta_provider.dart';
@@ -13,17 +14,9 @@ class ConfirmarPagoScreen extends ConsumerStatefulWidget {
 }
 
 class _ConfirmarPagoScreenState extends ConsumerState<ConfirmarPagoScreen> {
-  final Map<String, TextEditingController> _controllers = {};
-  final TextEditingController _efectivoRecibidoCtrl = TextEditingController();
+  MetodoPago? _metodoSeleccionado;
 
-  @override
-  void dispose() {
-    for (final c in _controllers.values) {
-      c.dispose();
-    }
-    _efectivoRecibidoCtrl.dispose();
-    super.dispose();
-  }
+  bool get _esValido => _metodoSeleccionado != null;
 
   @override
   Widget build(BuildContext context) {
@@ -31,90 +24,212 @@ class _ConfirmarPagoScreenState extends ConsumerState<ConfirmarPagoScreen> {
     if (venta == null) return const SizedBox.shrink();
 
     final total = venta.total;
-    // Métodos soportados
-    final metodos = ['efectivo', 'tarjeta', 'transferencia'];
-    for (final m in metodos) {
-      _controllers.putIfAbsent(m, () => TextEditingController(text: ''));
-    }
 
     return Scaffold(
       appBar: AppBar(title: const Text('Confirmar pago')),
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            children: [
-              Text('Total a pagar: ${formatCurrency(total)}', style: Theme.of(context).textTheme.titleLarge),
-              const SizedBox(height: 12),
-              for (final m in metodos) ...[
-                TextField(
-                  controller: _controllers[m],
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                  decoration: InputDecoration(labelText: 'Pago: ${m[0].toUpperCase()}${m.substring(1)}'),
+        child: Column(
+          children: [
+            // ── Resumen de la venta (scrolleable con total fijo) ──
+            Expanded(
+              child: Card(
+                margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                child: Column(
+                  children: [
+                    Expanded(
+                      child: ListView(
+                        padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                        children: venta.items
+                            .map(
+                              (item) => Padding(
+                                padding: const EdgeInsets.only(bottom: 10),
+                                child: Row(
+                                  children: [
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            item.productoNombre,
+                                            style: Theme.of(context).textTheme.bodyLarge,
+                                          ),
+                                          const SizedBox(height: 2),
+                                          Text(
+                                            '${item.cantidad} \u00d7 ${formatCurrency(item.precioUnitario)}',
+                                            style: Theme.of(context).textTheme.bodyMedium,
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    Text(
+                                      formatCurrency(item.subtotal),
+                                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                        color: AppColors.primary,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            )
+                            .toList(),
+                      ),
+                    ),
+                    const Divider(height: 24),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text('Total', style: Theme.of(context).textTheme.titleLarge),
+                          Text(
+                            formatCurrency(total),
+                            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                              color: AppColors.primary,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 8),
-              ],
-              const SizedBox(height: 8),
-              TextField(
-                controller: _efectivoRecibidoCtrl,
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                decoration: const InputDecoration(labelText: 'Efectivo recibido (opcional)'),
               ),
-              const Spacer(),
-              SizedBox(
-                width: double.infinity,
+            ),
+
+            const SizedBox(height: 16),
+
+            // ── Método de pago ──
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Método de pago',
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _MetodoCard(
+                          metodo: MetodoPago.efectivo,
+                          seleccionado: _metodoSeleccionado == MetodoPago.efectivo,
+                          onTap: () => setState(() {
+                            _metodoSeleccionado =
+                                _metodoSeleccionado == MetodoPago.efectivo
+                                    ? null
+                                    : MetodoPago.efectivo;
+                          }),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _MetodoCard(
+                          metodo: MetodoPago.transferencia,
+                          seleccionado: _metodoSeleccionado == MetodoPago.transferencia,
+                          onTap: () => setState(() {
+                            _metodoSeleccionado =
+                                _metodoSeleccionado == MetodoPago.transferencia
+                                    ? null
+                                    : MetodoPago.transferencia;
+                          }),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+
+            // ── Botón confirmar ──
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+              child: SizedBox(
                 height: 52,
+                width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: () {
-                    // Construir lista de pagos
-                    final pagos = <Pago>[];
-                    double sum = 0.0;
-                    for (final m in metodos) {
-                      final text = (_controllers[m]?.text ?? '').trim();
-                      if (text.isEmpty) continue;
-                      final value = double.tryParse(text.replaceAll(',', '')) ?? 0.0;
-                      if (value <= 0) continue;
-                      pagos.add(Pago(metodo: m, monto: value));
-                      sum += value;
-                    }
-
-                    // Si no se ingresó nada, asumir pago en efectivo completo
-                    if (pagos.isEmpty) {
-                      pagos.add(Pago(metodo: 'efectivo', monto: total));
-                      sum = total;
-                    }
-
-                    // Validación básica: suma de pagos debe cubrir el total
-                    if (sum < total) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('La suma de pagos no cubre el total')),
-                      );
-                      return;
-                    }
-
-                    // Si efectivo recibido se indicó, añadirlo al pago efectivo
-                    final efectivoText = _efectivoRecibidoCtrl.text.trim();
-                    if (efectivoText.isNotEmpty) {
-                      final received = double.tryParse(efectivoText.replaceAll(',', '')) ?? 0.0;
-                      if (received > 0) {
-                        final idx = pagos.indexWhere((p) => p.metodo == 'efectivo');
-                        if (idx != -1) {
-                          pagos[idx] = Pago(metodo: pagos[idx].metodo, monto: pagos[idx].monto, efectivoRecibido: received);
-                        } else {
-                          pagos.add(Pago(metodo: 'efectivo', monto: 0.0, efectivoRecibido: received));
-                        }
-                      }
-                    }
-
-                    // Completar la venta
-                    ref.read(ventaEnCursoProvider.notifier).completarVentaConPagos(pagos);
-                    Navigator.of(context).pop(true);
-                  },
+                  onPressed: _esValido ? () => _confirmar(total) : null,
                   child: const Text('Confirmar y registrar venta'),
                 ),
               ),
-            ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _confirmar(double total) {
+    final venta = ref.read(ventaEnCursoProvider);
+    if (venta == null) return;
+
+    final pagos = <Pago>[];
+    if (_metodoSeleccionado == MetodoPago.efectivo) {
+      pagos.add(Pago(metodo: MetodoPago.efectivo, monto: total));
+    } else if (_metodoSeleccionado == MetodoPago.transferencia) {
+      pagos.add(Pago(metodo: MetodoPago.transferencia, monto: total));
+    }
+
+    ref.read(ventaEnCursoProvider.notifier).completarVentaConPagos(pagos);
+    if (mounted) Navigator.of(context).pop(true);
+  }
+}
+
+class _MetodoCard extends StatelessWidget {
+  const _MetodoCard({
+    required this.metodo,
+    required this.seleccionado,
+    required this.onTap,
+  });
+
+  final MetodoPago metodo;
+  final bool seleccionado;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 12),
+        decoration: BoxDecoration(
+          color: seleccionado
+              ? AppColors.primary.withValues(alpha: 0.08)
+              : AppColors.surface,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: seleccionado ? AppColors.primary : AppColors.line,
+            width: seleccionado ? 2 : 1,
           ),
+        ),
+        child: Column(
+          children: [
+            Icon(
+              metodo.icon,
+              size: 32,
+              color: seleccionado ? AppColors.primary : AppColors.muted,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              metodo.label,
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                color: seleccionado ? AppColors.primary : AppColors.ink,
+                fontWeight: seleccionado ? FontWeight.w700 : FontWeight.w500,
+              ),
+            ),
+            const SizedBox(height: 6),
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              width: 10,
+              height: 10,
+              decoration: BoxDecoration(
+                color: seleccionado ? AppColors.primary : AppColors.line,
+                shape: BoxShape.circle,
+              ),
+            ),
+          ],
         ),
       ),
     );
