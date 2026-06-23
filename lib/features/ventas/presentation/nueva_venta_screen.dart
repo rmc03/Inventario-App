@@ -9,6 +9,7 @@ import '../../../shared/models/cuadre_item.dart';
 import '../../../shared/models/producto.dart';
 import '../../../shared/widgets/product_photo.dart';
 import '../../../shared/widgets/qty_controls.dart';
+import '../../inventario/data/producto_repository.dart';
 import '../../inventario/providers/inventario_provider.dart';
 import '../../turno/providers/turno_provider.dart';
 import '../providers/venta_provider.dart';
@@ -23,6 +24,7 @@ class NuevaVentaScreen extends ConsumerStatefulWidget {
 class _NuevaVentaScreenState extends ConsumerState<NuevaVentaScreen> {
   final _searchCtrl = TextEditingController();
   String _searchQuery = '';
+  String? _selectedCategoriaId;
 
   @override
   void initState() {
@@ -44,16 +46,23 @@ class _NuevaVentaScreenState extends ConsumerState<NuevaVentaScreen> {
   @override
   Widget build(BuildContext context) {
     final ventaEnCurso = ref.watch(ventaEnCursoProvider);
-    final allProducts = ref.watch(inventarioControllerProvider).productos;
+    final inventarioState = ref.watch(inventarioControllerProvider);
+    final allProducts = inventarioState.productos.isEmpty
+        ? demoProductos()
+        : inventarioState.productos;
+    final categorias = inventarioState.categorias.isEmpty
+        ? demoCategorias()
+        : inventarioState.categorias;
 
-    final productos = _searchQuery.trim().isEmpty
-        ? allProducts.where((p) => p.activo && p.stockActual > 0).toList()
-        : allProducts.where((p) {
-            final normalizedQuery = _searchQuery.trim().toLowerCase();
-            return p.activo &&
-                p.stockActual > 0 &&
-                p.nombre.toLowerCase().contains(normalizedQuery);
-          }).toList();
+    final normalizedQuery = _searchQuery.trim().toLowerCase();
+    final productos = allProducts.where((p) {
+      final matchesSearch =
+          normalizedQuery.isEmpty ||
+          p.nombre.toLowerCase().contains(normalizedQuery);
+      final matchesCategory =
+          _selectedCategoriaId == null || p.categoriaId == _selectedCategoriaId;
+      return p.activo && p.stockActual > 0 && matchesSearch && matchesCategory;
+    }).toList();
 
     return Scaffold(
       appBar: AppBar(
@@ -66,148 +75,228 @@ class _NuevaVentaScreenState extends ConsumerState<NuevaVentaScreen> {
           },
         ),
       ),
+      bottomNavigationBar: _CartBottomBar(
+        onShowCart: () => _showCartSheet(context),
+        onComplete: () async {
+          final res = await context.push<bool>(
+            '/dependiente/turno/confirmar-pago',
+          );
+          if (res == true) {
+            if (context.mounted) context.pop();
+          }
+        },
+      ),
       body: SafeArea(
         top: false,
         child: Column(
           children: [
-            // Buscador
             Padding(
-              padding: const EdgeInsets.all(AppSpacing.xl),
-              child: TextField(
-                controller: _searchCtrl,
-                autofocus: true,
-                onChanged: (val) => setState(() => _searchQuery = val),
-                decoration: InputDecoration(
-                  hintText: 'Buscar producto...',
-                  prefixIcon: const Icon(Icons.search_rounded),
-                  suffixIcon: _searchQuery.isNotEmpty
-                      ? IconButton(
-                          icon: const Icon(Icons.clear_rounded),
-                          onPressed: () {
-                            _searchCtrl.clear();
-                            setState(() => _searchQuery = '');
-                          },
-                        )
-                      : null,
-                  border: const OutlineInputBorder(
-                    borderRadius: AppRadii.pillBorder,
-                    borderSide: BorderSide(color: AppColors.line),
-                  ),
-                  enabledBorder: const OutlineInputBorder(
-                    borderRadius: AppRadii.pillBorder,
-                    borderSide: BorderSide(color: AppColors.line),
-                  ),
-                  focusedBorder: const OutlineInputBorder(
-                    borderRadius: AppRadii.pillBorder,
-                    borderSide: BorderSide(
-                      color: AppColors.primary,
-                      width: 1.5,
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.xl,
+                AppSpacing.sm,
+                AppSpacing.xl,
+                AppSpacing.md,
+              ),
+              child: Column(
+                children: [
+                  TextField(
+                    controller: _searchCtrl,
+                    autofocus: true,
+                    onChanged: (val) => setState(() => _searchQuery = val),
+                    decoration: InputDecoration(
+                      hintText: 'Buscar producto...',
+                      prefixIcon: const Icon(Icons.search_rounded),
+                      suffixIcon: _searchQuery.isNotEmpty
+                          ? IconButton(
+                              icon: const Icon(Icons.clear_rounded),
+                              onPressed: () {
+                                _searchCtrl.clear();
+                                setState(() => _searchQuery = '');
+                              },
+                            )
+                          : null,
+                      border: const OutlineInputBorder(
+                        borderRadius: AppRadii.pillBorder,
+                        borderSide: BorderSide(color: AppColors.line),
+                      ),
+                      enabledBorder: const OutlineInputBorder(
+                        borderRadius: AppRadii.pillBorder,
+                        borderSide: BorderSide(color: AppColors.line),
+                      ),
+                      focusedBorder: const OutlineInputBorder(
+                        borderRadius: AppRadii.pillBorder,
+                        borderSide: BorderSide(
+                          color: AppColors.primary,
+                          width: 1.5,
+                        ),
+                      ),
                     ),
                   ),
-                ),
+                  const SizedBox(height: AppSpacing.md),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          child: Row(
+                            children: [
+                              _CategoryChip(
+                                label: 'Todos',
+                                selected: _selectedCategoriaId == null,
+                                onTap: () =>
+                                    setState(() => _selectedCategoriaId = null),
+                              ),
+                              for (final categoria in categorias) ...[
+                                const SizedBox(width: AppSpacing.sm),
+                                _CategoryChip(
+                                  label: categoria.nombre,
+                                  selected:
+                                      _selectedCategoriaId == categoria.id,
+                                  onTap: () => setState(
+                                    () => _selectedCategoriaId = categoria.id,
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: AppSpacing.sm),
+                      IconButton.filledTonal(
+                        onPressed: () => _showCategoryFilterSheet(context),
+                        icon: const Icon(Icons.tune_rounded),
+                        tooltip: 'Filtrar productos',
+                      ),
+                    ],
+                  ),
+                ],
               ),
             ),
-            
-            // Lista de productos
             Expanded(
-              child: ListView.separated(
-                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
-                itemCount: productos.length,
-                separatorBuilder: (_, _) => const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: AppSpacing.sm),
-                  child: Divider(height: 1, indent: 72),
-                ),
-                itemBuilder: (context, index) {
-                  final p = productos[index];
-                  final qtyInCart = ventaEnCurso?.items
-                          .where((i) => i.productoId == p.id)
-                          .fold(0, (sum, i) => sum + i.cantidad) ?? 0;
+              child: productos.isEmpty
+                  ? const _EmptyProductList()
+                  : ListView.builder(
+                      padding: const EdgeInsets.fromLTRB(
+                        AppSpacing.xl,
+                        0,
+                        AppSpacing.xl,
+                        AppSpacing.xxl,
+                      ),
+                      itemCount: productos.length,
+                      itemBuilder: (context, index) {
+                        final p = productos[index];
+                        final qtyInCart =
+                            ventaEnCurso?.items
+                                .where((i) => i.productoId == p.id)
+                                .fold(0, (sum, i) => sum + i.cantidad) ??
+                            0;
 
-                  return _ProductoVentaTile(
-                    producto: p,
-                    qtyInCart: qtyInCart,
-                    onAdd: () {
-                      final turnoState = ref.read(turnoControllerProvider);
-                      if (!turnoState.permitirVentas) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('No se pueden registrar ventas: turno cerrado')),
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: AppSpacing.md),
+                          child: _ProductoVentaTile(
+                            key: ValueKey(p.id),
+                            producto: p,
+                            qtyInCart: qtyInCart,
+                            onAdd: () {
+                              final turnoState = ref.read(
+                                turnoControllerProvider,
+                              );
+                              if (!turnoState.permitirVentas) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text(
+                                      'No se pueden registrar ventas: turno cerrado',
+                                    ),
+                                  ),
+                                );
+                                return;
+                              }
+                              final ventaCtrl = ref.read(
+                                ventaEnCursoProvider.notifier,
+                              );
+                              if (qtyInCart == 0) {
+                                if (p.stockActual <= 0) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(content: Text('Sin stock')),
+                                  );
+                                  return;
+                                }
+                                ventaCtrl.agregarProducto(
+                                  CuadreItem(
+                                    productoId: p.id,
+                                    productoNombre: p.nombre,
+                                    cantidad: 1,
+                                    precioUnitario: p.precio,
+                                  ),
+                                );
+                                return;
+                              }
+                              _showQtySheet(context, p);
+                            },
+                            onIncrement: () {
+                              final turnoState = ref.read(
+                                turnoControllerProvider,
+                              );
+                              if (!turnoState.permitirVentas) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text(
+                                      'No se pueden registrar ventas: turno cerrado',
+                                    ),
+                                  ),
+                                );
+                                return;
+                              }
+                              final ventaCtrl = ref.read(
+                                ventaEnCursoProvider.notifier,
+                              );
+                              final pFound = ref
+                                  .read(inventarioControllerProvider.notifier)
+                                  .findProducto(p.id);
+                              final currentProduct = pFound ?? p;
+                              if (qtyInCart + 1 > currentProduct.stockActual) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('Sin stock')),
+                                );
+                                return;
+                              }
+                              ventaCtrl.actualizarCantidadItem(
+                                p.id,
+                                qtyInCart + 1,
+                              );
+                            },
+                            onDecrement: () {
+                              final turnoState = ref.read(
+                                turnoControllerProvider,
+                              );
+                              if (!turnoState.permitirVentas) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text(
+                                      'No se pueden registrar ventas: turno cerrado',
+                                    ),
+                                  ),
+                                );
+                                return;
+                              }
+                              final ventaCtrl = ref.read(
+                                ventaEnCursoProvider.notifier,
+                              );
+                              if (qtyInCart - 1 <= 0) {
+                                ventaCtrl.eliminarItem(p.id);
+                              } else {
+                                ventaCtrl.actualizarCantidadItem(
+                                  p.id,
+                                  qtyInCart - 1,
+                                );
+                              }
+                            },
+                            onLongPress: () => _showQtySheet(context, p),
+                          ),
                         );
-                        return;
-                      }
-                      final ventaCtrl = ref.read(ventaEnCursoProvider.notifier);
-                      if (qtyInCart == 0) {
-                        if (p.stockActual <= 0) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Sin stock')),
-                          );
-                          return;
-                        }
-                        ventaCtrl.agregarProducto(CuadreItem(
-                          productoId: p.id,
-                          productoNombre: p.nombre,
-                          cantidad: 1,
-                          precioUnitario: p.precio,
-                        ));
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Agregado al carrito')),
-                        );
-                        return;
-                      }
-                      // si ya tiene qty mostrar el sheet para edición avanzada
-                      _showQtySheet(context, p);
-                    },
-                    onIncrement: () {
-                      final turnoState = ref.read(turnoControllerProvider);
-                      if (!turnoState.permitirVentas) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('No se pueden registrar ventas: turno cerrado')),
-                        );
-                        return;
-                      }
-                      final ventaCtrl = ref.read(ventaEnCursoProvider.notifier);
-                      final pFound = ref.read(inventarioControllerProvider.notifier).findProducto(p.id);
-                      if (pFound != null && qtyInCart + 1 > pFound.stockActual) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Sin stock')),
-                        );
-                        return;
-                      }
-                      ventaCtrl.actualizarCantidadItem(p.id, qtyInCart + 1);
-                    },
-                    onDecrement: () {
-                      final turnoState = ref.read(turnoControllerProvider);
-                      if (!turnoState.permitirVentas) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('No se pueden registrar ventas: turno cerrado')),
-                        );
-                        return;
-                      }
-                      final ventaCtrl = ref.read(ventaEnCursoProvider.notifier);
-                      if (qtyInCart - 1 <= 0) {
-                        ventaCtrl.eliminarItem(p.id);
-                      } else {
-                        ventaCtrl.actualizarCantidadItem(p.id, qtyInCart - 1);
-                      }
-                    },
-                    onLongPress: () => _showQtySheet(context, p),
-                  );
-                },
-              ),
+                      },
+                    ),
             ),
-
-            // Carrito bottom bar
-            if (ventaEnCurso != null && ventaEnCurso.items.isNotEmpty)
-              _CartBottomBar(
-                onShowCart: () => _showCartSheet(context),
-                onComplete: () async {
-                  // Navegar a pantalla de confirmar pago
-                  final res = await context.push<bool>('/dependiente/turno/confirmar-pago');
-                  // Si se confirmó y regresó true, cerrar la pantalla de nueva venta
-                  if (res == true) {
-                    if (context.mounted) context.pop();
-                  }
-                },
-              ),
           ],
         ),
       ),
@@ -232,12 +321,114 @@ class _NuevaVentaScreenState extends ConsumerState<NuevaVentaScreen> {
       builder: (ctx) => const _CartSheet(),
     );
   }
+
+  void _showCategoryFilterSheet(BuildContext context) {
+    final inventarioCategorias = ref
+        .read(inventarioControllerProvider)
+        .categorias;
+    final categorias = inventarioCategorias.isEmpty
+        ? demoCategorias()
+        : inventarioCategorias;
+    showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.xl,
+            0,
+            AppSpacing.xl,
+            AppSpacing.xl,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Filtrar por categoría',
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
+              const SizedBox(height: AppSpacing.md),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(Icons.apps_rounded),
+                title: const Text('Todos'),
+                trailing: _selectedCategoriaId == null
+                    ? const Icon(Icons.check_rounded, color: AppColors.primary)
+                    : null,
+                onTap: () {
+                  setState(() => _selectedCategoriaId = null);
+                  Navigator.of(ctx).pop();
+                },
+              ),
+              for (final categoria in categorias)
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Icon(Icons.category_outlined),
+                  title: Text(categoria.nombre),
+                  trailing: _selectedCategoriaId == categoria.id
+                      ? const Icon(
+                          Icons.check_rounded,
+                          color: AppColors.primary,
+                        )
+                      : null,
+                  onTap: () {
+                    setState(() => _selectedCategoriaId = categoria.id);
+                    Navigator.of(ctx).pop();
+                  },
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 // ─── Componentes ─────────────────────────────────────────────────────────────
 
+String _articulosLabel(int total) {
+  return total == 1 ? '1 artículo' : '$total artículos';
+}
+
+class _CategoryChip extends StatelessWidget {
+  const _CategoryChip({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: AppRadii.pillBorder,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        decoration: BoxDecoration(
+          color: selected ? AppColors.primary : AppColors.surfaceSecondary,
+          borderRadius: AppRadii.pillBorder,
+        ),
+        child: Text(
+          label,
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+            color: selected ? Colors.white : AppColors.ink,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _ProductoVentaTile extends StatelessWidget {
   const _ProductoVentaTile({
+    super.key,
     required this.producto,
     required this.qtyInCart,
     required this.onAdd,
@@ -255,84 +446,240 @@ class _ProductoVentaTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onAdd,
-      onLongPress: onLongPress,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.sm,
-          vertical: AppSpacing.md,
-        ),
+    final isSelected = qtyInCart > 0;
+
+    return Card(
+      color: AppColors.surface,
+      elevation: 0,
+      margin: EdgeInsets.zero,
+      shape: const RoundedRectangleBorder(borderRadius: AppRadii.lgBorder),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onAdd,
+        onLongPress: onLongPress,
+        borderRadius: AppRadii.lgBorder,
         child: Row(
           children: [
-            ProductPhoto(url: producto.fotoUrl, size: 56),
-            const SizedBox(width: AppSpacing.md),
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 180),
+              width: 5,
+              color: isSelected ? AppColors.primary : Colors.transparent,
+            ),
             Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    producto.nombre,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
-                  const SizedBox(height: 2),
-                  Row(
-                    children: [
-                      Text(
-                        '${producto.stockActual} disp.',
-                        style: Theme.of(context).textTheme.bodyMedium,
+              child: Padding(
+                padding: const EdgeInsets.all(AppSpacing.md),
+                child: Row(
+                  children: [
+                    ProductPhoto(url: producto.fotoUrl, size: 66),
+                    const SizedBox(width: AppSpacing.md),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            producto.nombre,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: Theme.of(context).textTheme.titleMedium
+                                ?.copyWith(fontWeight: FontWeight.w700),
+                          ),
+                          const SizedBox(height: AppSpacing.xs),
+                          Text.rich(
+                            TextSpan(
+                              text: 'Stock: ${producto.stockActual} ',
+                              children: const [
+                                TextSpan(
+                                  text: 'disponibles',
+                                  style: TextStyle(color: AppColors.success),
+                                ),
+                              ],
+                            ),
+                            style: Theme.of(context).textTheme.bodyMedium,
+                          ),
+                        ],
                       ),
-                      if (qtyInCart > 0) ...[
-                        const SizedBox(width: AppSpacing.sm),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 6,
-                            vertical: 2,
-                          ),
-                          decoration: BoxDecoration(
-                            color: AppColors.primary.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: Text(
-                            '$qtyInCart en carrito',
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    ),
+                    const SizedBox(width: AppSpacing.sm),
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(minWidth: 102),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Text(
+                            formatCurrency(producto.precio),
+                            style: Theme.of(context).textTheme.titleMedium
+                                ?.copyWith(
                                   color: AppColors.primary,
-                                  fontWeight: FontWeight.w600,
+                                  fontWeight: FontWeight.w800,
                                 ),
                           ),
-                        ),
-                      ],
-                    ],
-                  ),
-                ],
+                          const SizedBox(height: AppSpacing.md),
+                          isSelected
+                              ? _InlineQtySelector(
+                                  cantidad: qtyInCart,
+                                  onDecrement: onDecrement,
+                                  onIncrement: onIncrement,
+                                )
+                              : _AddProductButton(onPressed: onAdd),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
-            const SizedBox(width: AppSpacing.sm),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text(
-                  formatCurrency(producto.precio),
-                  style: Theme.of(context)
-                      .textTheme
-                      .titleMedium
-                      ?.copyWith(color: AppColors.primary),
-                ),
-                const SizedBox(height: 8),
-                qtyInCart > 0
-                    ? QtyControls(
-                        cantidad: qtyInCart,
-                        onDecrement: onDecrement,
-                        onIncrement: onIncrement ?? () {},
-                      )
-                    : const Icon(
-                        Icons.add_circle_outline_rounded,
-                        color: AppColors.muted,
-                        size: 24,
-                      ),
-              ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _AddProductButton extends StatelessWidget {
+  const _AddProductButton({required this.onPressed});
+
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return OutlinedButton(
+      onPressed: onPressed,
+      style: OutlinedButton.styleFrom(
+        foregroundColor: AppColors.primary,
+        minimumSize: const Size(0, 38),
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+        side: const BorderSide(color: AppColors.primary),
+        shape: const RoundedRectangleBorder(borderRadius: AppRadii.pillBorder),
+        textStyle: const TextStyle(
+          fontSize: 13,
+          fontWeight: FontWeight.w800,
+          letterSpacing: -0.1,
+        ),
+      ),
+      child: const Text('+ Agregar'),
+    );
+  }
+}
+
+class _InlineQtySelector extends StatelessWidget {
+  const _InlineQtySelector({
+    required this.cantidad,
+    this.onDecrement,
+    this.onIncrement,
+  });
+
+  final int cantidad;
+  final VoidCallback? onDecrement;
+  final VoidCallback? onIncrement;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        _QtyRoundButton(
+          icon: Icons.remove_rounded,
+          onPressed: onDecrement,
+          backgroundColor: AppColors.primary.withValues(alpha: 0.10),
+          foregroundColor: AppColors.primary,
+        ),
+        Container(
+          height: 34,
+          constraints: const BoxConstraints(minWidth: 36),
+          alignment: Alignment.center,
+          margin: const EdgeInsets.symmetric(horizontal: 6),
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
+          decoration: BoxDecoration(
+            border: Border.all(color: AppColors.line),
+            borderRadius: AppRadii.smBorder,
+          ),
+          child: Text(
+            cantidad.toString(),
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+          ),
+        ),
+        _QtyRoundButton(
+          icon: Icons.add_rounded,
+          onPressed: onIncrement,
+          backgroundColor: AppColors.primary,
+          foregroundColor: Colors.white,
+        ),
+      ],
+    );
+  }
+}
+
+class _QtyRoundButton extends StatelessWidget {
+  const _QtyRoundButton({
+    required this.icon,
+    required this.onPressed,
+    required this.backgroundColor,
+    required this.foregroundColor,
+  });
+
+  final IconData icon;
+  final VoidCallback? onPressed;
+  final Color backgroundColor;
+  final Color foregroundColor;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox.square(
+      dimension: 34,
+      child: IconButton(
+        onPressed: onPressed,
+        icon: Icon(icon, size: 18),
+        color: foregroundColor,
+        style: IconButton.styleFrom(
+          backgroundColor: backgroundColor,
+          disabledBackgroundColor: AppColors.surfaceSecondary,
+          disabledForegroundColor: AppColors.muted,
+          padding: EdgeInsets.zero,
+          shape: const RoundedRectangleBorder(borderRadius: AppRadii.smBorder),
+        ),
+      ),
+    );
+  }
+}
+
+class _EmptyProductList extends StatelessWidget {
+  const _EmptyProductList();
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.xl),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 68,
+              height: 68,
+              decoration: BoxDecoration(
+                color: AppColors.surfaceSecondary,
+                borderRadius: AppRadii.xlBorder,
+              ),
+              child: const Icon(
+                Icons.search_off_rounded,
+                color: AppColors.muted,
+                size: 34,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            Text(
+              'No hay productos disponibles',
+              style: Theme.of(context).textTheme.titleMedium,
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: AppSpacing.xs),
+            Text(
+              'Prueba con otra búsqueda o categoría.',
+              style: Theme.of(context).textTheme.bodyMedium,
+              textAlign: TextAlign.center,
             ),
           ],
         ),
@@ -373,7 +720,10 @@ class _AddQtySheetState extends ConsumerState<_AddQtySheet> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Añadir a venta', style: Theme.of(context).textTheme.titleLarge),
+            Text(
+              'Añadir a venta',
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
             const SizedBox(height: AppSpacing.sm),
             Text(p.nombre, style: Theme.of(context).textTheme.bodyLarge),
             const SizedBox(height: 2),
@@ -396,12 +746,14 @@ class _AddQtySheetState extends ConsumerState<_AddQtySheet> {
               onPressed: () {
                 final qty = int.tryParse(_qtyCtrl.text.trim()) ?? 0;
                 if (qty <= 0) return;
-                
+
                 // Fetch the current qty in cart for this product
                 final ventaEnCurso = ref.read(ventaEnCursoProvider);
-                final qtyInCart = ventaEnCurso?.items
+                final qtyInCart =
+                    ventaEnCurso?.items
                         .where((i) => i.productoId == p.id)
-                        .fold(0, (sum, i) => sum + i.cantidad) ?? 0;
+                        .fold(0, (sum, i) => sum + i.cantidad) ??
+                    0;
 
                 if (qtyInCart + qty > p.stockActual) {
                   ScaffoldMessenger.of(context).showSnackBar(
@@ -409,8 +761,10 @@ class _AddQtySheetState extends ConsumerState<_AddQtySheet> {
                   );
                   return;
                 }
-                
-                ref.read(ventaEnCursoProvider.notifier).agregarProducto(
+
+                ref
+                    .read(ventaEnCursoProvider.notifier)
+                    .agregarProducto(
                       CuadreItem(
                         productoId: p.id,
                         productoNombre: p.nombre,
@@ -434,10 +788,7 @@ class _AddQtySheetState extends ConsumerState<_AddQtySheet> {
 }
 
 class _CartBottomBar extends StatelessWidget {
-  const _CartBottomBar({
-    required this.onShowCart,
-    required this.onComplete,
-  });
+  const _CartBottomBar({required this.onShowCart, required this.onComplete});
 
   final VoidCallback onShowCart;
   final VoidCallback onComplete;
@@ -447,17 +798,18 @@ class _CartBottomBar extends StatelessWidget {
     return Consumer(
       builder: (context, ref, _) {
         final venta = ref.watch(ventaEnCursoProvider);
-        if (venta == null) return const SizedBox.shrink();
+        final totalArticulos = venta?.totalUnidades ?? 0;
+        final total = venta?.total ?? 0;
+        final hasItems = totalArticulos > 0;
 
         return DecoratedBox(
           decoration: const BoxDecoration(
             color: AppColors.surface,
-            border: Border(top: BorderSide(color: AppColors.line)),
             boxShadow: [
               BoxShadow(
-                color: Colors.black12,
-                blurRadius: 10,
-                offset: Offset(0, -2),
+                color: Color(0x1A000000),
+                blurRadius: 18,
+                offset: Offset(0, -6),
               ),
             ],
           ),
@@ -467,43 +819,115 @@ class _CartBottomBar extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
               child: Row(
                 children: [
-                  Expanded(
-                    child: GestureDetector(
-                      onTap: onShowCart,
-                      behavior: HitTestBehavior.opaque,
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              const Icon(Icons.shopping_cart_rounded, size: 18),
-                              const SizedBox(width: 6),
-                              Text(
-                                '${venta.totalUnidades} items',
-                                style: Theme.of(context).textTheme.bodyMedium,
+                  GestureDetector(
+                    onTap: hasItems ? onShowCart : null,
+                    behavior: HitTestBehavior.opaque,
+                    child: Row(
+                      children: [
+                        Stack(
+                          clipBehavior: Clip.none,
+                          children: [
+                            Container(
+                              width: 46,
+                              height: 46,
+                              decoration: BoxDecoration(
+                                color: AppColors.primary.withValues(
+                                  alpha: 0.10,
+                                ),
+                                borderRadius: AppRadii.lgBorder,
                               ),
-                            ],
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            formatCurrency(venta.total),
-                            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                              child: const Icon(
+                                Icons.shopping_cart_rounded,
+                                color: AppColors.primary,
+                              ),
+                            ),
+                            Positioned(
+                              right: -3,
+                              top: -5,
+                              child: Container(
+                                constraints: const BoxConstraints(
+                                  minWidth: 20,
+                                  minHeight: 20,
+                                ),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 5,
+                                  vertical: 2,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: AppColors.primary,
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: AppColors.surface,
+                                    width: 2,
+                                  ),
+                                ),
+                                child: Text(
+                                  totalArticulos.toString(),
+                                  textAlign: TextAlign.center,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(width: AppSpacing.sm),
+                        Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              _articulosLabel(totalArticulos),
+                              style: Theme.of(context).textTheme.titleMedium
+                                  ?.copyWith(fontWeight: FontWeight.w800),
+                            ),
+                            const SizedBox(height: 2),
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  'Ver carrito',
+                                  style: Theme.of(context).textTheme.bodyMedium
+                                      ?.copyWith(color: AppColors.primary),
+                                ),
+                                const Icon(
+                                  Icons.keyboard_arrow_down_rounded,
+                                  size: 16,
                                   color: AppColors.primary,
                                 ),
-                          ),
-                        ],
-                      ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ],
                     ),
                   ),
-                  ElevatedButton.icon(
-                    onPressed: onComplete,
-                    icon: const Icon(Icons.check_circle_rounded),
-                    label: const Text('Completar'),
-                    style: ElevatedButton.styleFrom(
-                      minimumSize: const Size(140, 50),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
+                  const SizedBox(width: AppSpacing.md),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: hasItems ? onComplete : null,
+                      style: ElevatedButton.styleFrom(
+                        minimumSize: const Size.fromHeight(54),
+                        shape: const RoundedRectangleBorder(
+                          borderRadius: AppRadii.lgBorder,
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Flexible(
+                            child: Text(
+                              'Cobrar ${formatCurrency(total)}',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          const SizedBox(width: AppSpacing.sm),
+                          const Icon(Icons.arrow_forward_rounded, size: 20),
+                        ],
                       ),
                     ),
                   ),
@@ -541,12 +965,15 @@ class _CartSheet extends ConsumerWidget {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text('Carrito', style: Theme.of(context).textTheme.titleLarge),
+                  Text(
+                    'Carrito',
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
                   Text(
                     formatCurrency(venta.total),
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          color: AppColors.primary,
-                        ),
+                    style: Theme.of(
+                      context,
+                    ).textTheme.titleMedium?.copyWith(color: AppColors.primary),
                   ),
                 ],
               ),
@@ -570,7 +997,9 @@ class _CartSheet extends ConsumerWidget {
                               children: [
                                 Text(
                                   item.productoNombre,
-                                  style: Theme.of(context).textTheme.titleMedium,
+                                  style: Theme.of(
+                                    context,
+                                  ).textTheme.titleMedium,
                                 ),
                                 const SizedBox(height: 2),
                                 Text(
@@ -584,15 +1013,16 @@ class _CartSheet extends ConsumerWidget {
                             cantidad: item.cantidad,
                             onDecrement: item.cantidad > 1
                                 ? () => ctrl.actualizarCantidadItem(
-                                      item.productoId,
-                                      item.cantidad - 1,
-                                    )
+                                    item.productoId,
+                                    item.cantidad - 1,
+                                  )
                                 : null,
                             onIncrement: () {
                               final p = ref
                                   .read(inventarioControllerProvider.notifier)
                                   .findProducto(item.productoId);
-                              if (p != null && item.cantidad + 1 > p.stockActual) {
+                              if (p != null &&
+                                  item.cantidad + 1 > p.stockActual) {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   const SnackBar(content: Text('Sin stock')),
                                 );
@@ -606,7 +1036,10 @@ class _CartSheet extends ConsumerWidget {
                           ),
                           const SizedBox(width: 8),
                           IconButton(
-                            icon: const Icon(Icons.delete_outline_rounded, color: AppColors.danger),
+                            icon: const Icon(
+                              Icons.delete_outline_rounded,
+                              color: AppColors.danger,
+                            ),
                             onPressed: () => ctrl.eliminarItem(item.productoId),
                           ),
                         ],

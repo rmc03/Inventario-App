@@ -9,82 +9,105 @@ abstract class ProductoRepository implements CategoriaRepository {
   void deleteProducto(String id);
 }
 
+List<Categoria> demoCategorias() {
+  return [
+    Categoria(
+      id: 'cat-computadoras',
+      nombre: 'Computadoras',
+      createdAt: DateTime(2026, 6, 1),
+    ),
+    Categoria(
+      id: 'cat-perifericos',
+      nombre: 'Periféricos',
+      createdAt: DateTime(2026, 6, 1),
+    ),
+    Categoria(
+      id: 'cat-muebles',
+      nombre: 'Muebles',
+      createdAt: DateTime(2026, 6, 1),
+    ),
+  ];
+}
+
+List<Producto> demoProductos() {
+  return [
+    Producto(
+      id: 'prod-laptop',
+      nombre: 'Laptop Dell Inspiron 15',
+      categoriaId: 'cat-computadoras',
+      categoriaNombre: 'Computadoras',
+      precio: 750,
+      stockActual: 15,
+      stockMinimo: 3,
+      codigoRef: 'LAP-001',
+      fotoUrl:
+          'https://images.unsplash.com/photo-1496181133206-80ce9b88a853?auto=format&fit=crop&w=400&q=80',
+      createdAt: DateTime(2026, 6, 1, 9),
+      updatedAt: DateTime(2026, 6, 1, 9),
+    ),
+    Producto(
+      id: 'prod-keyboard',
+      nombre: 'Teclado Inalámbrico Logitech',
+      categoriaId: 'cat-perifericos',
+      categoriaNombre: 'Periféricos',
+      precio: 45,
+      stockActual: 30,
+      stockMinimo: 3,
+      codigoRef: 'TEC-002',
+      fotoUrl:
+          'https://images.unsplash.com/photo-1587829741301-dc798b83add3?auto=format&fit=crop&w=400&q=80',
+      createdAt: DateTime(2026, 6, 1, 9),
+      updatedAt: DateTime(2026, 6, 1, 9),
+    ),
+    Producto(
+      id: 'prod-mouse',
+      nombre: 'Mouse Óptico HP',
+      categoriaId: 'cat-perifericos',
+      categoriaNombre: 'Periféricos',
+      precio: 18,
+      stockActual: 4,
+      stockMinimo: 3,
+      codigoRef: 'MOU-003',
+      fotoUrl:
+          'https://images.unsplash.com/photo-1527814050087-3793815479db?auto=format&fit=crop&w=400&q=80',
+      createdAt: DateTime(2026, 6, 1, 9),
+      updatedAt: DateTime(2026, 6, 1, 9),
+    ),
+    Producto(
+      id: 'prod-monitor',
+      nombre: 'Monitor 24" Samsung',
+      categoriaId: 'cat-computadoras',
+      categoriaNombre: 'Computadoras',
+      precio: 150,
+      stockActual: 12,
+      stockMinimo: 3,
+      codigoRef: 'MON-004',
+      fotoUrl:
+          'https://images.unsplash.com/photo-1527443224154-c4a3942d3acf?auto=format&fit=crop&w=400&q=80',
+      createdAt: DateTime(2026, 6, 1, 9),
+      updatedAt: DateTime(2026, 6, 1, 9),
+    ),
+    Producto(
+      id: 'prod-chair',
+      nombre: 'Silla Ergonómica',
+      categoriaId: 'cat-muebles',
+      categoriaNombre: 'Muebles',
+      precio: 120,
+      stockActual: 8,
+      stockMinimo: 3,
+      codigoRef: 'SIL-005',
+      fotoUrl:
+          'https://images.unsplash.com/photo-1580480055273-228ff5388ef8?auto=format&fit=crop&w=400&q=80',
+      createdAt: DateTime(2026, 6, 1, 9),
+      updatedAt: DateTime(2026, 6, 1, 9),
+    ),
+  ];
+}
+
 class InMemoryProductoRepository implements ProductoRepository {
   InMemoryProductoRepository()
-    : _categorias = [
-        Categoria(
-          id: 'cat-computadoras',
-          nombre: 'Computadoras',
-          createdAt: DateTime(2026, 6, 1),
-        ),
-        Categoria(
-          id: 'cat-perifericos',
-          nombre: 'Periféricos',
-          createdAt: DateTime(2026, 6, 1),
-        ),
-        Categoria(
-          id: 'cat-muebles',
-          nombre: 'Muebles',
-          createdAt: DateTime(2026, 6, 1),
-        ),
-      ],
-      _productos = [
-        Producto(
-          id: 'prod-laptop',
-          nombre: 'Laptop Dell Inspiron 15',
-          categoriaId: 'cat-computadoras',
-          precio: 750,
-          stockActual: 15,
-          stockMinimo: 3,
-          codigoRef: 'LAP-001',
-          createdAt: DateTime(2026, 6, 1, 9),
-          updatedAt: DateTime(2026, 6, 1, 9),
-        ),
-        Producto(
-          id: 'prod-keyboard',
-          nombre: 'Teclado Inalámbrico Logitech',
-          categoriaId: 'cat-perifericos',
-          precio: 45,
-          stockActual: 30,
-          stockMinimo: 3,
-          codigoRef: 'TEC-002',
-          createdAt: DateTime(2026, 6, 1, 9),
-          updatedAt: DateTime(2026, 6, 1, 9),
-        ),
-        Producto(
-          id: 'prod-mouse',
-          nombre: 'Mouse Óptico HP',
-          categoriaId: 'cat-perifericos',
-          precio: 18,
-          stockActual: 4,
-          stockMinimo: 3,
-          codigoRef: 'MOU-003',
-          createdAt: DateTime(2026, 6, 1, 9),
-          updatedAt: DateTime(2026, 6, 1, 9),
-        ),
-        Producto(
-          id: 'prod-monitor',
-          nombre: 'Monitor 24" Samsung',
-          categoriaId: 'cat-computadoras',
-          precio: 150,
-          stockActual: 12,
-          stockMinimo: 3,
-          codigoRef: 'MON-004',
-          createdAt: DateTime(2026, 6, 1, 9),
-          updatedAt: DateTime(2026, 6, 1, 9),
-        ),
-        Producto(
-          id: 'prod-chair',
-          nombre: 'Silla Ergonómica',
-          categoriaId: 'cat-muebles',
-          precio: 120,
-          stockActual: 8,
-          stockMinimo: 3,
-          codigoRef: 'SIL-005',
-          createdAt: DateTime(2026, 6, 1, 9),
-          updatedAt: DateTime(2026, 6, 1, 9),
-        ),
-      ];
+    : _categorias = demoCategorias(),
+      _productos = demoProductos();
 
   final List<Categoria> _categorias;
   final List<Producto> _productos;

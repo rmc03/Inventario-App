@@ -15,7 +15,10 @@ class SqliteProductoRepository implements ProductoRepository {
   @override
   List<Categoria> fetchCategorias() {
     // Synchronous wrapper: we cache in-memory after first async load.
-    return _cachedCategorias;
+    if (_cachedCategorias.isEmpty) {
+      return List.unmodifiable(demoCategorias());
+    }
+    return List.unmodifiable(_cachedCategorias);
   }
 
   List<Categoria> _cachedCategorias = [];
@@ -77,19 +80,27 @@ class SqliteProductoRepository implements ProductoRepository {
   Future<void> ensureProductosLoaded() async {
     final db = await _db.database;
     final rows = await db.query('productos', orderBy: 'created_at DESC');
-    _cachedProductos = rows.map((r) => _withCategoryName(Producto.fromLocalMap(r))).toList();
+    _cachedProductos = rows
+        .map((r) => _withCategoryName(Producto.fromLocalMap(r)))
+        .toList();
   }
 
   @override
   List<Producto> fetchProductos() {
+    if (_cachedProductos.isEmpty) {
+      return List.unmodifiable(demoProductos());
+    }
     return List.unmodifiable(_cachedProductos);
   }
 
   @override
   Producto? findProducto(String id) {
-    final index = _cachedProductos.indexWhere((p) => p.id == id);
+    final productos = _cachedProductos.isEmpty
+        ? demoProductos()
+        : _cachedProductos;
+    final index = productos.indexWhere((p) => p.id == id);
     if (index == -1) return null;
-    return _cachedProductos[index];
+    return productos[index];
   }
 
   @override
@@ -132,7 +143,9 @@ class SqliteProductoRepository implements ProductoRepository {
 
   Future<void> _reloadProductos(dynamic d) async {
     final rows = await d.query('productos', orderBy: 'created_at DESC');
-    _cachedProductos = rows.map((r) => _withCategoryName(Producto.fromLocalMap(r))).toList();
+    _cachedProductos = rows
+        .map((r) => _withCategoryName(Producto.fromLocalMap(r)))
+        .toList();
   }
 
   Producto _withCategoryName(Producto producto) {
@@ -140,7 +153,9 @@ class SqliteProductoRepository implements ProductoRepository {
       (c) => c.id == producto.categoriaId,
     );
     return producto.copyWith(
-      categoriaNombre: index == -1 ? 'Sin categoría' : _cachedCategorias[index].nombre,
+      categoriaNombre: index == -1
+          ? 'Sin categoría'
+          : _cachedCategorias[index].nombre,
     );
   }
 }
