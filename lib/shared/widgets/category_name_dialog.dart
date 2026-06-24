@@ -5,18 +5,27 @@ class CategoryNameDialog extends StatefulWidget {
     super.key,
     required this.title,
     required this.categoryExists,
+    this.initialName,
   });
 
   final String title;
   final bool Function(String name) categoryExists;
+  final String? initialName;
 
   @override
   State<CategoryNameDialog> createState() => _CategoryNameDialogState();
 }
 
 class _CategoryNameDialogState extends State<CategoryNameDialog> {
-  final _controller = TextEditingController();
+  late final TextEditingController _controller;
+
   String? _errorText;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: widget.initialName ?? '');
+  }
 
   @override
   void dispose() {

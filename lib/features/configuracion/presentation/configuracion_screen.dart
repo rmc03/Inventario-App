@@ -1,13 +1,16 @@
 // ignore_for_file: unused_element_parameter
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:uuid/uuid.dart';
-
-import '../../../core/theme/app_theme.dart';
-import 'dart:io';
+import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path/path.dart' as p;
+import 'package:uuid/uuid.dart';
+
 import '../../../core/local_db/local_database.dart';
+import '../../../core/theme/app_dimens.dart';
+import '../../../core/theme/app_theme.dart';
 import '../../../shared/models/usuario.dart';
 import '../../../shared/models/categoria.dart';
 import '../../../shared/widgets/category_name_dialog.dart';
@@ -89,8 +92,30 @@ class ConfiguracionScreen extends ConsumerWidget {
             ],
             if (isAdmin) ...[
               const SizedBox(height: 18),
+              Card(
+                child: ListTile(
+                  leading: const Icon(Icons.people_outline),
+                  title: const Text('Gestionar dependientes'),
+                  subtitle: const Text('Administrar usuarios internos'),
+                  trailing: const Icon(Icons.chevron_right_rounded),
+                  onTap: () => context.push('/admin/usuarios'),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Card(
+                child: ListTile(
+                  leading: const Icon(Icons.category_outlined),
+                  title: const Text('Gestionar categorías'),
+                  subtitle: const Text('Crear, editar y eliminar categorías'),
+                  trailing: const Icon(Icons.chevron_right_rounded),
+                  onTap: () => _showCategoryManagement(context, ref),
+                ),
+              ),
+            ],
+            if (!isAdmin) ...[
+              const SizedBox(height: 18),
               Text(
-                'USUARIOS',
+                'CATEGORÍAS',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   fontWeight: FontWeight.w600,
                   color: AppColors.muted,
@@ -98,56 +123,16 @@ class ConfiguracionScreen extends ConsumerWidget {
                 ),
               ),
               const SizedBox(height: 10),
-              Card(
-                child: ListTile(
-                  leading: const Icon(Icons.person_add_alt_1_outlined),
-                  title: const Text('Crear dependiente'),
-                  subtitle: const Text('Alta rápida para usuarios internos'),
-                  trailing: const Icon(Icons.chevron_right_rounded),
-                  onTap: () {},
-                ),
-              ),
-            ],
-            const SizedBox(height: 18),
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    'CATEGORÍAS',
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.muted,
-                      letterSpacing: 0.5,
-                    ),
+              for (final categoria in categorias) ...[
+                Card(
+                  key: ValueKey(categoria.id),
+                  child: ListTile(
+                    title: Text(categoria.nombre),
+                    leading: const Icon(Icons.category_outlined),
                   ),
                 ),
-                if (isAdmin)
-                  IconButton.filledTonal(
-                    onPressed: () => _showCategoryDialog(context, ref),
-                    icon: const Icon(Icons.add_rounded),
-                    tooltip: 'Crear categoría',
-                  ),
+                const SizedBox(height: 10),
               ],
-            ),
-            const SizedBox(height: 10),
-            for (final categoria in categorias) ...[
-              Card(
-                key: ValueKey(categoria.id),
-                child: ListTile(
-                  title: Text(categoria.nombre),
-                  leading: const Icon(Icons.category_outlined),
-                  trailing: isAdmin
-                      ? IconButton(
-                          onPressed: () =>
-                              _confirmDeleteCategoria(context, ref, categoria),
-                          icon: const Icon(Icons.delete_outline_rounded),
-                          color: AppColors.danger,
-                          tooltip: 'Eliminar',
-                        )
-                      : null,
-                ),
-              ),
-              const SizedBox(height: 10),
             ],
           ],
         ),
@@ -155,70 +140,13 @@ class ConfiguracionScreen extends ConsumerWidget {
     );
   }
 
-  Future<void> _showCategoryDialog(BuildContext context, WidgetRef ref) async {
-    final name = await showDialog<String>(
+  void _showCategoryManagement(BuildContext context, WidgetRef ref) {
+    showModalBottomSheet<void>(
       context: context,
-      builder: (_) => CategoryNameDialog(
-        title: 'Crear categoría',
-        categoryExists: (value) => ref
-            .read(inventarioControllerProvider.notifier)
-            .existsCategoriaConNombre(value),
-      ),
+      isScrollControlled: true,
+      showDragHandle: false,
+      builder: (ctx) => _CategoryManagementSheet(),
     );
-
-    if (name != null && name.isNotEmpty) {
-      ref
-          .read(inventarioControllerProvider.notifier)
-          .upsertCategoria(
-            Categoria(
-              id: const Uuid().v4(),
-              nombre: name,
-              createdAt: DateTime.now(),
-            ),
-          );
-    }
-  }
-
-  Future<void> _confirmDeleteCategoria(
-    BuildContext context,
-    WidgetRef ref,
-    Categoria categoria,
-  ) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          icon: const Icon(
-            Icons.warning_amber_rounded,
-            color: AppColors.danger,
-            size: 42,
-          ),
-          title: const Text('¿Eliminar categoría?'),
-          content: Text(
-            'Esta acción no se puede deshacer. ¿Deseas eliminar la categoría "${categoria.nombre}"?',
-          ),
-          actions: [
-            OutlinedButton(
-              onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('Cancelar'),
-            ),
-            ElevatedButton(
-              onPressed: () => Navigator.of(context).pop(true),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.danger,
-              ),
-              child: const Text('Eliminar'),
-            ),
-          ],
-        );
-      },
-    );
-
-    if (confirmed ?? false) {
-      ref
-          .read(inventarioControllerProvider.notifier)
-          .deleteCategoria(categoria.id);
-    }
   }
 
   Future<void> _showEditProfileDialog(
@@ -456,5 +384,224 @@ class _ProfileAvatarState extends ConsumerState<_ProfileAvatar> {
         ],
       ),
     );
+  }
+}
+
+// ─── Category management sheet ─────────────────────────────────────────────
+
+class _CategoryManagementSheet extends ConsumerStatefulWidget {
+  @override
+  ConsumerState<_CategoryManagementSheet> createState() =>
+      _CategoryManagementSheetState();
+}
+
+class _CategoryManagementSheetState
+    extends ConsumerState<_CategoryManagementSheet> {
+  final _sheetController = DraggableScrollableController();
+  bool _isDragging = false;
+
+  @override
+  void dispose() {
+    _sheetController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final categorias = ref.watch(
+      inventarioControllerProvider.select((s) => s.categorias),
+    );
+
+    return DraggableScrollableSheet(
+      controller: _sheetController,
+      initialChildSize: 0.65,
+      minChildSize: 0.4,
+      maxChildSize: 0.95,
+      expand: false,
+      builder: (context, scrollController) {
+        return SafeArea(
+          child: Column(
+            children: [
+              GestureDetector(
+                onVerticalDragStart: (_) =>
+                    setState(() => _isDragging = true),
+                onVerticalDragUpdate: (details) {
+                  final delta = -details.primaryDelta! /
+                      MediaQuery.of(context).size.height;
+                  _sheetController.jumpTo(
+                    (_sheetController.size + delta).clamp(0.4, 0.95),
+                  );
+                },
+                onVerticalDragEnd: (_) =>
+                    setState(() => _isDragging = false),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    vertical: AppSpacing.md,
+                  ),
+                  child: Center(
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      width: 40,
+                      height: 5,
+                      decoration: BoxDecoration(
+                        color: _isDragging
+                            ? AppColors.primary
+                            : AppColors.muted,
+                        borderRadius: BorderRadius.circular(AppRadii.pill),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.xl,
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        'Categorías',
+                        style:
+                            Theme.of(context).textTheme.titleLarge,
+                      ),
+                    ),
+                    IconButton.filledTonal(
+                      onPressed: () =>
+                          _showCategoryDialog(context, ref),
+                      icon: const Icon(Icons.add_rounded),
+                      tooltip: 'Crear categoría',
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              Expanded(
+                child: ListView(
+                  controller: scrollController,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.xl,
+                  ),
+                  children: [
+                    for (final categoria in categorias) ...[
+                      Card(
+                        key: ValueKey(categoria.id),
+                        child: ListTile(
+                          title: Text(categoria.nombre),
+                          leading: const Icon(Icons.category_outlined),
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              IconButton(
+                                icon: const Icon(Icons.edit_outlined),
+                                tooltip: 'Editar',
+                                onPressed: () => _showCategoryDialog(
+                                  context,
+                                  ref,
+                                  categoria: categoria,
+                                ),
+                              ),
+                              IconButton(
+                                onPressed: () =>
+                                    _confirmDeleteCategoria(
+                                  context,
+                                  ref,
+                                  categoria,
+                                ),
+                                icon: const Icon(
+                                  Icons.delete_outline_rounded,
+                                ),
+                                color: AppColors.danger,
+                                tooltip: 'Eliminar',
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.sm),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _showCategoryDialog(
+    BuildContext context,
+    WidgetRef ref, {
+    Categoria? categoria,
+  }) async {
+    final isEdit = categoria != null;
+    final name = await showDialog<String>(
+      context: context,
+      builder: (_) => CategoryNameDialog(
+        title: isEdit ? 'Editar categoría' : 'Crear categoría',
+        initialName: isEdit ? categoria.nombre : null,
+        categoryExists: (value) => ref
+            .read(inventarioControllerProvider.notifier)
+            .existsCategoriaConNombre(
+              value,
+              excludeId: isEdit ? categoria.id : null,
+            ),
+      ),
+    );
+
+    if (name != null && name.isNotEmpty) {
+      ref
+          .read(inventarioControllerProvider.notifier)
+          .upsertCategoria(
+            Categoria(
+              id: isEdit ? categoria.id : const Uuid().v4(),
+              nombre: name,
+              createdAt: isEdit ? categoria.createdAt : DateTime.now(),
+            ),
+          );
+    }
+  }
+
+  Future<void> _confirmDeleteCategoria(
+    BuildContext context,
+    WidgetRef ref,
+    Categoria categoria,
+  ) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          icon: const Icon(
+            Icons.warning_amber_rounded,
+            color: AppColors.danger,
+            size: 42,
+          ),
+          title: const Text('¿Eliminar categoría?'),
+          content: Text(
+            'Esta acción no se puede deshacer. ¿Deseas eliminar la categoría "${categoria.nombre}"?',
+          ),
+          actions: [
+            OutlinedButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Cancelar'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.danger,
+              ),
+              child: const Text('Eliminar'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmed ?? false) {
+      ref
+          .read(inventarioControllerProvider.notifier)
+          .deleteCategoria(categoria.id);
+    }
   }
 }

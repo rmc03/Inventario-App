@@ -16,6 +16,8 @@ import '../../features/turno/presentation/mi_turno_screen.dart';
 import '../../features/ventas/presentation/nueva_venta_screen.dart';
 import '../../features/ventas/presentation/confirmar_pago_screen.dart';
 import '../../features/ventas/presentation/venta_detalle_screen.dart';
+import '../../features/usuarios/presentation/usuarios_screen.dart';
+import '../../features/usuarios/presentation/usuario_form_screen.dart';
 import '../../shared/models/venta.dart';
 import '../../shared/widgets/error_page.dart';
 import '../../shared/models/usuario.dart';
@@ -105,6 +107,20 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/admin/configuracion',
             builder: (context, state) => const ConfiguracionScreen(isAdmin: true),
+          ),
+          GoRoute(
+            path: '/admin/usuarios',
+            builder: (context, state) => const UsuariosScreen(),
+          ),
+          GoRoute(
+            path: '/admin/usuarios/nuevo',
+            builder: (context, state) => const UsuarioFormScreen(),
+          ),
+          GoRoute(
+            path: '/admin/usuarios/:id/editar',
+            builder: (context, state) => UsuarioFormScreen(
+              userId: state.pathParameters['id'],
+            ),
           ),
         ],
       ),

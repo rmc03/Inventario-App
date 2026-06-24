@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_dimens.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/formatters.dart';
+import '../../../shared/models/categoria.dart';
 import '../../../shared/models/cuadre_item.dart';
 import '../../../shared/models/producto.dart';
 import '../../../shared/widgets/product_photo.dart';
@@ -25,6 +26,8 @@ class _NuevaVentaScreenState extends ConsumerState<NuevaVentaScreen> {
   final _searchCtrl = TextEditingController();
   String _searchQuery = '';
   String? _selectedCategoriaId;
+  ProductoSortBy _selectedSortBy = ProductoSortBy.nombreAsc;
+  bool _soloStockBajo = false;
 
   @override
   void initState() {
@@ -55,14 +58,28 @@ class _NuevaVentaScreenState extends ConsumerState<NuevaVentaScreen> {
         : inventarioState.categorias;
 
     final normalizedQuery = _searchQuery.trim().toLowerCase();
-    final productos = allProducts.where((p) {
+    var productos = allProducts.where((p) {
       final matchesSearch =
           normalizedQuery.isEmpty ||
           p.nombre.toLowerCase().contains(normalizedQuery);
       final matchesCategory =
           _selectedCategoriaId == null || p.categoriaId == _selectedCategoriaId;
-      return p.activo && p.stockActual > 0 && matchesSearch && matchesCategory;
+      final matchesStockBajo = !_soloStockBajo || p.tieneStockBajo;
+      return p.activo && p.stockActual > 0 && matchesSearch && matchesCategory && matchesStockBajo;
     }).toList();
+
+    switch (_selectedSortBy) {
+      case ProductoSortBy.nombreAsc:
+        productos.sort((a, b) => a.nombre.toLowerCase().compareTo(b.nombre.toLowerCase()));
+      case ProductoSortBy.precioAsc:
+        productos.sort((a, b) => a.precio.compareTo(b.precio));
+      case ProductoSortBy.precioDesc:
+        productos.sort((a, b) => b.precio.compareTo(a.precio));
+      case ProductoSortBy.stockAsc:
+        productos.sort((a, b) => a.stockActual.compareTo(b.stockActual));
+      case ProductoSortBy.stockDesc:
+        productos.sort((a, b) => b.stockActual.compareTo(a.stockActual));
+    }
 
     return Scaffold(
       appBar: AppBar(
@@ -163,9 +180,9 @@ class _NuevaVentaScreenState extends ConsumerState<NuevaVentaScreen> {
                       ),
                       const SizedBox(width: AppSpacing.sm),
                       IconButton.filledTonal(
-                        onPressed: () => _showCategoryFilterSheet(context),
+                        onPressed: () => _showFilterSheet(context),
                         icon: const Icon(Icons.tune_rounded),
-                        tooltip: 'Filtrar productos',
+                        tooltip: 'Ordenar y filtrar',
                       ),
                     ],
                   ),
@@ -322,65 +339,229 @@ class _NuevaVentaScreenState extends ConsumerState<NuevaVentaScreen> {
     );
   }
 
-  void _showCategoryFilterSheet(BuildContext context) {
-    final inventarioCategorias = ref
-        .read(inventarioControllerProvider)
-        .categorias;
-    final categorias = inventarioCategorias.isEmpty
-        ? demoCategorias()
-        : inventarioCategorias;
+  void _showFilterSheet(BuildContext context) {
     showModalBottomSheet<void>(
       context: context,
-      showDragHandle: true,
-      builder: (ctx) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(
-            AppSpacing.xl,
-            0,
-            AppSpacing.xl,
-            AppSpacing.xl,
-          ),
+      isScrollControlled: true,
+      showDragHandle: false,
+      builder: (ctx) => _VentaFilterSheetContent(
+        initialSortBy: _selectedSortBy,
+        initialCategoriaId: _selectedCategoriaId,
+        initialSoloStockBajo: _soloStockBajo,
+        categorias: ref.read(inventarioControllerProvider).categorias.isEmpty
+            ? demoCategorias()
+            : ref.read(inventarioControllerProvider).categorias,
+        onChanged: ({sortBy, categoriaId, soloStockBajo}) {
+          setState(() {
+            if (sortBy != null) _selectedSortBy = sortBy;
+            if (categoriaId != null) _selectedCategoriaId = categoriaId;
+            if (soloStockBajo != null) _soloStockBajo = soloStockBajo;
+          });
+        },
+      ),
+    );
+  }
+}
+
+// ─── Filter sheet con drag handle personalizado ─────────────────────────────
+
+class _VentaFilterSheetContent extends StatefulWidget {
+  const _VentaFilterSheetContent({
+    required this.initialSortBy,
+    required this.initialCategoriaId,
+    required this.initialSoloStockBajo,
+    required this.categorias,
+    required this.onChanged,
+  });
+
+  final ProductoSortBy initialSortBy;
+  final String? initialCategoriaId;
+  final bool initialSoloStockBajo;
+  final List<Categoria> categorias;
+  final void Function({
+    ProductoSortBy? sortBy,
+    String? categoriaId,
+    bool? soloStockBajo,
+  }) onChanged;
+
+  @override
+  State<_VentaFilterSheetContent> createState() => _VentaFilterSheetContentState();
+}
+
+class _VentaFilterSheetContentState extends State<_VentaFilterSheetContent> {
+  late ProductoSortBy _sortBy;
+  String? _categoriaId;
+  late bool _soloStockBajo;
+  final _sheetController = DraggableScrollableController();
+  bool _isDragging = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _sortBy = widget.initialSortBy;
+    _categoriaId = widget.initialCategoriaId;
+    _soloStockBajo = widget.initialSoloStockBajo;
+  }
+
+  @override
+  void dispose() {
+    _sheetController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return DraggableScrollableSheet(
+      controller: _sheetController,
+      initialChildSize: 0.5,
+      minChildSize: 0.3,
+      maxChildSize: 0.95,
+      expand: false,
+      builder: (context, scrollController) {
+        return SafeArea(
           child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                'Filtrar por categoría',
-                style: Theme.of(context).textTheme.titleLarge,
-              ),
-              const SizedBox(height: AppSpacing.md),
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: const Icon(Icons.apps_rounded),
-                title: const Text('Todos'),
-                trailing: _selectedCategoriaId == null
-                    ? const Icon(Icons.check_rounded, color: AppColors.primary)
-                    : null,
-                onTap: () {
-                  setState(() => _selectedCategoriaId = null);
-                  Navigator.of(ctx).pop();
+              GestureDetector(
+                onVerticalDragStart: (_) =>
+                    setState(() => _isDragging = true),
+                onVerticalDragUpdate: (details) {
+                  final delta = -details.primaryDelta! /
+                      MediaQuery.of(context).size.height;
+                  _sheetController.jumpTo(
+                    (_sheetController.size + delta).clamp(0.3, 0.95),
+                  );
                 },
-              ),
-              for (final categoria in categorias)
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: const Icon(Icons.category_outlined),
-                  title: Text(categoria.nombre),
-                  trailing: _selectedCategoriaId == categoria.id
-                      ? const Icon(
-                          Icons.check_rounded,
-                          color: AppColors.primary,
-                        )
-                      : null,
-                  onTap: () {
-                    setState(() => _selectedCategoriaId = categoria.id);
-                    Navigator.of(ctx).pop();
-                  },
+                onVerticalDragEnd: (_) =>
+                    setState(() => _isDragging = false),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    vertical: AppSpacing.md,
+                  ),
+                  child: Center(
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      width: 40,
+                      height: 5,
+                      decoration: BoxDecoration(
+                        color: _isDragging
+                            ? AppColors.primary
+                            : AppColors.muted,
+                        borderRadius: BorderRadius.circular(AppRadii.pill),
+                      ),
+                    ),
+                  ),
                 ),
+              ),
+              Expanded(
+                child: SingleChildScrollView(
+                  controller: scrollController,
+                  padding: EdgeInsets.fromLTRB(
+                    AppSpacing.xl,
+                    0,
+                    AppSpacing.xl,
+                    MediaQuery.of(context).viewInsets.bottom + AppSpacing.xl,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Ordenar y Filtrar',
+                        style: Theme.of(context).textTheme.titleLarge,
+                      ),
+                      const SizedBox(height: AppSpacing.xl),
+                      Text(
+                        'Ordenar por',
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                      const SizedBox(height: AppSpacing.sm),
+                      DropdownButtonFormField<ProductoSortBy>(
+                        initialValue: _sortBy,
+                        decoration: const InputDecoration(
+                          isDense: true,
+                          contentPadding: EdgeInsets.symmetric(
+                            horizontal: AppSpacing.sm,
+                            vertical: AppSpacing.sm,
+                          ),
+                        ),
+                        items: ProductoSortBy.values
+                            .map(
+                              (s) => DropdownMenuItem(
+                                value: s,
+                                child: Text(s.label),
+                              ),
+                            )
+                            .toList(),
+                        onChanged: (val) {
+                          if (val != null) {
+                            setState(() => _sortBy = val);
+                            widget.onChanged(sortBy: val);
+                          }
+                        },
+                      ),
+                      const SizedBox(height: AppSpacing.xl),
+                      SwitchListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: const Text('Solo stock bajo'),
+                        subtitle: const Text(
+                          'Muestra productos con 3 unidades o menos disponibles',
+                        ),
+                        value: _soloStockBajo,
+                        onChanged: (val) {
+                          setState(() => _soloStockBajo = val);
+                          widget.onChanged(soloStockBajo: val);
+                        },
+                      ),
+                      const Divider(),
+                      Text(
+                        'Categoría',
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                      const SizedBox(height: AppSpacing.sm),
+                      ListView(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        children: [
+                          ListTile(
+                            contentPadding: EdgeInsets.zero,
+                            leading: const Icon(Icons.apps_rounded),
+                            title: const Text('Todos'),
+                            trailing: _categoriaId == null
+                                ? const Icon(
+                                    Icons.check_rounded,
+                                    color: AppColors.primary,
+                                  )
+                                : null,
+                            onTap: () {
+                              setState(() => _categoriaId = null);
+                              widget.onChanged(categoriaId: _categoriaId);
+                            },
+                          ),
+                          for (final categoria in widget.categorias)
+                            ListTile(
+                              contentPadding: EdgeInsets.zero,
+                              leading: const Icon(Icons.category_outlined),
+                              title: Text(categoria.nombre),
+                              trailing: _categoriaId == categoria.id
+                                  ? const Icon(
+                                      Icons.check_rounded,
+                                      color: AppColors.primary,
+                                    )
+                                  : null,
+                              onTap: () {
+                                setState(() => _categoriaId = categoria.id);
+                                widget.onChanged(categoriaId: _categoriaId);
+                              },
+                            ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
             ],
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 }

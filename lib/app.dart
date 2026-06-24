@@ -26,6 +26,7 @@ class _SplashOverlayState extends State<_SplashOverlay> {
   @override
   void initState() {
     super.initState();
+    _precacheDemoAssets();
     final future = AppStartup.supabaseInitFuture ?? Future.value();
     var ready = false;
     future.then((_) {
@@ -38,6 +39,27 @@ class _SplashOverlayState extends State<_SplashOverlay> {
     _minDelayTimer = Timer(const Duration(milliseconds: 200), () {
       if (ready) {
         if (mounted) setState(() => _visible = false);
+      }
+    });
+  }
+
+  void _precacheDemoAssets() {
+    const paths = [
+      'assets/images/aceite.jpg',
+      'assets/images/cadena.jpg',
+      'assets/images/casco.jpg',
+      'assets/images/cubre-tanque.jpg',
+      'assets/images/guantes.jpg',
+      'assets/images/extra-1.jpg',
+      'assets/images/extra-2.jpg',
+      'assets/images/extra-3.jpg',
+      'assets/images/extra-4.jpg',
+      'assets/images/extra-5.jpg',
+    ];
+    // Usamos el frame después del primer build para tener PaintingBinding listo.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      for (final path in paths) {
+        precacheImage(AssetImage(path), context);
       }
     });
   }
