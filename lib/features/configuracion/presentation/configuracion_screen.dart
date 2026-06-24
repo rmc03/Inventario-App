@@ -35,6 +35,15 @@ class ConfiguracionScreen extends ConsumerWidget {
         title: const Text('Ajustes'),
         actions: [
           IconButton(
+            icon: const Icon(Icons.dark_mode_outlined),
+            tooltip: 'Modo oscuro (próximamente)',
+            onPressed: () {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Próximamente')),
+              );
+            },
+          ),
+          IconButton(
             onPressed: () =>
                 ref.read(authControllerProvider.notifier).signOut(),
             icon: const Icon(Icons.logout_rounded),
@@ -81,8 +90,6 @@ class ConfiguracionScreen extends ConsumerWidget {
             if (!isAdmin) ...[
               const SizedBox(height: 12),
               _TurnoCard(),
-              const SizedBox(height: 12),
-              _TemaCard(),
             ],
             if (isAdmin) ...[
               const SizedBox(height: 18),
@@ -105,8 +112,6 @@ class ConfiguracionScreen extends ConsumerWidget {
                   onTap: () => _showCategoryManagement(context, ref),
                 ),
               ),
-              const SizedBox(height: 12),
-              _TemaCard(),
             ],
           ],
         ),
@@ -425,26 +430,6 @@ class _CompactValor extends StatelessWidget {
         ),
         Text(label, style: Theme.of(context).textTheme.bodyMedium),
       ],
-    );
-  }
-}
-
-// ─── Tema card ─────────────────────────────────────────────────────────────
-
-class _TemaCard extends StatelessWidget {
-  const _TemaCard();
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      child: ListTile(
-        leading: const Icon(Icons.dark_mode_outlined),
-        title: const Text('Modo oscuro'),
-        subtitle: const Text('Próximamente'),
-        trailing: IgnorePointer(
-          child: Switch(value: false, onChanged: null),
-        ),
-      ),
     );
   }
 }
