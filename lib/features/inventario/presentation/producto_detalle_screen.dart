@@ -11,9 +11,14 @@ import '../../../shared/widgets/stock_badge.dart';
 import '../providers/inventario_provider.dart';
 
 class ProductoDetalleScreen extends ConsumerWidget {
-  const ProductoDetalleScreen({super.key, required this.productId});
+  const ProductoDetalleScreen({
+    super.key,
+    required this.productId,
+    this.isAdmin = true,
+  });
 
   final String productId;
+  final bool isAdmin;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -43,12 +48,13 @@ class ProductoDetalleScreen extends ConsumerWidget {
           tooltip: 'Volver',
         ),
         actions: [
-          IconButton(
-            onPressed: () =>
-                context.push('/admin/inventario/productos/${producto.id}/editar'),
-            icon: const Icon(Icons.edit_rounded),
-            tooltip: 'Editar',
-          ),
+          if (isAdmin)
+            IconButton(
+              onPressed: () =>
+                  context.push('/admin/inventario/productos/${producto.id}/editar'),
+              icon: const Icon(Icons.edit_rounded),
+              tooltip: 'Editar',
+            ),
         ],
       ),
       body: SafeArea(
@@ -122,22 +128,23 @@ class ProductoDetalleScreen extends ConsumerWidget {
                   ),
                 ),
                 const _CardSeparator(),
-                _DetailRow(
-                  icon: Icons.assessment_outlined,
-                  label: 'Valor total',
-                  value: formatCurrency(producto.valorTotal),
-                ),
+                if (isAdmin)
+                  _DetailRow(
+                    icon: Icons.assessment_outlined,
+                    label: 'Valor total',
+                    value: formatCurrency(producto.valorTotal),
+                  ),
               ],
             ),
             // ─── Eliminar ────────────────────────────────────────────────
-            const SizedBox(height: AppSpacing.xl),
-            _GroupedCard(
-              children: [
-                _DeleteButton(
-                  producto: producto,
-                ),
-              ],
-            ),
+            if (isAdmin) ...[
+              const SizedBox(height: AppSpacing.xl),
+              _GroupedCard(
+                children: [
+                  _DeleteButton(producto: producto),
+                ],
+              ),
+            ],
           ],
         ),
       ),

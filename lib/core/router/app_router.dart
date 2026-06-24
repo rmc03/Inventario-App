@@ -120,6 +120,13 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             builder: (context, state) => const InventarioScreen(isAdmin: false),
           ),
           GoRoute(
+            path: '/dependiente/inventario/productos/:id',
+            builder: (context, state) => ProductoDetalleScreen(
+              productId: state.pathParameters['id']!,
+              isAdmin: false,
+            ),
+          ),
+          GoRoute(
             path: '/dependiente/turno',
             builder: (context, state) => const MiTurnoScreen(),
           ),

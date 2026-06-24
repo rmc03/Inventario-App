@@ -145,27 +145,28 @@ class InventarioScreen extends ConsumerWidget {
                 ),
               ),
             const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.xl)),
-            // ─── Stats ────────────────────────────────────────────────
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
-                child: Row(
-                  children: [
-                    StatCard(
-                      label: 'Total productos',
-                      value: state.totalProductos.toString(),
-                      tint: AppColors.primary,
-                    ),
-                    const SizedBox(width: AppSpacing.sm),
-                    StatCard(
-                      label: 'Valor total',
-                      value: formatCurrency(state.valorTotal),
-                      tint: AppColors.success,
-                    ),
-                  ],
+            // ─── Stats (solo admin) ───────────────────────────────────
+            if (isAdmin)
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
+                  child: Row(
+                    children: [
+                      StatCard(
+                        label: 'Total productos',
+                        value: state.totalProductos.toString(),
+                        tint: AppColors.primary,
+                      ),
+                      const SizedBox(width: AppSpacing.sm),
+                      StatCard(
+                        label: 'Valor total',
+                        value: formatCurrency(state.valorTotal),
+                        tint: AppColors.success,
+                      ),
+                    ],
+                  ),
                 ),
               ),
-            ),
             const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.xl)),
             // ─── Lista de productos (lazy-loaded) ────────────────────
             if (productos.isEmpty)
@@ -199,88 +200,152 @@ class InventarioScreen extends ConsumerWidget {
     );
   }
 
-  // ─── Filter bottom sheet ──────────────────────────────────────────────────
+  // ─── Filter bottom sheet (expandible) ──────────────────────────────────────
 
   void _showFilterSheet(BuildContext context, WidgetRef ref) {
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      showDragHandle: true,
-      builder: (context) {
-        return Consumer(
-          builder: (context, ref, _) {
-            final state = ref.watch(inventarioControllerProvider);
-            return SafeArea(
-              child: Padding(
-                padding: EdgeInsets.fromLTRB(
-                  AppSpacing.xl,
-                  0,
-                  AppSpacing.xl,
-                  MediaQuery.of(context).viewInsets.bottom + AppSpacing.xl,
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Ordenar y Filtrar',
-                      style: Theme.of(context).textTheme.titleLarge,
-                    ),
-                    const SizedBox(height: AppSpacing.xl),
-                    Text(
-                      'Ordenar por',
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
-                    const SizedBox(height: AppSpacing.sm),
-                    DropdownButtonFormField<ProductoSortBy>(
-                      initialValue: state.sortBy,
-                      decoration: const InputDecoration(
-                        isDense: true,
-                        contentPadding: EdgeInsets.symmetric(
-                          horizontal: AppSpacing.sm,
-                          vertical: AppSpacing.sm,
-                        ),
+      showDragHandle: false,
+      builder: (context) => const _FilterSheetContent(),
+    );
+  }
+}
+
+// ─── Filter sheet con drag handle personalizado ─────────────────────────────
+
+class _FilterSheetContent extends ConsumerStatefulWidget {
+  const _FilterSheetContent();
+
+  @override
+  ConsumerState<_FilterSheetContent> createState() =>
+      _FilterSheetContentState();
+}
+
+class _FilterSheetContentState extends ConsumerState<_FilterSheetContent> {
+  final _sheetController = DraggableScrollableController();
+  bool _isDragging = false;
+
+  @override
+  void dispose() {
+    _sheetController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return DraggableScrollableSheet(
+      controller: _sheetController,
+      initialChildSize: 0.5,
+      minChildSize: 0.3,
+      maxChildSize: 0.95,
+      expand: false,
+      builder: (context, scrollController) {
+        final state = ref.watch(inventarioControllerProvider);
+        return SafeArea(
+          child: Column(
+            children: [
+              GestureDetector(
+                onVerticalDragStart: (_) =>
+                    setState(() => _isDragging = true),
+                onVerticalDragUpdate: (details) {
+                  final delta = -details.primaryDelta! /
+                      MediaQuery.of(context).size.height;
+                  _sheetController.jumpTo(
+                    (_sheetController.size + delta).clamp(0.3, 0.95),
+                  );
+                },
+                onVerticalDragEnd: (_) =>
+                    setState(() => _isDragging = false),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    vertical: AppSpacing.md,
+                  ),
+                  child: Center(
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      width: 40,
+                      height: 5,
+                      decoration: BoxDecoration(
+                        color: _isDragging
+                            ? AppColors.primary
+                            : AppColors.muted,
+                        borderRadius: BorderRadius.circular(AppRadii.pill),
                       ),
-                      items: ProductoSortBy.values
-                          .map(
-                            (s) => DropdownMenuItem(
-                              value: s,
-                              child: Text(s.label),
-                            ),
-                          )
-                          .toList(),
-                      onChanged: (val) {
-                        if (val != null) {
+                    ),
+                  ),
+                ),
+              ),
+              Expanded(
+                child: SingleChildScrollView(
+                  controller: scrollController,
+                  padding: EdgeInsets.fromLTRB(
+                    AppSpacing.xl,
+                    0,
+                    AppSpacing.xl,
+                    MediaQuery.of(context).viewInsets.bottom + AppSpacing.xl,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Ordenar y Filtrar',
+                        style: Theme.of(context).textTheme.titleLarge,
+                      ),
+                      const SizedBox(height: AppSpacing.xl),
+                      Text(
+                        'Ordenar por',
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                      const SizedBox(height: AppSpacing.sm),
+                      DropdownButtonFormField<ProductoSortBy>(
+                        initialValue: state.sortBy,
+                        decoration: const InputDecoration(
+                          isDense: true,
+                          contentPadding: EdgeInsets.symmetric(
+                            horizontal: AppSpacing.sm,
+                            vertical: AppSpacing.sm,
+                          ),
+                        ),
+                        items: ProductoSortBy.values
+                            .map(
+                              (s) => DropdownMenuItem(
+                                value: s,
+                                child: Text(s.label),
+                              ),
+                            )
+                            .toList(),
+                        onChanged: (val) {
+                          if (val != null) {
+                            ref
+                                .read(inventarioControllerProvider.notifier)
+                                .setSortBy(val);
+                          }
+                        },
+                      ),
+                      const SizedBox(height: AppSpacing.xl),
+                      SwitchListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: const Text('Solo stock bajo'),
+                        subtitle: const Text(
+                          'Muestra productos con 3 unidades o menos disponibles',
+                        ),
+                        value: state.soloStockBajo,
+                        onChanged: (val) {
                           ref
                               .read(inventarioControllerProvider.notifier)
-                              .setSortBy(val);
-                        }
-                      },
-                    ),
-                    const SizedBox(height: AppSpacing.xl),
-                    SwitchListTile(
-                      contentPadding: EdgeInsets.zero,
-                      title: const Text('Solo stock bajo'),
-                      subtitle: const Text(
-                        'Muestra productos con 3 unidades o menos disponibles',
+                              .setSoloStockBajo(val);
+                        },
                       ),
-                      value: state.soloStockBajo,
-                      onChanged: (val) {
-                        ref
-                            .read(inventarioControllerProvider.notifier)
-                            .setSoloStockBajo(val);
-                      },
-                    ),
-                    const Divider(),
-                    Text(
-                      'Categoría',
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
-                    const SizedBox(height: AppSpacing.sm),
-                    ConstrainedBox(
-                      constraints: const BoxConstraints(maxHeight: 200),
-                      child: ListView(
+                      const Divider(),
+                      Text(
+                        'Categoría',
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                      const SizedBox(height: AppSpacing.sm),
+                      ListView(
                         shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
                         children: [
                           ListTile(
                             contentPadding: EdgeInsets.zero,
@@ -313,12 +378,12 @@ class InventarioScreen extends ConsumerWidget {
                             ),
                         ],
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
-            );
-          },
+            ],
+          ),
         );
       },
     );
@@ -344,9 +409,12 @@ class _ProductTile extends ConsumerWidget {
     // pantalla cuando cambia el "vendidos hoy" de un solo producto.
     return RepaintBoundary(
       child: InkWell(
-        onTap: isAdmin
-            ? () => context.push('/admin/inventario/productos/${producto.id}')
-            : null,
+        onTap: () {
+          final path = isAdmin
+              ? '/admin/inventario/productos/${producto.id}'
+              : '/dependiente/inventario/productos/${producto.id}';
+          context.push(path);
+        },
         child: Padding(
           padding: const EdgeInsets.symmetric(
             horizontal: AppSpacing.sm,

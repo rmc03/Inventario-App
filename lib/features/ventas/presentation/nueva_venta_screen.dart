@@ -838,55 +838,19 @@ class _CartBottomBar extends StatelessWidget {
                     behavior: HitTestBehavior.opaque,
                     child: Row(
                       children: [
-                        Stack(
-                          clipBehavior: Clip.none,
-                          children: [
-                            Container(
-                              width: 46,
-                              height: 46,
-                              decoration: BoxDecoration(
-                                color: AppColors.primary.withValues(
-                                  alpha: 0.10,
-                                ),
-                                borderRadius: AppRadii.lgBorder,
-                              ),
-                              child: const Icon(
-                                Icons.shopping_cart_rounded,
-                                color: AppColors.primary,
-                              ),
+                        Container(
+                          width: 46,
+                          height: 46,
+                          decoration: BoxDecoration(
+                            color: AppColors.primary.withValues(
+                              alpha: 0.10,
                             ),
-                            Positioned(
-                              right: -3,
-                              top: -5,
-                              child: Container(
-                                constraints: const BoxConstraints(
-                                  minWidth: 20,
-                                  minHeight: 20,
-                                ),
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 5,
-                                  vertical: 2,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: AppColors.primary,
-                                  shape: BoxShape.circle,
-                                  border: Border.all(
-                                    color: AppColors.surface,
-                                    width: 2,
-                                  ),
-                                ),
-                                child: Text(
-                                  totalArticulos.toString(),
-                                  textAlign: TextAlign.center,
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w800,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
+                            borderRadius: AppRadii.lgBorder,
+                          ),
+                          child: const Icon(
+                            Icons.shopping_cart_rounded,
+                            color: AppColors.primary,
+                          ),
                         ),
                         const SizedBox(width: AppSpacing.sm),
                         Column(
