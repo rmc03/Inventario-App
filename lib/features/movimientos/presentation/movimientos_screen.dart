@@ -183,34 +183,29 @@ class _MovimientosScreenState extends ConsumerState<MovimientosScreen> {
             Padding(
               padding: const EdgeInsets.fromLTRB(AppSpacing.xl, 0, AppSpacing.xl, 0),
               child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Expanded(
-                    child: _ToggleOption(
-                      label: 'Todos',
-                      icon: Icons.filter_list_rounded,
-                      selected: _tipo == null,
-                      onTap: () => setState(() => _tipo = null),
-                    ),
+                  _FilterTextButton(
+                    label: 'Todos',
+                    icon: Icons.filter_list_rounded,
+                    selected: _tipo == null,
+                    onTap: () => setState(() => _tipo = null),
                   ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: _ToggleOption(
-                      label: 'Entradas',
-                      icon: Icons.arrow_downward_rounded,
-                      selected: _tipo == MovimientoTipo.entrada,
-                      onTap: () =>
-                          setState(() => _tipo = MovimientoTipo.entrada),
-                    ),
+                  const SizedBox(width: 16),
+                  _FilterTextButton(
+                    label: 'Entradas',
+                    icon: Icons.arrow_downward_rounded,
+                    selected: _tipo == MovimientoTipo.entrada,
+                    onTap: () =>
+                        setState(() => _tipo = MovimientoTipo.entrada),
                   ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: _ToggleOption(
-                      label: 'Salidas',
-                      icon: Icons.arrow_upward_rounded,
-                      selected: _tipo == MovimientoTipo.salida,
-                      onTap: () =>
-                          setState(() => _tipo = MovimientoTipo.salida),
-                    ),
+                  const SizedBox(width: 16),
+                  _FilterTextButton(
+                    label: 'Salidas',
+                    icon: Icons.arrow_upward_rounded,
+                    selected: _tipo == MovimientoTipo.salida,
+                    onTap: () =>
+                        setState(() => _tipo = MovimientoTipo.salida),
                   ),
                 ],
               ),
@@ -372,6 +367,72 @@ class _ToggleOption extends StatelessWidget {
               style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                 color: selected ? AppColors.primary : AppColors.ink,
                 fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Filter text button ────────────────────────────────────────────────────
+
+class _FilterTextButton extends StatelessWidget {
+  const _FilterTextButton({
+    required this.label,
+    this.icon,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final IconData? icon;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (icon != null) ...[
+                  Icon(
+                    icon,
+                    size: 14,
+                    color: selected ? AppColors.primary : AppColors.muted,
+                  ),
+                  const SizedBox(width: 4),
+                ],
+                Text(
+                  label,
+                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                    color: selected ? AppColors.primary : AppColors.muted,
+                    fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            ClipRect(
+              child: AnimatedAlign(
+                duration: const Duration(milliseconds: 200),
+                alignment: Alignment.centerLeft,
+                widthFactor: selected ? 1.0 : 0.0,
+                child: Container(
+                  height: 2.5,
+                  decoration: BoxDecoration(
+                    color: AppColors.primary,
+                    borderRadius: BorderRadius.circular(1),
+                  ),
+                ),
               ),
             ),
           ],
