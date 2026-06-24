@@ -101,7 +101,7 @@ class _NuevaVentaScreenState extends ConsumerState<NuevaVentaScreen> {
                 children: [
                   TextField(
                     controller: _searchCtrl,
-                    autofocus: true,
+                    autofocus: false,
                     onChanged: (val) => setState(() => _searchQuery = val),
                     decoration: InputDecoration(
                       hintText: 'Buscar producto...',
@@ -500,8 +500,8 @@ class _ProductoVentaTile extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(width: AppSpacing.sm),
-                    ConstrainedBox(
-                      constraints: const BoxConstraints(minWidth: 102),
+                    SizedBox(
+                      width: 118,
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         crossAxisAlignment: CrossAxisAlignment.end,
@@ -515,13 +515,23 @@ class _ProductoVentaTile extends StatelessWidget {
                                 ),
                           ),
                           const SizedBox(height: AppSpacing.md),
-                          isSelected
-                              ? _InlineQtySelector(
-                                  cantidad: qtyInCart,
-                                  onDecrement: onDecrement,
-                                  onIncrement: onIncrement,
-                                )
-                              : _AddProductButton(onPressed: onAdd),
+                          SizedBox(
+                            height: 34,
+                            child: AnimatedSwitcher(
+                              duration: const Duration(milliseconds: 180),
+                              child: isSelected
+                                  ? _InlineQtySelector(
+                                      key: const ValueKey('qty'),
+                                      cantidad: qtyInCart,
+                                      onDecrement: onDecrement,
+                                      onIncrement: onIncrement,
+                                    )
+                                  : _AddProductButton(
+                                      key: const ValueKey('add'),
+                                      onPressed: onAdd,
+                                    ),
+                            ),
+                          ),
                         ],
                       ),
                     ),
@@ -537,7 +547,10 @@ class _ProductoVentaTile extends StatelessWidget {
 }
 
 class _AddProductButton extends StatelessWidget {
-  const _AddProductButton({required this.onPressed});
+  const _AddProductButton({
+    super.key,
+    required this.onPressed,
+  });
 
   final VoidCallback onPressed;
 
@@ -547,7 +560,7 @@ class _AddProductButton extends StatelessWidget {
       onPressed: onPressed,
       style: OutlinedButton.styleFrom(
         foregroundColor: AppColors.primary,
-        minimumSize: const Size(0, 38),
+        minimumSize: const Size(0, 34),
         padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
         side: const BorderSide(color: AppColors.primary),
         shape: const RoundedRectangleBorder(borderRadius: AppRadii.pillBorder),
@@ -564,6 +577,7 @@ class _AddProductButton extends StatelessWidget {
 
 class _InlineQtySelector extends StatelessWidget {
   const _InlineQtySelector({
+    super.key,
     required this.cantidad,
     this.onDecrement,
     this.onIncrement,
@@ -581,8 +595,8 @@ class _InlineQtySelector extends StatelessWidget {
         _QtyRoundButton(
           icon: Icons.remove_rounded,
           onPressed: onDecrement,
-          backgroundColor: AppColors.primary.withValues(alpha: 0.10),
-          foregroundColor: AppColors.primary,
+          backgroundColor: AppColors.surfaceSecondary,
+          foregroundColor: AppColors.ink,
         ),
         Container(
           height: 34,
@@ -604,8 +618,8 @@ class _InlineQtySelector extends StatelessWidget {
         _QtyRoundButton(
           icon: Icons.add_rounded,
           onPressed: onIncrement,
-          backgroundColor: AppColors.primary,
-          foregroundColor: Colors.white,
+          backgroundColor: AppColors.surfaceSecondary,
+          foregroundColor: AppColors.ink,
         ),
       ],
     );

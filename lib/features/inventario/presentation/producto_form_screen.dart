@@ -23,18 +23,23 @@ const _defaultStockMinimo = 3;
 final _defaultCategoryCreatedAt = DateTime.utc(2024);
 final List<Categoria> _defaultCategorias = List.unmodifiable([
   Categoria(
-    id: 'cat-comp',
-    nombre: 'Computadoras',
+    id: 'cat-cascos',
+    nombre: 'Cascos',
     createdAt: _defaultCategoryCreatedAt,
   ),
   Categoria(
-    id: 'cat-perif',
-    nombre: 'Periféricos',
+    id: 'cat-repuestos',
+    nombre: 'Repuestos',
     createdAt: _defaultCategoryCreatedAt,
   ),
   Categoria(
-    id: 'cat-mueb',
-    nombre: 'Muebles',
+    id: 'cat-accesorios',
+    nombre: 'Accesorios',
+    createdAt: _defaultCategoryCreatedAt,
+  ),
+  Categoria(
+    id: 'cat-lubricantes',
+    nombre: 'Lubricantes',
     createdAt: _defaultCategoryCreatedAt,
   ),
 ]);

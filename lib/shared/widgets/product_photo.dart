@@ -40,6 +40,18 @@ class ProductPhoto extends StatelessWidget {
     // decode which can waste 40-50× more texture memory on a 56×56 display.
     final cacheSize = (size * 2).ceil();
 
+    if (_isAssetPath(imageUrl)) {
+      return Image.asset(
+        imageUrl,
+        fit: BoxFit.cover,
+        width: size,
+        height: size,
+        cacheWidth: cacheSize,
+        cacheHeight: cacheSize,
+        errorBuilder: (context, error, stackTrace) => _placeholder(),
+      );
+    }
+
     if (!_isNetworkUrl(imageUrl)) {
       return Image.file(
         File(imageUrl),
@@ -65,6 +77,10 @@ class ProductPhoto extends StatelessWidget {
       ),
       errorWidget: (context, url, error) => _placeholder(),
     );
+  }
+
+  bool _isAssetPath(String value) {
+    return value.startsWith('assets/');
   }
 
   bool _isNetworkUrl(String value) {

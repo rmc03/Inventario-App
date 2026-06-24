@@ -7,8 +7,8 @@ class MovimientoRepository {
     : _movimientos = [
         Movimiento(
           id: 'mov-001',
-          productoId: 'prod-laptop',
-          productoNombre: 'Laptop Dell Inspiron 15',
+          productoId: 'prod-casco',
+          productoNombre: 'Casco Integral Shoei GT-Air II',
           usuarioId: '00000000-0000-4000-9000-000000000002',
           usuarioNombre: 'Dependiente Demo',
           tipo: MovimientoTipo.salida,
@@ -20,12 +20,12 @@ class MovimientoRepository {
         ),
         Movimiento(
           id: 'mov-002',
-          productoId: 'prod-keyboard',
-          productoNombre: 'Teclado Inalámbrico Logitech',
+          productoId: 'prod-aceite',
+          productoNombre: 'Aceite Motul 5100 10W-40',
           usuarioId: '00000000-0000-4000-9000-000000000002',
           usuarioNombre: 'Dependiente Demo',
           tipo: MovimientoTipo.entrada,
-          cantidad: 5,
+          cantidad: 10,
           nota: 'Reposición',
           fecha: DateTime.now().subtract(const Duration(hours: 1)),
           synced: true,
