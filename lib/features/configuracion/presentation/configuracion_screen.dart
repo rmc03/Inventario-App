@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path/path.dart' as p;
 import 'package:uuid/uuid.dart';
@@ -10,12 +11,15 @@ import 'package:uuid/uuid.dart';
 import '../../../core/local_db/local_database.dart';
 import '../../../core/theme/app_dimens.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/utils/formatters.dart';
 import '../../../shared/models/usuario.dart';
 import '../../../shared/models/categoria.dart';
 import '../../../shared/widgets/category_name_dialog.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../inventario/providers/inventario_provider.dart';
+import '../../turno/providers/turno_provider.dart';
 import '../../usuarios/providers/usuario_provider.dart';
+import '../../ventas/providers/venta_provider.dart';
 
 class ConfiguracionScreen extends ConsumerWidget {
   const ConfiguracionScreen({super.key, this.isAdmin = true});
@@ -25,9 +29,6 @@ class ConfiguracionScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final user = ref.watch(authControllerProvider.select((s) => s.user));
-    final categorias = ref.watch(
-      inventarioControllerProvider.select((s) => s.categorias),
-    );
 
     return Scaffold(
       appBar: AppBar(
@@ -46,49 +47,42 @@ class ConfiguracionScreen extends ConsumerWidget {
         child: ListView(
           padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
           children: [
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Row(
-                  children: [
-                    _ProfileAvatar(user: user),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            user?.nombre ?? 'Admin',
-                            style: Theme.of(context).textTheme.titleMedium,
-                          ),
-                          Text(user?.email ?? 'admin@inventario.local'),
-                        ],
+            if (user != null)
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Row(
+                    children: [
+                      _ProfileAvatar(user: user),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              user.nombre,
+                              style: Theme.of(context).textTheme.titleMedium,
+                            ),
+                            Text(user.email),
+                          ],
+                        ),
                       ),
-                    ),
-                    if (!isAdmin)
-                      IconButton(
-                        onPressed: () =>
-                            _showEditProfileDialog(context, ref, user),
-                        icon: const Icon(Icons.edit_rounded),
-                        tooltip: 'Editar perfil',
-                      ),
-                  ],
+                      if (!isAdmin)
+                        IconButton(
+                          onPressed: () =>
+                              _showEditProfileDialog(context, ref, user),
+                          icon: const Icon(Icons.edit_rounded),
+                          tooltip: 'Editar perfil',
+                        ),
+                    ],
+                  ),
                 ),
               ),
-            ),
             if (!isAdmin) ...[
               const SizedBox(height: 12),
-              Card(
-                child: ListTile(
-                  leading: const Icon(Icons.lock_outline),
-                  title: const Text('Cambiar contraseña'),
-                  subtitle: const Text(
-                    'Cambia tu contraseña de acceso (simulado)',
-                  ),
-                  trailing: const Icon(Icons.chevron_right_rounded),
-                  onTap: () => _showChangePasswordDialog(context),
-                ),
-              ),
+              _TurnoCard(),
+              const SizedBox(height: 12),
+              _TemaCard(),
             ],
             if (isAdmin) ...[
               const SizedBox(height: 18),
@@ -111,28 +105,8 @@ class ConfiguracionScreen extends ConsumerWidget {
                   onTap: () => _showCategoryManagement(context, ref),
                 ),
               ),
-            ],
-            if (!isAdmin) ...[
-              const SizedBox(height: 18),
-              Text(
-                'CATEGORÍAS',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.muted,
-                  letterSpacing: 0.5,
-                ),
-              ),
-              const SizedBox(height: 10),
-              for (final categoria in categorias) ...[
-                Card(
-                  key: ValueKey(categoria.id),
-                  child: ListTile(
-                    title: Text(categoria.nombre),
-                    leading: const Icon(Icons.category_outlined),
-                  ),
-                ),
-                const SizedBox(height: 10),
-              ],
+              const SizedBox(height: 12),
+              _TemaCard(),
             ],
           ],
         ),
@@ -239,88 +213,6 @@ class ConfiguracionScreen extends ConsumerWidget {
     }
   }
 
-  Future<void> _showChangePasswordDialog(BuildContext context) async {
-    final oldCtrl = TextEditingController();
-    final newCtrl = TextEditingController();
-    final confirmCtrl = TextEditingController();
-    final result = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) {
-        String? errorText;
-        return StatefulBuilder(
-          builder: (context, setState) {
-            return AlertDialog(
-              title: const Text('Cambiar contraseña'),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Old password kept for UX only; not validated in local demo
-                  TextField(
-                    controller: oldCtrl,
-                    obscureText: true,
-                    decoration: const InputDecoration(
-                      labelText: 'Contraseña actual',
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  TextField(
-                    controller: newCtrl,
-                    obscureText: true,
-                    decoration: const InputDecoration(
-                      labelText: 'Nueva contraseña',
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  TextField(
-                    controller: confirmCtrl,
-                    obscureText: true,
-                    decoration: InputDecoration(
-                      labelText: 'Confirmar',
-                      errorText: errorText,
-                    ),
-                  ),
-                ],
-              ),
-              actions: [
-                OutlinedButton(
-                  onPressed: () => Navigator.of(context).pop(false),
-                  child: const Text('Cancelar'),
-                ),
-                ElevatedButton(
-                  onPressed: () {
-                    final n = newCtrl.text;
-                    final c = confirmCtrl.text;
-                    if (n.isEmpty || n != c) {
-                      setState(
-                        () => errorText = 'Las contraseñas no coinciden',
-                      );
-                      return;
-                    }
-                    Navigator.of(context).pop(true);
-                  },
-                  child: const Text('Cambiar'),
-                ),
-              ],
-            );
-          },
-        );
-      },
-    );
-    oldCtrl.dispose();
-    newCtrl.dispose();
-    confirmCtrl.dispose();
-    if (result ?? false) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Cambio simulado: integra con Supabase para guardar contraseña',
-            ),
-          ),
-        );
-      }
-    }
-  }
 }
 
 class _ProfileAvatar extends ConsumerStatefulWidget {
@@ -391,6 +283,167 @@ class _ProfileAvatarState extends ConsumerState<_ProfileAvatar> {
             child: Icon(Icons.camera_alt_rounded, size: 14),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ─── Turno card ────────────────────────────────────────────────────────────
+
+class _TurnoCard extends ConsumerWidget {
+  const _TurnoCard();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final turno = ref.watch(turnoControllerProvider);
+    if (!turno.estaActivo) return const SizedBox.shrink();
+
+    final ventas = ref.watch(ventasDelTurnoProvider);
+    final totalTurno = ventas.fold(0.0, (sum, v) => sum + v.total);
+    final cantidadVentas = ventas.length;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: AppRadii.mdBorder,
+        border: const Border(
+          left: BorderSide(color: AppColors.success, width: 4),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.success.withValues(alpha: 0.08),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 8,
+                height: 8,
+                decoration: const BoxDecoration(
+                  color: AppColors.success,
+                  shape: BoxShape.circle,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'Turno activo${turno.horaInicio != null ? ' \u00b7 Desde ${timeFormatter.format(turno.horaInicio!)}' : ''}',
+                style: const TextStyle(
+                  fontSize: 13,
+                  color: AppColors.success,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Ventas de hoy',
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      formatCurrency(totalTurno),
+                      style: Theme.of(context)
+                          .textTheme
+                          .headlineMedium
+                          ?.copyWith(
+                            color: AppColors.primary,
+                            fontWeight: FontWeight.w800,
+                          ),
+                    ),
+                  ],
+                ),
+              ),
+              _CompactValor(
+                valor: '$cantidadVentas',
+                label: 'ventas',
+              ),
+              const SizedBox(width: 16),
+              SizedBox(
+                height: 36,
+                child: VerticalDivider(width: 1, color: AppColors.line),
+              ),
+              const SizedBox(width: 16),
+              _CompactValor(
+                valor: '${ventas.fold(0, (sum, v) => sum + v.totalUnidades)}',
+                label: 'uds.',
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: () =>
+                  context.push('/dependiente/turno/resumen'),
+              icon: const Icon(Icons.logout_rounded, size: 18),
+              label: const Text('Cerrar turno'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppColors.danger,
+                side: const BorderSide(color: AppColors.danger),
+                minimumSize: const Size.fromHeight(40),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CompactValor extends StatelessWidget {
+  const _CompactValor({required this.valor, required this.label});
+
+  final String valor;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          valor,
+          style: Theme.of(context)
+              .textTheme
+              .titleMedium
+              ?.copyWith(fontWeight: FontWeight.w800),
+        ),
+        Text(label, style: Theme.of(context).textTheme.bodyMedium),
+      ],
+    );
+  }
+}
+
+// ─── Tema card ─────────────────────────────────────────────────────────────
+
+class _TemaCard extends StatelessWidget {
+  const _TemaCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: ListTile(
+        leading: const Icon(Icons.dark_mode_outlined),
+        title: const Text('Modo oscuro'),
+        subtitle: const Text('Próximamente'),
+        trailing: IgnorePointer(
+          child: Switch(value: false, onChanged: null),
+        ),
       ),
     );
   }
