@@ -182,25 +182,37 @@ class _MovimientosScreenState extends ConsumerState<MovimientosScreen> {
             // ── Filtro ──
             Padding(
               padding: const EdgeInsets.fromLTRB(AppSpacing.xl, 0, AppSpacing.xl, 0),
-              child: SegmentedButton<MovimientoTipo?>(
-                segments: const [
-                  ButtonSegment(value: null, label: Text('Todos')),
-                  ButtonSegment(
-                    value: MovimientoTipo.entrada,
-                    label: Text('Entradas'),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: _ToggleOption(
+                      label: 'Todos',
+                      icon: Icons.filter_list_rounded,
+                      selected: _tipo == null,
+                      onTap: () => setState(() => _tipo = null),
+                    ),
                   ),
-                  ButtonSegment(
-                    value: MovimientoTipo.salida,
-                    label: Text('Salidas'),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _ToggleOption(
+                      label: 'Entradas',
+                      icon: Icons.arrow_downward_rounded,
+                      selected: _tipo == MovimientoTipo.entrada,
+                      onTap: () =>
+                          setState(() => _tipo = MovimientoTipo.entrada),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _ToggleOption(
+                      label: 'Salidas',
+                      icon: Icons.arrow_upward_rounded,
+                      selected: _tipo == MovimientoTipo.salida,
+                      onTap: () =>
+                          setState(() => _tipo = MovimientoTipo.salida),
+                    ),
                   ),
                 ],
-                selected: {_tipo},
-                onSelectionChanged: (value) =>
-                    setState(() => _tipo = value.first),
-                style: SegmentedButton.styleFrom(
-                  selectedBackgroundColor:
-                      AppColors.primary.withValues(alpha: 0.12),
-                ),
               ),
             ),
             const SizedBox(height: AppSpacing.md),
