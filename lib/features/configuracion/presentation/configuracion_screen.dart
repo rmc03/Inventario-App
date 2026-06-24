@@ -735,37 +735,39 @@ class _UserManagementSheetState
                                     ),
                                     title: Text(usuario.nombre),
                                     subtitle: Text(usuario.email),
-                                    trailing: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        IconButton(
-                                          icon: const Icon(
-                                            Icons.edit_outlined,
+                                    trailing: usuario.rol == UserRole.admin
+                                        ? null
+                                        : Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              IconButton(
+                                                icon: const Icon(
+                                                  Icons.edit_outlined,
+                                                ),
+                                                tooltip: 'Editar',
+                                                onPressed: () =>
+                                                    _showUserDialog(
+                                                  context,
+                                                  ref,
+                                                  usuario: usuario,
+                                                ),
+                                              ),
+                                              IconButton(
+                                                onPressed: () =>
+                                                    _confirmDeleteUser(
+                                                  context,
+                                                  ref,
+                                                  usuario,
+                                                ),
+                                                icon: const Icon(
+                                                  Icons
+                                                      .delete_outline_rounded,
+                                                ),
+                                                color: AppColors.danger,
+                                                tooltip: 'Eliminar',
+                                              ),
+                                            ],
                                           ),
-                                          tooltip: 'Editar',
-                                          onPressed: () =>
-                                              _showUserDialog(
-                                            context,
-                                            ref,
-                                            usuario: usuario,
-                                          ),
-                                        ),
-                                        IconButton(
-                                          onPressed: () =>
-                                              _confirmDeleteUser(
-                                            context,
-                                            ref,
-                                            usuario,
-                                          ),
-                                          icon: const Icon(
-                                            Icons
-                                                .delete_outline_rounded,
-                                          ),
-                                          color: AppColors.danger,
-                                          tooltip: 'Eliminar',
-                                        ),
-                                      ],
-                                    ),
                                   ),
                                 ),
                                 const SizedBox(height: AppSpacing.sm),
