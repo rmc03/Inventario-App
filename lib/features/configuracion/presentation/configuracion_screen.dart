@@ -3,7 +3,6 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path/path.dart' as p;
 import 'package:uuid/uuid.dart';
@@ -16,6 +15,7 @@ import '../../../shared/models/categoria.dart';
 import '../../../shared/widgets/category_name_dialog.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../inventario/providers/inventario_provider.dart';
+import '../../usuarios/providers/usuario_provider.dart';
 
 class ConfiguracionScreen extends ConsumerWidget {
   const ConfiguracionScreen({super.key, this.isAdmin = true});
@@ -98,7 +98,7 @@ class ConfiguracionScreen extends ConsumerWidget {
                   title: const Text('Gestionar dependientes'),
                   subtitle: const Text('Administrar usuarios internos'),
                   trailing: const Icon(Icons.chevron_right_rounded),
-                  onTap: () => context.push('/admin/usuarios'),
+                  onTap: () => _showUserManagement(context, ref),
                 ),
               ),
               const SizedBox(height: 12),
@@ -146,6 +146,15 @@ class ConfiguracionScreen extends ConsumerWidget {
       isScrollControlled: true,
       showDragHandle: false,
       builder: (ctx) => _CategoryManagementSheet(),
+    );
+  }
+
+  void _showUserManagement(BuildContext context, WidgetRef ref) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: false,
+      builder: (ctx) => _UserManagementSheet(),
     );
   }
 
@@ -603,5 +612,388 @@ class _CategoryManagementSheetState
           .read(inventarioControllerProvider.notifier)
           .deleteCategoria(categoria.id);
     }
+  }
+}
+
+// ─── User management sheet ─────────────────────────────────────────────────
+
+class _UserManagementSheet extends ConsumerStatefulWidget {
+  @override
+  ConsumerState<_UserManagementSheet> createState() =>
+      _UserManagementSheetState();
+}
+
+class _UserManagementSheetState
+    extends ConsumerState<_UserManagementSheet> {
+  final _sheetController = DraggableScrollableController();
+  bool _isDragging = false;
+
+  @override
+  void dispose() {
+    _sheetController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final state = ref.watch(usuariosControllerProvider);
+
+    return DraggableScrollableSheet(
+      controller: _sheetController,
+      initialChildSize: 0.65,
+      minChildSize: 0.4,
+      maxChildSize: 0.95,
+      expand: false,
+      builder: (context, scrollController) {
+        return SafeArea(
+          child: Column(
+            children: [
+              GestureDetector(
+                onVerticalDragStart: (_) =>
+                    setState(() => _isDragging = true),
+                onVerticalDragUpdate: (details) {
+                  final delta = -details.primaryDelta! /
+                      MediaQuery.of(context).size.height;
+                  _sheetController.jumpTo(
+                    (_sheetController.size + delta).clamp(0.4, 0.95),
+                  );
+                },
+                onVerticalDragEnd: (_) =>
+                    setState(() => _isDragging = false),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    vertical: AppSpacing.md,
+                  ),
+                  child: Center(
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      width: 40,
+                      height: 5,
+                      decoration: BoxDecoration(
+                        color: _isDragging
+                            ? AppColors.primary
+                            : AppColors.muted,
+                        borderRadius: BorderRadius.circular(AppRadii.pill),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.xl,
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        'Dependientes',
+                        style:
+                            Theme.of(context).textTheme.titleLarge,
+                      ),
+                    ),
+                    IconButton.filledTonal(
+                      onPressed: () =>
+                          _showUserDialog(context, ref),
+                      icon: const Icon(Icons.add_rounded),
+                      tooltip: 'Crear dependiente',
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              Expanded(
+                child: state.isLoading
+                    ? const Center(child: CircularProgressIndicator())
+                    : state.usuarios.isEmpty
+                        ? const _EmptyUsuarios()
+                        : ListView(
+                            controller: scrollController,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: AppSpacing.xl,
+                            ),
+                            children: [
+                              for (final usuario in state.usuarios) ...[
+                                Card(
+                                  key: ValueKey(usuario.id),
+                                  child: ListTile(
+                                    leading: CircleAvatar(
+                                      backgroundColor:
+                                          usuario.rol == UserRole.admin
+                                              ? AppColors.primary
+                                              : AppColors.warning,
+                                      foregroundColor: AppColors.surface,
+                                      child: Text(
+                                        usuario.nombre.isNotEmpty
+                                            ? usuario.nombre[0]
+                                                .toUpperCase()
+                                            : '?',
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.w700,
+                                        ),
+                                      ),
+                                    ),
+                                    title: Text(usuario.nombre),
+                                    subtitle: Text(usuario.email),
+                                    trailing: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        IconButton(
+                                          icon: const Icon(
+                                            Icons.edit_outlined,
+                                          ),
+                                          tooltip: 'Editar',
+                                          onPressed: () =>
+                                              _showUserDialog(
+                                            context,
+                                            ref,
+                                            usuario: usuario,
+                                          ),
+                                        ),
+                                        IconButton(
+                                          onPressed: () =>
+                                              _confirmDeleteUser(
+                                            context,
+                                            ref,
+                                            usuario,
+                                          ),
+                                          icon: const Icon(
+                                            Icons
+                                                .delete_outline_rounded,
+                                          ),
+                                          color: AppColors.danger,
+                                          tooltip: 'Eliminar',
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: AppSpacing.sm),
+                              ],
+                            ],
+                          ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _showUserDialog(
+    BuildContext context,
+    WidgetRef ref, {
+    Usuario? usuario,
+  }) async {
+    final isEdit = usuario != null;
+    final result = await showDialog<({String nombre, String email})>(
+      context: context,
+      builder: (_) => _UserDialog(
+        title: isEdit ? 'Editar dependiente' : 'Crear dependiente',
+        initialName: isEdit ? usuario.nombre : null,
+        initialEmail: isEdit ? usuario.email : null,
+      ),
+    );
+
+    if (result == null) return;
+
+    final nombre = result.nombre.trim();
+    final email = result.email.trim().toLowerCase();
+
+    final repo = ref.read(usuarioRepositoryProvider);
+    final exists = await repo.existsEmail(
+      email,
+      excludeId: isEdit ? usuario.id : null,
+    );
+    if (exists) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Ya existe un usuario con este email'),
+          ),
+        );
+      }
+      return;
+    }
+
+    if (isEdit) {
+      await ref
+          .read(usuariosControllerProvider.notifier)
+          .actualizarUsuario(usuario.copyWith(
+            nombre: nombre,
+            email: email,
+          ));
+    } else {
+      await ref
+          .read(usuariosControllerProvider.notifier)
+          .crearUsuario(
+            nombre: nombre,
+            email: email,
+            rol: UserRole.dependiente,
+          );
+    }
+  }
+
+  Future<void> _confirmDeleteUser(
+    BuildContext context,
+    WidgetRef ref,
+    Usuario usuario,
+  ) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          icon: const Icon(
+            Icons.warning_amber_rounded,
+            color: AppColors.danger,
+            size: 42,
+          ),
+          title: const Text('¿Eliminar dependiente?'),
+          content: Text(
+            'Se desactivará el acceso de "${usuario.nombre}". ¿Deseas continuar?',
+          ),
+          actions: [
+            OutlinedButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Cancelar'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.danger,
+              ),
+              child: const Text('Eliminar'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmed ?? false) {
+      await ref
+          .read(usuariosControllerProvider.notifier)
+          .eliminarUsuario(usuario.id);
+    }
+  }
+}
+
+// ─── Empty usuarios ────────────────────────────────────────────────────────
+
+class _EmptyUsuarios extends StatelessWidget {
+  const _EmptyUsuarios();
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(
+            Icons.people_outline,
+            size: 48,
+            color: AppColors.muted,
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          Text(
+            'No hay dependientes',
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          Text(
+            'Crea un dependiente desde el botón +',
+            style: Theme.of(context).textTheme.bodyMedium,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─── User dialog ───────────────────────────────────────────────────────────
+
+class _UserDialog extends StatefulWidget {
+  const _UserDialog({
+    required this.title,
+    this.initialName,
+    this.initialEmail,
+  });
+
+  final String title;
+  final String? initialName;
+  final String? initialEmail;
+
+  @override
+  State<_UserDialog> createState() => _UserDialogState();
+}
+
+class _UserDialogState extends State<_UserDialog> {
+  late final TextEditingController _nombreCtrl;
+  late final TextEditingController _emailCtrl;
+  String? _errorText;
+
+  @override
+  void initState() {
+    super.initState();
+    _nombreCtrl = TextEditingController(text: widget.initialName ?? '');
+    _emailCtrl = TextEditingController(text: widget.initialEmail ?? '');
+  }
+
+  @override
+  void dispose() {
+    _nombreCtrl.dispose();
+    _emailCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text(widget.title),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          TextField(
+            controller: _nombreCtrl,
+            textCapitalization: TextCapitalization.words,
+            decoration: const InputDecoration(
+              labelText: 'Nombre',
+              prefixIcon: Icon(Icons.person_outlined),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          TextField(
+            controller: _emailCtrl,
+            keyboardType: TextInputType.emailAddress,
+            decoration: InputDecoration(
+              labelText: 'Email',
+              prefixIcon: const Icon(Icons.email_outlined),
+              errorText: _errorText,
+            ),
+          ),
+        ],
+      ),
+      actions: [
+        OutlinedButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancelar'),
+        ),
+        ElevatedButton(
+          onPressed: () {
+            final nombre = _nombreCtrl.text.trim();
+            final email = _emailCtrl.text.trim();
+            if (nombre.isEmpty) {
+              setState(() => _errorText = 'El nombre es obligatorio');
+              return;
+            }
+            if (email.isEmpty || !email.contains('@')) {
+              setState(() => _errorText = 'Introduce un email válido');
+              return;
+            }
+            Navigator.of(context).pop((nombre: nombre, email: email));
+          },
+          child: const Text('Guardar'),
+        ),
+      ],
+    );
   }
 }
