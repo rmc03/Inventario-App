@@ -97,7 +97,9 @@ class Usuario {
       email: map['email'] as String,
       nombre: map['nombre'] as String,
       rol: UserRole.fromValue(map['rol'] as String),
-      activo: (map['activo'] as int?) == 1 || (map['activo'] as bool?) == true,
+      activo: map['activo'] is int
+          ? (map['activo'] as int) == 1
+          : (map['activo'] as bool?) ?? true,
       fotoUrl: map['foto_url'] as String?,
       createdAt: createdAt != null ? DateTime.parse(createdAt) : DateTime.now(),
     );
