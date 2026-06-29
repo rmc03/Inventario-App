@@ -7,6 +7,9 @@ import 'package:go_router/go_router.dart';
 
 import '../models/usuario.dart';
 import 'indicador_conexion.dart';
+import '../../core/theme/app_theme.dart';
+import '../../features/cuadres/providers/cuadre_provider.dart';
+import '../models/cuadre.dart';
 
 class RoleShell extends ConsumerWidget {
   const RoleShell({
@@ -22,7 +25,7 @@ class RoleShell extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final items = role == UserRole.admin ? _adminItems : _dependienteItems;
+    final items = role == UserRole.admin ? _adminItems(ref) : _dependienteItems;
     final selectedIndex = items.indexWhere((item) => item.path == path);
     final showNavigation = selectedIndex != -1;
     final isRootTab = showNavigation;
@@ -55,8 +58,15 @@ class RoleShell extends ConsumerWidget {
                   items: [
                     for (final item in items)
                       BottomNavigationBarItem(
-                        icon: Icon(item.icon),
-                        activeIcon: Icon(item.activeIcon),
+                        icon: item.badge
+                            ? _BadgedIcon(icon: item.icon, showBadge: true)
+                            : Icon(item.icon),
+                        activeIcon: item.badge
+                            ? _BadgedIcon(
+                                icon: item.activeIcon,
+                                showBadge: true,
+                              )
+                            : Icon(item.activeIcon),
                         label: item.label,
                       ),
                   ],
@@ -198,40 +208,85 @@ class ShellItem {
     required this.label,
     required this.icon,
     required this.activeIcon,
+    this.badge = false,
   });
 
   final String path;
   final String label;
   final IconData icon;
   final IconData activeIcon;
+  final bool badge;
 }
 
-const _adminItems = [
-  ShellItem(
-    path: '/admin/inventario',
-    label: 'Inventario',
-    icon: Icons.inventory_2_outlined,
-    activeIcon: Icons.inventory_2,
-  ),
-  ShellItem(
-    path: '/admin/movimientos',
-    label: 'Movimientos',
-    icon: Icons.swap_vert_circle_outlined,
-    activeIcon: Icons.swap_vert_circle,
-  ),
-  ShellItem(
-    path: '/admin/cuadres',
-    label: 'Cuadres',
-    icon: Icons.fact_check_outlined,
-    activeIcon: Icons.fact_check,
-  ),
-  ShellItem(
-    path: '/admin/configuracion',
-    label: 'Ajustes',
-    icon: Icons.settings_outlined,
-    activeIcon: Icons.settings,
-  ),
-];
+class _BadgedIcon extends StatelessWidget {
+  const _BadgedIcon({
+    required this.icon,
+    required this.showBadge,
+  });
+
+  final IconData icon;
+  final bool showBadge;
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        Icon(icon),
+        if (showBadge)
+          Positioned(
+            top: -2,
+            right: -2,
+            child: Container(
+              width: 10,
+              height: 10,
+              decoration: BoxDecoration(
+                color: AppColors.danger,
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: AppColors.surface,
+                  width: 1.5,
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+List<ShellItem> _adminItems(WidgetRef ref) {
+  final cuadres = ref.watch(cuadreControllerProvider);
+  final hasPending = cuadres.any((c) => c.estado == CuadreEstado.pendiente);
+
+  return [
+    ShellItem(
+      path: '/admin/inventario',
+      label: 'Inventario',
+      icon: Icons.inventory_2_outlined,
+      activeIcon: Icons.inventory_2,
+    ),
+    ShellItem(
+      path: '/admin/movimientos',
+      label: 'Movimientos',
+      icon: Icons.swap_vert_circle_outlined,
+      activeIcon: Icons.swap_vert_circle,
+    ),
+    ShellItem(
+      path: '/admin/cuadres',
+      label: 'Cuadres',
+      icon: Icons.fact_check_outlined,
+      activeIcon: Icons.fact_check,
+      badge: hasPending,
+    ),
+    ShellItem(
+      path: '/admin/configuracion',
+      label: 'Ajustes',
+      icon: Icons.settings_outlined,
+      activeIcon: Icons.settings,
+    ),
+  ];
+}
 
 const _dependienteItems = [
   ShellItem(
