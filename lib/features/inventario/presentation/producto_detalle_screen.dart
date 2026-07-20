@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_dimens.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/formatters.dart';
+import '../../../core/utils/haptics.dart';
 import '../../../shared/models/producto.dart';
 import '../../../shared/widgets/product_photo.dart';
 import '../../../shared/widgets/stock_badge.dart';
@@ -59,7 +60,10 @@ class ProductoDetalleScreen extends ConsumerWidget {
       ),
       body: SafeArea(
         top: false,
-        child: ListView(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 800),
+            child: ListView(
           padding: const EdgeInsets.fromLTRB(
             AppSpacing.xl, AppSpacing.sm, AppSpacing.xl, AppSpacing.xxl,
           ),
@@ -146,6 +150,8 @@ class ProductoDetalleScreen extends ConsumerWidget {
               ),
             ],
           ],
+        ),
+      ),
         ),
       ),
     );
@@ -306,7 +312,10 @@ class _DeleteButton extends ConsumerWidget {
               child: const Text('Cancelar'),
             ),
             ElevatedButton(
-              onPressed: () => Navigator.of(context).pop(true),
+              onPressed: () {
+                Haptics.warning(context);
+                Navigator.of(context).pop(true);
+              },
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.danger,
               ),

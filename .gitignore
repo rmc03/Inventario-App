@@ -2,6 +2,7 @@
 *.kilo
 *.kiro
 *.class
+*.kimchi
 *.log
 *.pyc
 *.swp

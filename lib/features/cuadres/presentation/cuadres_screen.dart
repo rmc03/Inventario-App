@@ -18,7 +18,10 @@ class CuadresScreen extends ConsumerWidget {
       appBar: AppBar(title: const Text('Cuadres')),
       body: SafeArea(
         top: false,
-        child: ListView(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 800),
+            child: ListView(
           padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
           children: [
             for (final cuadre in cuadres) ...[
@@ -38,6 +41,8 @@ class CuadresScreen extends ConsumerWidget {
               const SizedBox(height: 10),
             ],
           ],
+        ),
+      ),
         ),
       ),
     );

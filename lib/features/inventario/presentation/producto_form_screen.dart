@@ -11,7 +11,11 @@ import 'package:uuid/uuid.dart';
 
 import '../../../core/theme/app_dimens.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/utils/haptics.dart';
+import '../../../features/auth/providers/auth_provider.dart';
+import '../../../features/movimientos/providers/movimiento_provider.dart';
 import '../../../shared/models/categoria.dart';
+import '../../../shared/models/movimiento.dart';
 import '../../../shared/models/producto.dart';
 import '../../../shared/widgets/category_name_dialog.dart';
 import '../../../shared/widgets/product_photo.dart';
@@ -143,7 +147,10 @@ class _ProductoFormScreenState extends ConsumerState<ProductoFormScreen> {
       ),
       body: SafeArea(
         top: false,
-        child: Column(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 800),
+            child: Column(
           children: [
             Expanded(
               child: ListView(
@@ -335,7 +342,9 @@ class _ProductoFormScreenState extends ConsumerState<ProductoFormScreen> {
           ],
         ),
       ),
-    );
+    ),
+  ),
+);
   }
 
   void _save(BuildContext context) {
@@ -397,6 +406,24 @@ class _ProductoFormScreenState extends ConsumerState<ProductoFormScreen> {
     );
 
     ref.read(inventarioControllerProvider.notifier).upsertProducto(producto);
+
+    // Registrar un movimiento de entrada por el incremento de stock.
+    // Para productos nuevos el stock previo es 0, así que cuenta todo el
+    // stock inicial. Al editar, solo se registra la diferencia positiva.
+    final prevStock = _producto?.stockActual ?? 0;
+    final delta = stock - prevStock;
+    if (delta > 0) {
+      final user = ref.read(authControllerProvider).user;
+      if (user != null) {
+        ref.read(movimientoControllerProvider.notifier).registrarMovimiento(
+          producto: producto,
+          usuario: user,
+          tipo: MovimientoTipo.entrada,
+          cantidad: delta,
+          nota: _isEditing ? 'Ajuste de stock (entrada)' : 'Alta de producto',
+        );
+      }
+    }
 
     // Si estamos editando (venimos desde la pantalla de detalle), simplemente
     // hacemos pop para volver a la pantalla de detalle que ya existe en la
@@ -795,7 +822,10 @@ class _StickyActionBar extends StatelessWidget {
             AppSpacing.sm + MediaQuery.of(context).padding.bottom,
           ),
           child: ElevatedButton.icon(
-            onPressed: onPressed,
+            onPressed: () {
+              Haptics.confirm(context);
+              onPressed();
+            },
             icon: Icon(
               isEditing ? Icons.save_outlined : Icons.add_circle_outline,
             ),

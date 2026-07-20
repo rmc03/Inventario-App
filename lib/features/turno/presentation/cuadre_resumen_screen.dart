@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/formatters.dart';
+import '../../../core/utils/haptics.dart';
 import '../../../shared/models/venta.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../cuadres/providers/cuadre_provider.dart';
@@ -63,7 +64,10 @@ class _CuadreResumenScreenState extends ConsumerState<CuadreResumenScreen> {
       ),
       body: SafeArea(
         top: false,
-        child: Column(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 800),
+            child: Column(
           children: [
             // ── Header ──
             Padding(
@@ -117,6 +121,8 @@ class _CuadreResumenScreenState extends ConsumerState<CuadreResumenScreen> {
               onConfirm: () => _confirmarEnvio(context, ref, ventas),
             ),
           ],
+        ),
+      ),
         ),
       ),
     );
@@ -511,7 +517,12 @@ class _ConfirmBar extends StatelessWidget {
             height: 54,
             width: double.infinity,
             child: ElevatedButton.icon(
-              onPressed: enabled ? onConfirm : null,
+              onPressed: enabled
+                  ? () {
+                      Haptics.confirm(context);
+                      onConfirm();
+                    }
+                  : null,
               icon: const Icon(Icons.send_rounded),
               label: const Text('Confirmar y enviar'),
               style: ElevatedButton.styleFrom(

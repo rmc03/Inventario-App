@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_dimens.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/formatters.dart';
+import '../../../core/utils/haptics.dart';
 import '../../../shared/models/producto.dart';
 import '../../../shared/models/categoria.dart';
 import '../../../shared/widgets/product_photo.dart';
@@ -32,8 +33,10 @@ class InventarioScreen extends ConsumerWidget {
       appBar: AppBar(title: const Text('Inventario')),
       floatingActionButton: isAdmin
           ? FloatingActionButton(
-              onPressed: () =>
-                  context.push('/admin/inventario/productos/nuevo'),
+              onPressed: () {
+                Haptics.tap(context);
+                context.push('/admin/inventario/productos/nuevo');
+              },
               tooltip: 'Crear producto',
               child: const Icon(Icons.add),
             )

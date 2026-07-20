@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/formatters.dart';
+import '../../../core/utils/haptics.dart';
 import '../../../shared/models/cuadre.dart';
 import '../../../shared/models/venta.dart';
 import '../providers/cuadre_provider.dart';
@@ -73,7 +74,10 @@ class _CuadreDetalleScreenState extends ConsumerState<CuadreDetalleScreen> {
       ),
       body: SafeArea(
         top: false,
-        child: Column(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 800),
+            child: Column(
           children: [
             // ── Header ──
             Padding(
@@ -132,6 +136,8 @@ class _CuadreDetalleScreenState extends ConsumerState<CuadreDetalleScreen> {
             // ── Acciones ──
             if (isPendiente) _AccionesBar(cuadreId: cuadre.id),
           ],
+        ),
+      ),
         ),
       ),
     );
@@ -609,9 +615,10 @@ class _AccionesBar extends ConsumerWidget {
       ),
     );
 
-    if (ok == true) {
+    if (ok == true && context.mounted) {
+      Haptics.confirm(context);
       ref.read(cuadreControllerProvider.notifier).confirmarCuadre(cuadreId);
-      if (context.mounted) context.go('/admin/cuadres');
+      context.go('/admin/cuadres');
     }
   }
 
@@ -675,11 +682,12 @@ class _AccionesBar extends ConsumerWidget {
     );
     ctrl.dispose();
 
-    if (comment != null && comment.isNotEmpty) {
+    if (comment != null && comment.isNotEmpty && context.mounted) {
+      Haptics.warning(context);
       ref
           .read(cuadreControllerProvider.notifier)
           .rechazarCuadre(cuadreId, comment);
-      if (context.mounted) context.go('/admin/cuadres');
+      context.go('/admin/cuadres');
     }
   }
 }

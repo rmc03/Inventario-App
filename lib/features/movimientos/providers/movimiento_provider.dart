@@ -7,11 +7,51 @@ import '../../../core/local_db/local_database.dart';
 import '../../../shared/models/movimiento.dart';
 import '../../../shared/models/producto.dart';
 import '../../../shared/models/usuario.dart';
+import '../data/movimiento_repository.dart';
 import '../data/sqlite_movimiento_repository.dart';
 
-final movimientoRepositoryProvider = Provider<SqliteMovimientoRepository>((ref) {
-  // Use the local sqlite repository by default.
+final movimientoRepositoryProvider = Provider<MovimientoRepository>((ref) {
+  // Use the local sqlite repository by default. Swap for a Supabase
+  // implementation later without touching the rest of the code.
   return SqliteMovimientoRepository(LocalDatabase.instance);
+});
+
+// ─── Estado de filtros compartido (una sola fuente para toda la pantalla) ───
+
+final movimientosFilterProvider =
+    NotifierProvider<MovimientosFilterNotifier, MovimientosFilterState>(
+      MovimientosFilterNotifier.new,
+    );
+
+class MovimientosFilterNotifier extends Notifier<MovimientosFilterState> {
+  @override
+  MovimientosFilterState build() => const MovimientosFilterState();
+
+  void setTipo(TipoMovimientoFiltro tipo) =>
+      state = state.copyWith(tipo: tipo);
+
+  void setRango(RangoFechaFiltro rango) =>
+      state = state.copyWith(rango: rango);
+
+  void setRangoPersonalizado(DateTime? inicio, DateTime? fin) => state =
+      state.copyWith(
+        rango: RangoFechaFiltro.personalizado,
+        fechaInicioCustom: inicio,
+        fechaFinCustom: fin,
+      );
+
+  void setQuery(String query) => state = state.copyWith(query: query);
+
+  void limpiar() => state = const MovimientosFilterState();
+}
+
+/// Lista de movimientos ya filtrada (tipo + fecha + búsqueda), derivada de
+/// forma reactiva del listado en vivo y del estado de filtros compartido.
+/// Ambas pestañas la consumen, por lo que un cambio de filtro refresca las dos.
+final movimientosFiltradosProvider = Provider<List<Movimiento>>((ref) {
+  final source = ref.watch(movimientoControllerProvider);
+  final filtro = ref.watch(movimientosFilterProvider);
+  return filtrarMovimientos(source, filtro);
 });
 
 // NOTE: current cuadre sales are computed from `cuadres` state (see cuadre_provider)
@@ -36,7 +76,7 @@ final movimientoControllerProvider =
     );
 
 class MovimientoController extends Notifier<List<Movimiento>> {
-  SqliteMovimientoRepository get _repository =>
+  MovimientoRepository get _repository =>
       ref.read(movimientoRepositoryProvider);
 
   @override

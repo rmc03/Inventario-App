@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/formatters.dart';
+import '../../../core/utils/haptics.dart';
 import '../../../shared/models/pago.dart';
 import '../providers/venta_provider.dart';
 
@@ -28,7 +29,10 @@ class _ConfirmarPagoScreenState extends ConsumerState<ConfirmarPagoScreen> {
     return Scaffold(
       appBar: AppBar(title: const Text('Confirmar pago')),
       body: SafeArea(
-        child: Column(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 800),
+            child: Column(
           children: [
             // ── Resumen de la venta (scrolleable con total fijo) ──
             Expanded(
@@ -149,12 +153,19 @@ class _ConfirmarPagoScreenState extends ConsumerState<ConfirmarPagoScreen> {
                 height: 52,
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: _esValido ? () => _confirmar(total) : null,
+                  onPressed: _esValido
+                      ? () {
+                          Haptics.confirm(context);
+                          _confirmar(total);
+                        }
+                      : null,
                   child: const Text('Confirmar y registrar venta'),
                 ),
               ),
             ),
           ],
+        ),
+      ),
         ),
       ),
     );

@@ -12,6 +12,7 @@ import '../../../core/local_db/local_database.dart';
 import '../../../core/theme/app_dimens.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/formatters.dart';
+import '../../../core/utils/haptics.dart';
 import '../../../shared/models/usuario.dart';
 import '../../../shared/models/categoria.dart';
 import '../../../shared/widgets/category_name_dialog.dart';
@@ -53,7 +54,10 @@ class ConfiguracionScreen extends ConsumerWidget {
       ),
       body: SafeArea(
         top: false,
-        child: ListView(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 800),
+            child: ListView(
           padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
           children: [
             if (user != null)
@@ -87,6 +91,21 @@ class ConfiguracionScreen extends ConsumerWidget {
                   ),
                 ),
               ),
+            const SizedBox(height: 12),
+            Card(
+              child: SwitchListTile(
+                secondary: const Icon(Icons.vibration_rounded),
+                title: const Text('Vibración en botones'),
+                subtitle: const Text(
+                  'Feedback táctil en acciones importantes',
+                ),
+                value: ref.watch(hapticsEnabledProvider),
+                onChanged: (v) {
+                  ref.read(hapticsEnabledProvider.notifier).setEnabled(v);
+                  if (v) Haptics.tap(context);
+                },
+              ),
+            ),
             if (!isAdmin) ...[
               const SizedBox(height: 12),
               _TurnoCard(),
@@ -114,6 +133,8 @@ class ConfiguracionScreen extends ConsumerWidget {
               ),
             ],
           ],
+        ),
+      ),
         ),
       ),
     );
@@ -197,6 +218,7 @@ class ConfiguracionScreen extends ConsumerWidget {
                     ref
                         .read(authControllerProvider.notifier)
                         .updateUser(updated);
+                    Haptics.confirm(context);
                     Navigator.of(context).pop(true);
                   },
                   child: const Text('Guardar'),
@@ -393,8 +415,10 @@ class _TurnoCard extends ConsumerWidget {
           SizedBox(
             width: double.infinity,
             child: OutlinedButton.icon(
-              onPressed: () =>
-                  context.push('/dependiente/turno/resumen'),
+              onPressed: () {
+                Haptics.confirm(context);
+                context.push('/dependiente/turno/resumen');
+              },
               icon: const Icon(Icons.logout_rounded, size: 18),
               label: const Text('Cerrar turno'),
               style: OutlinedButton.styleFrom(
@@ -634,7 +658,10 @@ class _CategoryManagementSheetState
               child: const Text('Cancelar'),
             ),
             ElevatedButton(
-              onPressed: () => Navigator.of(context).pop(true),
+              onPressed: () {
+                Haptics.warning(context);
+                Navigator.of(context).pop(true);
+              },
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.danger,
               ),
@@ -898,7 +925,10 @@ class _UserManagementSheetState
               child: const Text('Cancelar'),
             ),
             ElevatedButton(
-              onPressed: () => Navigator.of(context).pop(true),
+              onPressed: () {
+                Haptics.warning(context);
+                Navigator.of(context).pop(true);
+              },
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.danger,
               ),
@@ -1029,6 +1059,7 @@ class _UserDialogState extends State<_UserDialog> {
               setState(() => _errorText = 'Introduce un email válido');
               return;
             }
+            Haptics.confirm(context);
             Navigator.of(context).pop((nombre: nombre, email: email));
           },
           child: const Text('Guardar'),

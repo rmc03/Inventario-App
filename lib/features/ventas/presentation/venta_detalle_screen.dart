@@ -23,7 +23,10 @@ class VentaDetalleScreen extends StatelessWidget {
       ),
       body: SafeArea(
         top: false,
-        child: ListView(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 800),
+            child: ListView(
           padding: const EdgeInsets.all(AppSpacing.xl),
           children: [
             // Header
@@ -141,6 +144,8 @@ class VentaDetalleScreen extends StatelessWidget {
               ],
             ),
           ],
+        ),
+      ),
         ),
       ),
     );

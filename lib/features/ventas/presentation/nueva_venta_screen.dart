@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_dimens.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/formatters.dart';
+import '../../../core/utils/haptics.dart';
 import '../../../shared/models/categoria.dart';
 import '../../../shared/models/cuadre_item.dart';
 import '../../../shared/models/producto.dart';
@@ -105,7 +106,10 @@ class _NuevaVentaScreenState extends ConsumerState<NuevaVentaScreen> {
       ),
       body: SafeArea(
         top: false,
-        child: Column(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 800),
+            child: Column(
           children: [
             Padding(
               padding: const EdgeInsets.fromLTRB(
@@ -315,6 +319,8 @@ class _NuevaVentaScreenState extends ConsumerState<NuevaVentaScreen> {
                     ),
             ),
           ],
+        ),
+      ),
         ),
       ),
     );
@@ -1067,7 +1073,12 @@ class _CartBottomBar extends StatelessWidget {
                   const SizedBox(width: AppSpacing.md),
                   Expanded(
                     child: ElevatedButton(
-                      onPressed: hasItems ? onComplete : null,
+                      onPressed: hasItems
+                          ? () {
+                              Haptics.confirm(context);
+                              onComplete();
+                            }
+                          : null,
                       style: ElevatedButton.styleFrom(
                         minimumSize: const Size.fromHeight(54),
                         shape: const RoundedRectangleBorder(

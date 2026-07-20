@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/app_dimens.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/utils/haptics.dart';
 import '../../../shared/models/usuario.dart';
 import '../../../shared/widgets/loading_overlay.dart';
 import '../providers/auth_provider.dart';
@@ -144,7 +145,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     ],
                     const SizedBox(height: AppSpacing.xl),
                     ElevatedButton.icon(
-                      onPressed: _signIn,
+                      onPressed: () {
+                        Haptics.tap(context);
+                        _signIn();
+                      },
                       icon: const Icon(Icons.login_rounded),
                       label: const Text('Ingresar'),
                       style: ElevatedButton.styleFrom(

@@ -32,49 +32,119 @@ class RoleShell extends ConsumerWidget {
 
     return _PopGuard(
       isRootTab: isRootTab,
-      child: Scaffold(
-        body: Column(
-          children: [
-            const IndicadorConexion(),
-            Expanded(child: child),
-          ],
-        ),
-        bottomNavigationBar: showNavigation
-            ? SafeArea(
-                top: false,
-                child: BottomNavigationBar(
-                  currentIndex: selectedIndex,
-                  onTap: (index) => context.go(items[index].path),
-                  type: BottomNavigationBarType.fixed,
-                  backgroundColor: Theme.of(context).colorScheme.surface,
-                  selectedLabelStyle: const TextStyle(
-                    fontWeight: FontWeight.w600,
-                    fontSize: 11,
-                  ),
-                  unselectedLabelStyle: const TextStyle(
-                    fontWeight: FontWeight.w500,
-                    fontSize: 11,
-                  ),
-                  items: [
-                    for (final item in items)
-                      BottomNavigationBarItem(
-                        icon: item.badge
-                            ? _BadgedIcon(icon: item.icon, showBadge: true)
-                            : Icon(item.icon),
-                        activeIcon: item.badge
-                            ? _BadgedIcon(
-                                icon: item.activeIcon,
-                                showBadge: true,
-                              )
-                            : Icon(item.activeIcon),
-                        label: item.label,
-                      ),
-                  ],
-                ),
-              )
-            : null,
-        floatingActionButtonLocation: FloatingActionButtonLocation.endDocked,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          if (constraints.maxWidth > 600) {
+            return _buildLargeScreen(context, items, selectedIndex);
+          }
+          return _buildSmallScreen(
+            context,
+            items,
+            selectedIndex,
+            showNavigation,
+          );
+        },
       ),
+    );
+  }
+
+  Widget _buildLargeScreen(
+    BuildContext context,
+    List<ShellItem> items,
+    int selectedIndex,
+  ) {
+    return Scaffold(
+      body: Row(
+        children: [
+          NavigationRail(
+            selectedIndex: selectedIndex,
+            onDestinationSelected: (index) =>
+                context.go(items[index].path),
+            labelType: NavigationRailLabelType.all,
+            groupAlignment: -1.0,
+            leading: Padding(
+              padding: const EdgeInsets.only(top: 8, bottom: 8),
+              child: Icon(
+                Icons.inventory_2,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+            ),
+            destinations: [
+              for (final item in items)
+                NavigationRailDestination(
+                  icon: item.badge
+                      ? _BadgedIcon(icon: item.icon, showBadge: true)
+                      : Icon(item.icon),
+                  selectedIcon: item.badge
+                      ? _BadgedIcon(icon: item.activeIcon, showBadge: true)
+                      : Icon(item.activeIcon),
+                  label: Text(item.label),
+                ),
+            ],
+          ),
+          const VerticalDivider(width: 1),
+          Expanded(
+            child: Column(
+              children: [
+                const IndicadorConexion(),
+                Expanded(child: child),
+              ],
+            ),
+          ),
+        ],
+      ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.endDocked,
+    );
+  }
+
+  Widget _buildSmallScreen(
+    BuildContext context,
+    List<ShellItem> items,
+    int selectedIndex,
+    bool showNavigation,
+  ) {
+    return Scaffold(
+      body: Column(
+        children: [
+          const IndicadorConexion(),
+          Expanded(child: child),
+        ],
+      ),
+      bottomNavigationBar: showNavigation
+          ? SafeArea(
+              top: false,
+              child: BottomNavigationBar(
+                currentIndex: selectedIndex,
+                onTap: (index) => context.go(items[index].path),
+                type: BottomNavigationBarType.fixed,
+                backgroundColor: Theme.of(context).colorScheme.surface,
+                selectedLabelStyle: const TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 11,
+                ),
+                unselectedLabelStyle: const TextStyle(
+                  fontWeight: FontWeight.w500,
+                  fontSize: 11,
+                ),
+                items: [
+                  for (final item in items)
+                    BottomNavigationBarItem(
+                      icon: item.badge
+                          ? _BadgedIcon(icon: item.icon, showBadge: true)
+                          : Icon(item.icon),
+                      activeIcon: item.badge
+                          ? _BadgedIcon(
+                              icon: item.activeIcon,
+                              showBadge: true,
+                            )
+                          : Icon(item.activeIcon),
+                      label: item.label,
+                    ),
+                ],
+              ),
+            )
+          : null,
+      floatingActionButtonLocation: FloatingActionButtonLocation.endDocked,
     );
   }
 }

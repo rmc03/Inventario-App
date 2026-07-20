@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_dimens.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/formatters.dart';
+import '../../../core/utils/haptics.dart';
 import '../../../shared/models/venta.dart';
 import '../../ventas/providers/venta_provider.dart';
 import '../providers/turno_provider.dart';
@@ -36,55 +37,62 @@ class _SinTurnoView extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('Mi turno')),
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(24, 0, 24, 32),
-          child: Column(
-            children: [
-              const Spacer(),
-              DecoratedBox(
-                decoration: BoxDecoration(
-                  color: AppColors.primary.withValues(alpha: 0.08),
-                  shape: BoxShape.circle,
-                ),
-                child: const Padding(
-                  padding: EdgeInsets.all(28),
-                  child: Icon(
-                    Icons.work_outline_rounded,
-                    size: 56,
-                    color: AppColors.primary,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 24),
-              Text(
-                compactDateFormatter.format(DateTime.now()),
-                style: Theme.of(context).textTheme.titleLarge,
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Aún no has iniciado tu turno',
-                style: Theme.of(
-                  context,
-                ).textTheme.bodyLarge?.copyWith(color: AppColors.muted),
-                textAlign: TextAlign.center,
-              ),
-              const Spacer(),
-              SizedBox(
-                height: 58,
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: () =>
-                      ref.read(turnoControllerProvider.notifier).iniciarTurno(),
-                  icon: const Icon(Icons.play_arrow_rounded),
-                  label: const Text('Iniciar turno'),
-                  style: ElevatedButton.styleFrom(
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 800),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(24, 0, 24, 32),
+              child: Column(
+                children: [
+                  const Spacer(),
+                  DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withValues(alpha: 0.08),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Padding(
+                      padding: EdgeInsets.all(28),
+                      child: Icon(
+                        Icons.work_outline_rounded,
+                        size: 56,
+                        color: AppColors.primary,
+                      ),
                     ),
                   ),
-                ),
+                  const SizedBox(height: 24),
+                  Text(
+                    compactDateFormatter.format(DateTime.now()),
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Aún no has iniciado tu turno',
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodyLarge?.copyWith(color: AppColors.muted),
+                    textAlign: TextAlign.center,
+                  ),
+                  const Spacer(),
+                  SizedBox(
+                    height: 58,
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        Haptics.confirm(context);
+                        ref.read(turnoControllerProvider.notifier).iniciarTurno();
+                      },
+                      icon: const Icon(Icons.play_arrow_rounded),
+                      label: const Text('Iniciar turno'),
+                      style: ElevatedButton.styleFrom(
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
         ),
       ),
@@ -113,6 +121,7 @@ class _TurnoActivoView extends ConsumerWidget {
             onSelected: (value) {
               switch (value) {
                 case 'cerrar':
+                  Haptics.confirm(context);
                   context.push('/dependiente/turno/resumen');
                   break;
                 case 'resumen':
@@ -184,102 +193,107 @@ class _TurnoActivoView extends ConsumerWidget {
       ),
       body: SafeArea(
         top: false,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Card resumen compacta (fija)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(
-                AppSpacing.xl,
-                12,
-                AppSpacing.xl,
-                8,
-              ),
-              child: _ResumenDelDiaCard(
-                totalVentas: totalTurno,
-                cantidadVentas: ventas.length,
-                cantidadArticulos: totalArticulos,
-              ),
-            ),
-
-            // Badge de turno activo
-            if (turno.horaInicio != null)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(
-                  AppSpacing.xl,
-                  0,
-                  AppSpacing.xl,
-                  16,
-                ),
-                child: _BadgeChip(
-                  horaInicio: turno.horaInicio!,
-                ),
-              ),
-
-            Expanded(
-              child: ListView(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 800),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Card resumen compacta (fija)
+                Padding(
                   padding: const EdgeInsets.fromLTRB(
                     AppSpacing.xl,
-                    0,
+                    12,
                     AppSpacing.xl,
-                    0,
+                    8,
                   ),
-                children: [
-                  if (ventas.isNotEmpty) ...[
-                    // Historial de ventas
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          'Historial de ventas',
-                          style: Theme.of(context).textTheme.titleMedium,
-                        ),
-                        TextButton(
-                          onPressed: () {},
-                          child: const Text('Ver todas'),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: AppSpacing.sm),
-                    ...List.generate(ventas.length, (i) {
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: AppSpacing.md),
-                        child: _VentaCard(venta: ventas[i]),
-                      );
-                    }),
-                  ],
+                  child: _ResumenDelDiaCard(
+                    totalVentas: totalTurno,
+                    cantidadVentas: ventas.length,
+                    cantidadArticulos: totalArticulos,
+                  ),
+                ),
 
-                  if (ventas.isEmpty)
-                    const _EmptyItems(),
-                ],
-              ),
-            ),
-            // Botón nueva venta (fijo al fondo)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(
-                AppSpacing.xl,
-                AppSpacing.sm,
-                AppSpacing.xl,
-                AppSpacing.xl,
-              ),
-              child: SizedBox(
-                height: 54,
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: () =>
-                      context.push('/dependiente/turno/nueva-venta'),
-                  icon: const Icon(Icons.add_rounded, size: 22),
-                  label: const Text(
-                    'Nueva venta',
-                    style: TextStyle(
-                      fontSize: 17,
-                      fontWeight: FontWeight.w700,
+                // Badge de turno activo
+                if (turno.horaInicio != null)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(
+                      AppSpacing.xl,
+                      0,
+                      AppSpacing.xl,
+                      16,
+                    ),
+                    child: _BadgeChip(
+                      horaInicio: turno.horaInicio!,
+                    ),
+                  ),
+
+                Expanded(
+                  child: ListView(
+                    padding: const EdgeInsets.fromLTRB(
+                      AppSpacing.xl,
+                      0,
+                      AppSpacing.xl,
+                      0,
+                    ),
+                    children: [
+                      if (ventas.isNotEmpty) ...[
+                        // Historial de ventas
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              'Historial de ventas',
+                              style: Theme.of(context).textTheme.titleMedium,
+                            ),
+                            TextButton(
+                              onPressed: () {},
+                              child: const Text('Ver todas'),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: AppSpacing.sm),
+                        ...List.generate(ventas.length, (i) {
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: AppSpacing.md),
+                            child: _VentaCard(venta: ventas[i]),
+                          );
+                        }),
+                      ],
+
+                      if (ventas.isEmpty)
+                        const _EmptyItems(),
+                    ],
+                  ),
+                ),
+                // Botón nueva venta (fijo al fondo)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.xl,
+                    AppSpacing.sm,
+                    AppSpacing.xl,
+                    AppSpacing.xl,
+                  ),
+                  child: SizedBox(
+                    height: 54,
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: () =>
+                          context.push('/dependiente/turno/nueva-venta'),
+                      icon: const Icon(Icons.add_rounded, size: 22),
+                      label: const Text(
+                        'Nueva venta',
+                        style: TextStyle(
+                          fontSize: 17,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
                     ),
                   ),
                 ),
-              ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );
@@ -542,44 +556,49 @@ class _CuadreEnviadoView extends StatelessWidget {
       appBar: AppBar(title: const Text('Mi turno')),
       body: SafeArea(
         child: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(32),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                DecoratedBox(
-                  decoration: BoxDecoration(
-                    color: AppColors.success.withValues(alpha: 0.10),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Padding(
-                    padding: EdgeInsets.all(28),
-                    child: Icon(
-                      Icons.check_circle_outline_rounded,
-                      size: 56,
-                      color: AppColors.success,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 800),
+            child: Center(
+              child: Padding(
+                padding: const EdgeInsets.all(32),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: AppColors.success.withValues(alpha: 0.10),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Padding(
+                        padding: EdgeInsets.all(28),
+                        child: Icon(
+                          Icons.check_circle_outline_rounded,
+                          size: 56,
+                          color: AppColors.success,
+                        ),
+                      ),
                     ),
-                  ),
+                    const SizedBox(height: 24),
+                    Text(
+                      'Cuadre enviado',
+                      style: Theme.of(context).textTheme.headlineMedium,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Pendiente de revisión por el jefe.',
+                      style: Theme.of(
+                        context,
+                      ).textTheme.bodyLarge?.copyWith(color: AppColors.muted),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      'Hoy, ${compactDateFormatter.format(DateTime.now())}',
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 24),
-                Text(
-                  'Cuadre enviado',
-                  style: Theme.of(context).textTheme.headlineMedium,
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Pendiente de revisión por el jefe.',
-                  style: Theme.of(
-                    context,
-                  ).textTheme.bodyLarge?.copyWith(color: AppColors.muted),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  'Hoy, ${compactDateFormatter.format(DateTime.now())}',
-                  style: Theme.of(context).textTheme.bodyMedium,
-                ),
-              ],
+              ),
             ),
           ),
         ),
