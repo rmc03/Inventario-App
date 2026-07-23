@@ -6,6 +6,7 @@ import '../../../core/theme/app_dimens.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../core/utils/haptics.dart';
+import '../../../shared/models/pago.dart';
 import '../../../shared/models/venta.dart';
 import '../../ventas/providers/venta_provider.dart';
 import '../providers/turno_provider.dart';
@@ -116,77 +117,10 @@ class _TurnoActivoView extends ConsumerWidget {
       appBar: AppBar(
         title: const Text('Mi turno'),
         actions: [
-          PopupMenuButton<String>(
+          IconButton(
             icon: const Icon(Icons.more_vert_rounded),
-            onSelected: (value) {
-              switch (value) {
-                case 'cerrar':
-                  Haptics.confirm(context);
-                  context.push('/dependiente/turno/resumen');
-                  break;
-                case 'resumen':
-                  context.push('/dependiente/turno/resumen');
-                  break;
-                case 'imprimir':
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Función próximamente')),
-                  );
-                  break;
-                case 'ajustes':
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Función próximamente')),
-                  );
-                  break;
-              }
-            },
-            itemBuilder: (context) => [
-              const PopupMenuItem(
-                value: 'cerrar',
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.logout_rounded,
-                      color: AppColors.danger,
-                      size: 20,
-                    ),
-                    SizedBox(width: 12),
-                    Text('Cerrar turno'),
-                  ],
-                ),
-              ),
-              const PopupMenuItem(
-                value: 'resumen',
-                child: Row(
-                  children: [
-                    Icon(Icons.receipt_long_rounded, size: 20),
-                    SizedBox(width: 12),
-                    Text('Resumen del turno'),
-                  ],
-                ),
-              ),
-              const PopupMenuItem(
-                value: 'imprimir',
-                enabled: false,
-                child: Row(
-                  children: [
-                    Icon(Icons.print_rounded, size: 20),
-                    SizedBox(width: 12),
-                    Text('Imprimir reporte'),
-                  ],
-                ),
-              ),
-              const PopupMenuItem(
-                value: 'ajustes',
-                enabled: false,
-                child: Row(
-                  children: [
-                    Icon(Icons.settings_rounded, size: 20),
-                    SizedBox(width: 12),
-                    Text('Ajustes'),
-                  ],
-                ),
-              ),
-            ],
+            tooltip: 'Opciones',
+            onPressed: () => _showTurnoOptionsSheet(context, ref),
           ),
           const SizedBox(width: 4),
         ],
@@ -199,7 +133,7 @@ class _TurnoActivoView extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Card resumen compacta (fija)
+                // Card resumen mejorada (fija)
                 Padding(
                   padding: const EdgeInsets.fromLTRB(
                     AppSpacing.xl,
@@ -247,18 +181,36 @@ class _TurnoActivoView extends ConsumerWidget {
                               style: Theme.of(context).textTheme.titleMedium,
                             ),
                             TextButton(
-                              onPressed: () {},
+                              onPressed: () => _showAllVentasSheet(context, ventas),
                               child: const Text('Ver todas'),
                             ),
                           ],
                         ),
                         const SizedBox(height: AppSpacing.sm),
-                        ...List.generate(ventas.length, (i) {
-                          return Padding(
-                            padding: const EdgeInsets.only(bottom: AppSpacing.md),
-                            child: _VentaCard(venta: ventas[i]),
-                          );
-                        }),
+                        ...List.generate(
+                          ventas.length > 5 ? 5 : ventas.length, // Mostrar máximo 5
+                          (i) {
+                            return Padding(
+                              padding: const EdgeInsets.only(bottom: AppSpacing.md),
+                              child: _VentaCard(venta: ventas[i]),
+                            );
+                          },
+                        ),
+                        // Indicador de más ventas
+                        if (ventas.length > 5)
+                          Center(
+                            child: Padding(
+                              padding: const EdgeInsets.only(bottom: AppSpacing.md),
+                              child: TextButton.icon(
+                                onPressed: () => _showAllVentasSheet(context, ventas),
+                                icon: const Icon(Icons.expand_more_rounded, size: 20),
+                                label: Text(
+                                  'Ver ${ventas.length - 5} ventas más',
+                                  style: const TextStyle(fontWeight: FontWeight.w600),
+                                ),
+                              ),
+                            ),
+                          ),
                       ],
 
                       if (ventas.isEmpty)
@@ -278,8 +230,10 @@ class _TurnoActivoView extends ConsumerWidget {
                     height: 54,
                     width: double.infinity,
                     child: ElevatedButton.icon(
-                      onPressed: () =>
-                          context.push('/dependiente/turno/nueva-venta'),
+                      onPressed: () {
+                        Haptics.tap(context);
+                        context.push('/dependiente/turno/nueva-venta');
+                      },
                       icon: const Icon(Icons.add_rounded, size: 22),
                       label: const Text(
                         'Nueva venta',
@@ -293,6 +247,297 @@ class _TurnoActivoView extends ConsumerWidget {
                 ),
               ],
             ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Muestra un bottom sheet profesional con las opciones del turno
+  /// Siguiendo UI/UX Pro Max §2 Touch & Interaction y §8 Forms & Feedback
+  void _showTurnoOptionsSheet(BuildContext context, WidgetRef ref) {
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        decoration: const BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Drag handle
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
+                child: Center(
+                  child: Container(
+                    width: 40,
+                    height: 5,
+                    decoration: BoxDecoration(
+                      color: AppColors.muted.withValues(alpha: 0.5),
+                      borderRadius: BorderRadius.circular(AppRadii.pill),
+                    ),
+                  ),
+                ),
+              ),
+              // Opciones
+              _TurnoOptionTile(
+                icon: Icons.logout_rounded,
+                iconColor: AppColors.danger,
+                iconBgColor: AppColors.danger.withValues(alpha: 0.1),
+                title: 'Cerrar turno',
+                subtitle: 'Finaliza tu jornada y envía el cuadre',
+                onTap: () {
+                  Navigator.pop(ctx);
+                  Haptics.confirm(context);
+                  context.push('/dependiente/turno/resumen');
+                },
+              ),
+              Divider(height: 1, indent: 72, color: AppColors.line),
+              _TurnoOptionTile(
+                icon: Icons.receipt_long_rounded,
+                iconColor: AppColors.primary,
+                iconBgColor: AppColors.primary.withValues(alpha: 0.1),
+                title: 'Resumen del turno',
+                subtitle: 'Ver estadísticas y detalles',
+                onTap: () {
+                  Navigator.pop(ctx);
+                  context.push('/dependiente/turno/resumen');
+                },
+              ),
+              Divider(height: 1, indent: 72, color: AppColors.line),
+              _TurnoOptionTile(
+                icon: Icons.print_rounded,
+                iconColor: AppColors.muted,
+                iconBgColor: AppColors.muted.withValues(alpha: 0.1),
+                title: 'Imprimir reporte',
+                subtitle: 'Próximamente',
+                enabled: false,
+                onTap: () {
+                  Navigator.pop(ctx);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Función próximamente')),
+                  );
+                },
+              ),
+              Divider(height: 1, indent: 72, color: AppColors.line),
+              _TurnoOptionTile(
+                icon: Icons.settings_rounded,
+                iconColor: AppColors.muted,
+                iconBgColor: AppColors.muted.withValues(alpha: 0.1),
+                title: 'Ajustes',
+                subtitle: 'Próximamente',
+                enabled: false,
+                onTap: () {
+                  Navigator.pop(ctx);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Función próximamente')),
+                  );
+                },
+              ),
+              const SizedBox(height: AppSpacing.md),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Muestra un bottom sheet con todas las ventas del turno
+  /// Siguiendo UI/UX Pro Max §2 Touch & Interaction con lista scrollable
+  void _showAllVentasSheet(BuildContext context, List<Venta> ventas) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => DraggableScrollableSheet(
+        initialChildSize: 0.85,
+        minChildSize: 0.5,
+        maxChildSize: 0.95,
+        builder: (context, scrollController) => Container(
+          decoration: const BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          child: SafeArea(
+            child: Column(
+              children: [
+                // Drag handle
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
+                  child: Center(
+                    child: Container(
+                      width: 40,
+                      height: 5,
+                      decoration: BoxDecoration(
+                        color: AppColors.muted.withValues(alpha: 0.5),
+                        borderRadius: BorderRadius.circular(AppRadii.pill),
+                      ),
+                    ),
+                  ),
+                ),
+                // Header
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.xl,
+                    0,
+                    AppSpacing.xl,
+                    AppSpacing.md,
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: AppColors.primary.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Icon(
+                          Icons.receipt_long_rounded,
+                          size: 24,
+                          color: AppColors.primary,
+                        ),
+                      ),
+                      const SizedBox(width: AppSpacing.md),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Todas las ventas',
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .titleLarge
+                                  ?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                            ),
+                            Text(
+                              '${ventas.length} ${ventas.length == 1 ? 'venta' : 'ventas'} • ${formatCurrency(ventas.fold(0.0, (sum, v) => sum + v.total))}',
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodySmall
+                                  ?.copyWith(
+                                    color: AppColors.muted,
+                                  ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: () => Navigator.pop(ctx),
+                        icon: const Icon(Icons.close_rounded),
+                        tooltip: 'Cerrar',
+                      ),
+                    ],
+                  ),
+                ),
+                const Divider(height: 1),
+                // Lista de ventas
+                Expanded(
+                  child: ListView.separated(
+                    controller: scrollController,
+                    padding: const EdgeInsets.all(AppSpacing.xl),
+                    itemCount: ventas.length,
+                    separatorBuilder: (context, index) =>
+                        const SizedBox(height: AppSpacing.md),
+                    itemBuilder: (context, index) {
+                      return _VentaCard(venta: ventas[index]);
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Turno Option Tile (UI/UX Pro Max)
+// ═══════════════════════════════════════════════════════════════════════════
+
+class _TurnoOptionTile extends StatelessWidget {
+  const _TurnoOptionTile({
+    required this.icon,
+    required this.iconColor,
+    required this.iconBgColor,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+    this.enabled = true,
+  });
+
+  final IconData icon;
+  final Color iconColor;
+  final Color iconBgColor;
+  final String title;
+  final String subtitle;
+  final VoidCallback onTap;
+  final bool enabled;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: enabled ? onTap : null,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.xl,
+            vertical: AppSpacing.md,
+          ),
+          child: Row(
+            children: [
+              // Ícono con contenedor
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: iconBgColor,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  icon,
+                  color: enabled ? iconColor : AppColors.muted,
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: AppSpacing.md),
+              // Título y subtítulo
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                            fontWeight: FontWeight.w600,
+                            color: enabled ? null : AppColors.muted,
+                          ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: AppColors.muted,
+                          ),
+                    ),
+                  ],
+                ),
+              ),
+              // Indicador de chevron
+              if (enabled)
+                Icon(
+                  Icons.chevron_right_rounded,
+                  color: AppColors.muted,
+                  size: 24,
+                ),
+            ],
           ),
         ),
       ),
@@ -315,17 +560,25 @@ class _ResumenDelDiaCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+      padding: const EdgeInsets.all(AppSpacing.lg),
       decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: AppRadii.mdBorder,
-        border: const Border(
-          left: BorderSide(color: AppColors.primary, width: 4),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            AppColors.primary.withValues(alpha: 0.08),
+            AppColors.primary.withValues(alpha: 0.03),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: AppColors.primary.withValues(alpha: 0.15),
+          width: 1.5,
         ),
         boxShadow: [
           BoxShadow(
             color: AppColors.primary.withValues(alpha: 0.08),
-            blurRadius: 12,
+            blurRadius: 16,
             offset: const Offset(0, 4),
           ),
         ],
@@ -336,34 +589,66 @@ class _ResumenDelDiaCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  'Ventas de hoy',
-                  style: Theme.of(context).textTheme.bodyMedium,
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: AppColors.primary.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(
+                        Icons.monetization_on_rounded,
+                        color: AppColors.primary,
+                        size: 16,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Ventas de hoy',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.primary,
+                          ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: 8),
                 Text(
                   formatCurrency(totalVentas),
-                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                    color: AppColors.primary,
-                    fontWeight: FontWeight.w800,
-                  ),
+                  style: Theme.of(context).textTheme.headlineLarge?.copyWith(
+                        color: AppColors.primary,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: -0.5,
+                      ),
                 ),
               ],
             ),
           ),
-          _CompactMetrica(
-            valor: '$cantidadVentas',
-            label: 'ventas',
+          const SizedBox(width: AppSpacing.md),
+          // Divisor vertical
+          Container(
+            width: 1,
+            height: 60,
+            color: AppColors.line.withValues(alpha: 0.5),
           ),
-          const SizedBox(width: 16),
-          SizedBox(
-            height: 36,
-            child: VerticalDivider(width: 1, color: AppColors.line),
-          ),
-          const SizedBox(width: 16),
-          _CompactMetrica(
-            valor: '$cantidadArticulos',
-            label: 'unidades',
+          const SizedBox(width: AppSpacing.md),
+          // Métricas compactas
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              _MetricaBadge(
+                icon: Icons.receipt_rounded,
+                valor: '$cantidadVentas',
+                label: cantidadVentas == 1 ? 'venta' : 'ventas',
+              ),
+              const SizedBox(height: 8),
+              _MetricaBadge(
+                icon: Icons.inventory_2_rounded,
+                valor: '$cantidadArticulos',
+                label: 'uds.',
+              ),
+            ],
           ),
         ],
       ),
@@ -371,31 +656,57 @@ class _ResumenDelDiaCard extends StatelessWidget {
   }
 }
 
-class _CompactMetrica extends StatelessWidget {
-  const _CompactMetrica({
+/// Badge de métrica compacto para la card de resumen
+class _MetricaBadge extends StatelessWidget {
+  const _MetricaBadge({
+    required this.icon,
     required this.valor,
     required this.label,
   });
 
+  final IconData icon;
   final String valor;
   final String label;
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          valor,
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-            fontWeight: FontWeight.w800,
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: 10,
+        vertical: 6,
+      ),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: AppColors.line.withValues(alpha: 0.5),
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            icon,
+            size: 14,
+            color: AppColors.primary,
           ),
-        ),
-        Text(
-          label,
-          style: Theme.of(context).textTheme.bodyMedium,
-        ),
-      ],
+          const SizedBox(width: 6),
+          Text(
+            valor,
+            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.primary,
+                ),
+          ),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: AppColors.muted,
+                ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -482,62 +793,186 @@ class _VentaCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: () =>
-            context.push('/dependiente/turno/venta/${venta.id}', extra: venta),
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 14, 12, 14),
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: AppColors.primary.withValues(alpha: 0.1),
-                  shape: BoxShape.circle,
+    // Obtener el método de pago del primer pago (si existe)
+    final metodoPago = venta.pagos.isNotEmpty ? venta.pagos.first.metodo : null;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: AppColors.line,
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(16),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: () =>
+              context.push('/dependiente/turno/venta/${venta.id}', extra: venta),
+          child: Padding(
+            padding: const EdgeInsets.all(AppSpacing.md),
+            child: Row(
+              children: [
+                // Ícono con gradiente
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        AppColors.primary.withValues(alpha: 0.15),
+                        AppColors.primary.withValues(alpha: 0.05),
+                      ],
+                    ),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(
+                    Icons.shopping_cart_rounded,
+                    color: AppColors.primary,
+                    size: 22,
+                  ),
                 ),
-                child: const Icon(
-                  Icons.shopping_cart_rounded,
-                  color: AppColors.primary,
-                  size: 20,
+                const SizedBox(width: AppSpacing.md),
+                // Información de la venta
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Venta a las ${timeFormatter.format(venta.fecha)}',
+                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                              fontWeight: FontWeight.w600,
+                            ),
+                      ),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          // Badge de artículos
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 3,
+                            ),
+                            decoration: BoxDecoration(
+                              color: AppColors.primary.withValues(alpha: 0.08),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(
+                                  Icons.inventory_2_rounded,
+                                  size: 12,
+                                  color: AppColors.primary,
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  articulosLabel(venta.totalUnidades),
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .bodySmall
+                                      ?.copyWith(
+                                        color: AppColors.primary,
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: 11,
+                                      ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          // Badge de método de pago (si aplica)
+                          if (metodoPago != null)
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 3,
+                              ),
+                              decoration: BoxDecoration(
+                                color: metodoPago == MetodoPago.efectivo
+                                    ? AppColors.success.withValues(alpha: 0.08)
+                                    : AppColors.warning.withValues(alpha: 0.08),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    metodoPago == MetodoPago.efectivo
+                                        ? Icons.payments_rounded
+                                        : Icons.credit_card_rounded,
+                                    size: 12,
+                                    color: metodoPago == MetodoPago.efectivo
+                                        ? AppColors.success
+                                        : AppColors.warning,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    metodoPago == MetodoPago.efectivo
+                                        ? 'Efectivo'
+                                        : 'Transferencia',
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .bodySmall
+                                        ?.copyWith(
+                                          color: metodoPago == MetodoPago.efectivo
+                                              ? AppColors.success
+                                              : AppColors.warning,
+                                          fontWeight: FontWeight.w600,
+                                          fontSize: 11,
+                                        ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                const SizedBox(width: AppSpacing.sm),
+                // Precio y chevron
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
                     Text(
-                      'Venta a las ${timeFormatter.format(venta.fecha)}',
-                      style: Theme.of(context).textTheme.titleMedium,
+                      formatCurrency(venta.total),
+                      style: Theme.of(
+                        context,
+                      ).textTheme.titleLarge?.copyWith(
+                            color: AppColors.primary,
+                            fontWeight: FontWeight.w800,
+                          ),
                     ),
-                    const SizedBox(height: 2),
-                    Text(
-                      articulosLabel(venta.totalUnidades),
-                      style: Theme.of(context).textTheme.bodyMedium,
+                    const SizedBox(height: 4),
+                    Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: BoxDecoration(
+                        color: AppColors.primary.withValues(alpha: 0.08),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.chevron_right_rounded,
+                        color: AppColors.primary,
+                        size: 18,
+                      ),
                     ),
                   ],
                 ),
-              ),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text(
-                    formatCurrency(venta.total),
-                    style: Theme.of(
-                      context,
-                    ).textTheme.titleMedium?.copyWith(color: AppColors.primary),
-                  ),
-                  const SizedBox(height: 4),
-                  const Icon(
-                    Icons.chevron_right_rounded,
-                    color: AppColors.muted,
-                    size: 20,
-                  ),
-                ],
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
