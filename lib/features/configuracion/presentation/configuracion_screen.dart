@@ -92,6 +92,17 @@ class ConfiguracionScreen extends ConsumerWidget {
                 ),
               ),
             const SizedBox(height: 12),
+            if (!isAdmin)
+              Card(
+                child: ListTile(
+                  leading: const Icon(Icons.history_rounded),
+                  title: const Text('Historial de cuadres'),
+                  subtitle: const Text('Ver mis cuadres anteriores'),
+                  trailing: const Icon(Icons.chevron_right_rounded),
+                  onTap: () => context.push('/dependiente/cuadres/historial'),
+                ),
+              ),
+            if (!isAdmin) const SizedBox(height: 12),
             Card(
               child: SwitchListTile(
                 secondary: const Icon(Icons.vibration_rounded),
@@ -458,7 +469,7 @@ class _CompactValor extends StatelessWidget {
   }
 }
 
-// ─── Category management sheet ─────────────────────────────────────────────
+// ─── Category management sheet (UI/UX Pro Max) ─────────────────────────────
 
 class _CategoryManagementSheet extends ConsumerStatefulWidget {
   @override
@@ -485,14 +496,15 @@ class _CategoryManagementSheetState
 
     return DraggableScrollableSheet(
       controller: _sheetController,
-      initialChildSize: 0.65,
-      minChildSize: 0.4,
+      initialChildSize: 0.7,
+      minChildSize: 0.5,
       maxChildSize: 0.95,
       expand: false,
       builder: (context, scrollController) {
         return SafeArea(
           child: Column(
             children: [
+              // ═══ Drag Handle Profesional ═══
               GestureDetector(
                 onVerticalDragStart: (_) =>
                     setState(() => _isDragging = true),
@@ -500,7 +512,7 @@ class _CategoryManagementSheetState
                   final delta = -details.primaryDelta! /
                       MediaQuery.of(context).size.height;
                   _sheetController.jumpTo(
-                    (_sheetController.size + delta).clamp(0.4, 0.95),
+                    (_sheetController.size + delta).clamp(0.5, 0.95),
                   );
                 },
                 onVerticalDragEnd: (_) =>
@@ -512,7 +524,7 @@ class _CategoryManagementSheetState
                   child: Center(
                     child: AnimatedContainer(
                       duration: const Duration(milliseconds: 200),
-                      width: 40,
+                      width: _isDragging ? 50 : 40,
                       height: 5,
                       decoration: BoxDecoration(
                         color: _isDragging
@@ -524,75 +536,94 @@ class _CategoryManagementSheetState
                   ),
                 ),
               ),
+              // ═══ Header con título e icono ═══
               Padding(
                 padding: const EdgeInsets.symmetric(
                   horizontal: AppSpacing.xl,
                 ),
                 child: Row(
                   children: [
-                    Expanded(
-                      child: Text(
-                        'Categorías',
-                        style:
-                            Theme.of(context).textTheme.titleLarge,
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: AppColors.primary.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Icon(
+                        Icons.category_rounded,
+                        size: 24,
+                        color: AppColors.primary,
                       ),
                     ),
-                    IconButton.filledTonal(
-                      onPressed: () =>
-                          _showCategoryDialog(context, ref),
-                      icon: const Icon(Icons.add_rounded),
-                      tooltip: 'Crear categoría',
+                    const SizedBox(width: AppSpacing.md),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Categorías',
+                            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                          ),
+                          Text(
+                            '${categorias.length} ${categorias.length == 1 ? 'categoría' : 'categorías'}',
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                  color: AppColors.muted,
+                                ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    FilledButton.icon(
+                      onPressed: () => _showCategoryDialog(context, ref),
+                      icon: const Icon(Icons.add_rounded, size: 20),
+                      label: const Text('Nueva'),
+                      style: FilledButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppSpacing.md,
+                          vertical: AppSpacing.sm,
+                        ),
+                      ),
                     ),
                   ],
                 ),
               ),
-              const SizedBox(height: AppSpacing.sm),
+              const SizedBox(height: AppSpacing.xl),
+              // ═══ Lista de Categorías ═══
               Expanded(
-                child: ListView(
-                  controller: scrollController,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.xl,
-                  ),
-                  children: [
-                    for (final categoria in categorias) ...[
-                      Card(
-                        key: ValueKey(categoria.id),
-                        child: ListTile(
-                          title: Text(categoria.nombre),
-                          leading: const Icon(Icons.category_outlined),
-                          trailing: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              IconButton(
-                                icon: const Icon(Icons.edit_outlined),
-                                tooltip: 'Editar',
-                                onPressed: () => _showCategoryDialog(
-                                  context,
-                                  ref,
-                                  categoria: categoria,
-                                ),
-                              ),
-                              IconButton(
-                                onPressed: () =>
-                                    _confirmDeleteCategoria(
-                                  context,
-                                  ref,
-                                  categoria,
-                                ),
-                                icon: const Icon(
-                                  Icons.delete_outline_rounded,
-                                ),
-                                color: AppColors.danger,
-                                tooltip: 'Eliminar',
-                              ),
-                            ],
-                          ),
+                child: categorias.isEmpty
+                    ? const _EmptyCategorias()
+                    : ListView(
+                        controller: scrollController,
+                        padding: const EdgeInsets.fromLTRB(
+                          AppSpacing.xl,
+                          0,
+                          AppSpacing.xl,
+                          AppSpacing.xl,
                         ),
+                        children: [
+                          for (int i = 0; i < categorias.length; i++) ...[
+                            _CategoryCard(
+                              key: ValueKey(categorias[i].id),
+                              categoria: categorias[i],
+                              index: i + 1,
+                              onEdit: () => _showCategoryDialog(
+                                context,
+                                ref,
+                                categoria: categorias[i],
+                              ),
+                              onDelete: () => _confirmDeleteCategoria(
+                                context,
+                                ref,
+                                categorias[i],
+                              ),
+                            ),
+                            if (i < categorias.length - 1)
+                              const SizedBox(height: AppSpacing.sm),
+                          ],
+                        ],
                       ),
-                      const SizedBox(height: AppSpacing.sm),
-                    ],
-                  ],
-                ),
               ),
             ],
           ),
@@ -631,6 +662,16 @@ class _CategoryManagementSheetState
               createdAt: isEdit ? categoria.createdAt : DateTime.now(),
             ),
           );
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(isEdit
+                ? 'Categoría actualizada'
+                : 'Categoría creada correctamente'),
+            backgroundColor: AppColors.success,
+          ),
+        );
+      }
     }
   }
 
@@ -643,26 +684,45 @@ class _CategoryManagementSheetState
       context: context,
       builder: (context) {
         return AlertDialog(
-          icon: const Icon(
-            Icons.warning_amber_rounded,
-            color: AppColors.danger,
-            size: 42,
+          icon: Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: AppColors.danger.withValues(alpha: 0.1),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.warning_amber_rounded,
+              color: AppColors.danger,
+              size: 32,
+            ),
           ),
           title: const Text('¿Eliminar categoría?'),
-          content: Text(
-            'Esta acción no se puede deshacer. ¿Deseas eliminar la categoría "${categoria.nombre}"?',
+          content: RichText(
+            text: TextSpan(
+              style: Theme.of(context).textTheme.bodyMedium,
+              children: [
+                const TextSpan(
+                  text: 'Esta acción no se puede deshacer. ¿Deseas eliminar la categoría ',
+                ),
+                TextSpan(
+                  text: '"${categoria.nombre}"',
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+                const TextSpan(text: '?'),
+              ],
+            ),
           ),
           actions: [
             OutlinedButton(
               onPressed: () => Navigator.of(context).pop(false),
               child: const Text('Cancelar'),
             ),
-            ElevatedButton(
+            FilledButton(
               onPressed: () {
                 Haptics.warning(context);
                 Navigator.of(context).pop(true);
               },
-              style: ElevatedButton.styleFrom(
+              style: FilledButton.styleFrom(
                 backgroundColor: AppColors.danger,
               ),
               child: const Text('Eliminar'),
@@ -676,11 +736,200 @@ class _CategoryManagementSheetState
       ref
           .read(inventarioControllerProvider.notifier)
           .deleteCategoria(categoria.id);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Categoría eliminada'),
+            backgroundColor: AppColors.danger,
+          ),
+        );
+      }
     }
   }
 }
 
-// ─── User management sheet ─────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════
+// Category Card (UI/UX Pro Max)
+// ═══════════════════════════════════════════════════════════════════════════
+
+class _CategoryCard extends StatelessWidget {
+  const _CategoryCard({
+    super.key,
+    required this.categoria,
+    required this.index,
+    required this.onEdit,
+    required this.onDelete,
+  });
+
+  final Categoria categoria;
+  final int index;
+  final VoidCallback onEdit;
+  final VoidCallback onDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: AppColors.line,
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(16),
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.md),
+          child: Row(
+            children: [
+              // ═══ Número de índice ═══
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      AppColors.primary.withValues(alpha: 0.15),
+                      AppColors.primary.withValues(alpha: 0.05),
+                    ],
+                  ),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Center(
+                  child: Text(
+                    '$index',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          color: AppColors.primary,
+                          fontWeight: FontWeight.bold,
+                        ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: AppSpacing.md),
+              // ═══ Nombre de la categoría ═══
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      categoria.nombre,
+                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Creada ${_formatDate(categoria.createdAt)}',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: AppColors.muted,
+                          ),
+                    ),
+                  ],
+                ),
+              ),
+              // ═══ Botones de acción ═══
+              IconButton(
+                onPressed: onEdit,
+                icon: const Icon(Icons.edit_outlined, size: 20),
+                tooltip: 'Editar',
+                style: IconButton.styleFrom(
+                  foregroundColor: AppColors.primary,
+                  backgroundColor: AppColors.primary.withValues(alpha: 0.1),
+                ),
+              ),
+              const SizedBox(width: AppSpacing.xs),
+              IconButton(
+                onPressed: onDelete,
+                icon: const Icon(Icons.delete_outline_rounded, size: 20),
+                tooltip: 'Eliminar',
+                style: IconButton.styleFrom(
+                  foregroundColor: AppColors.danger,
+                  backgroundColor: AppColors.danger.withValues(alpha: 0.1),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  String _formatDate(DateTime date) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final dateOnly = DateTime(date.year, date.month, date.day);
+    final diff = today.difference(dateOnly).inDays;
+
+    if (diff == 0) return 'hoy';
+    if (diff == 1) return 'ayer';
+    if (diff < 7) return 'hace $diff días';
+    if (diff < 30) return 'hace ${(diff / 7).floor()} semanas';
+    if (diff < 365) return 'hace ${(diff / 30).floor()} meses';
+    return 'hace ${(diff / 365).floor()} años';
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Empty Categorias State
+// ═══════════════════════════════════════════════════════════════════════════
+
+class _EmptyCategorias extends StatelessWidget {
+  const _EmptyCategorias();
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.xxl),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: AppColors.primary.withValues(alpha: 0.08),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.category_outlined,
+                size: 48,
+                color: AppColors.primary,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.lg),
+            Text(
+              'No hay categorías',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+            ),
+            const SizedBox(height: AppSpacing.xs),
+            Text(
+              'Crea tu primera categoría desde el botón "Nueva"',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: AppColors.muted,
+                  ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─── User management sheet (UI/UX Pro Max) ─────────────────────────────────
 
 class _UserManagementSheet extends ConsumerStatefulWidget {
   @override
@@ -702,17 +951,19 @@ class _UserManagementSheetState
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(usuariosControllerProvider);
+    final usuarios = state.usuarios;
 
     return DraggableScrollableSheet(
       controller: _sheetController,
-      initialChildSize: 0.65,
-      minChildSize: 0.4,
+      initialChildSize: 0.7,
+      minChildSize: 0.5,
       maxChildSize: 0.95,
       expand: false,
       builder: (context, scrollController) {
         return SafeArea(
           child: Column(
             children: [
+              // ═══ Drag Handle Profesional ═══
               GestureDetector(
                 onVerticalDragStart: (_) =>
                     setState(() => _isDragging = true),
@@ -720,7 +971,7 @@ class _UserManagementSheetState
                   final delta = -details.primaryDelta! /
                       MediaQuery.of(context).size.height;
                   _sheetController.jumpTo(
-                    (_sheetController.size + delta).clamp(0.4, 0.95),
+                    (_sheetController.size + delta).clamp(0.5, 0.95),
                   );
                 },
                 onVerticalDragEnd: (_) =>
@@ -732,7 +983,7 @@ class _UserManagementSheetState
                   child: Center(
                     child: AnimatedContainer(
                       duration: const Duration(milliseconds: 200),
-                      width: 40,
+                      width: _isDragging ? 50 : 40,
                       height: 5,
                       decoration: BoxDecoration(
                         color: _isDragging
@@ -744,98 +995,93 @@ class _UserManagementSheetState
                   ),
                 ),
               ),
+              // ═══ Header con título e icono ═══
               Padding(
                 padding: const EdgeInsets.symmetric(
                   horizontal: AppSpacing.xl,
                 ),
                 child: Row(
                   children: [
-                    Expanded(
-                      child: Text(
-                        'Dependientes',
-                        style:
-                            Theme.of(context).textTheme.titleLarge,
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: AppColors.primary.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Icon(
+                        Icons.people_rounded,
+                        size: 24,
+                        color: AppColors.primary,
                       ),
                     ),
-                    IconButton.filledTonal(
-                      onPressed: () =>
-                          _showUserDialog(context, ref),
-                      icon: const Icon(Icons.add_rounded),
-                      tooltip: 'Crear dependiente',
+                    const SizedBox(width: AppSpacing.md),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Dependientes',
+                            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                          ),
+                          Text(
+                            '${usuarios.length} ${usuarios.length == 1 ? 'usuario' : 'usuarios'}',
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                  color: AppColors.muted,
+                                ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    FilledButton.icon(
+                      onPressed: () => _showUserDialog(context, ref),
+                      icon: const Icon(Icons.add_rounded, size: 20),
+                      label: const Text('Nuevo'),
+                      style: FilledButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppSpacing.md,
+                          vertical: AppSpacing.sm,
+                        ),
+                      ),
                     ),
                   ],
                 ),
               ),
-              const SizedBox(height: AppSpacing.sm),
+              const SizedBox(height: AppSpacing.xl),
+              // ═══ Lista de Usuarios ═══
               Expanded(
                 child: state.isLoading
                     ? const Center(child: CircularProgressIndicator())
-                    : state.usuarios.isEmpty
+                    : usuarios.isEmpty
                         ? const _EmptyUsuarios()
                         : ListView(
                             controller: scrollController,
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: AppSpacing.xl,
+                            padding: const EdgeInsets.fromLTRB(
+                              AppSpacing.xl,
+                              0,
+                              AppSpacing.xl,
+                              AppSpacing.xl,
                             ),
                             children: [
-                              for (final usuario in state.usuarios) ...[
-                                Card(
-                                  key: ValueKey(usuario.id),
-                                  child: ListTile(
-                                    leading: CircleAvatar(
-                                      backgroundColor:
-                                          usuario.rol == UserRole.admin
-                                              ? AppColors.primary
-                                              : AppColors.warning,
-                                      foregroundColor: AppColors.surface,
-                                      child: Text(
-                                        usuario.nombre.isNotEmpty
-                                            ? usuario.nombre[0]
-                                                .toUpperCase()
-                                            : '?',
-                                        style: const TextStyle(
-                                          fontWeight: FontWeight.w700,
-                                        ),
-                                      ),
-                                    ),
-                                    title: Text(usuario.nombre),
-                                    subtitle: Text(usuario.email),
-                                    trailing: usuario.rol == UserRole.admin
-                                        ? null
-                                        : Row(
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                              IconButton(
-                                                icon: const Icon(
-                                                  Icons.edit_outlined,
-                                                ),
-                                                tooltip: 'Editar',
-                                                onPressed: () =>
-                                                    _showUserDialog(
-                                                  context,
-                                                  ref,
-                                                  usuario: usuario,
-                                                ),
-                                              ),
-                                              IconButton(
-                                                onPressed: () =>
-                                                    _confirmDeleteUser(
-                                                  context,
-                                                  ref,
-                                                  usuario,
-                                                ),
-                                                icon: const Icon(
-                                                  Icons
-                                                      .delete_outline_rounded,
-                                                ),
-                                                color: AppColors.danger,
-                                                tooltip: 'Eliminar',
-                                              ),
-                                            ],
-                                          ),
+                              for (int i = 0; i < usuarios.length; i++) ...[
+                                _UserCard(
+                                  key: ValueKey(usuarios[i].id),
+                                  usuario: usuarios[i],
+                                  index: i + 1,
+                                  onEdit: () => _showUserDialog(
+                                    context,
+                                    ref,
+                                    usuario: usuarios[i],
+                                  ),
+                                  onDelete: () => _confirmDeleteUser(
+                                    context,
+                                    ref,
+                                    usuarios[i],
                                   ),
                                 ),
-                                const SizedBox(height: AppSpacing.sm),
+                                if (i < usuarios.length - 1)
+                                  const SizedBox(height: AppSpacing.sm),
                               ],
                             ],
                           ),
@@ -877,6 +1123,7 @@ class _UserManagementSheetState
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Ya existe un usuario con este email'),
+            backgroundColor: AppColors.danger,
           ),
         );
       }
@@ -890,6 +1137,14 @@ class _UserManagementSheetState
             nombre: nombre,
             email: email,
           ));
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Usuario actualizado correctamente'),
+            backgroundColor: AppColors.success,
+          ),
+        );
+      }
     } else {
       await ref
           .read(usuariosControllerProvider.notifier)
@@ -898,6 +1153,14 @@ class _UserManagementSheetState
             email: email,
             rol: UserRole.dependiente,
           );
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Usuario creado correctamente'),
+            backgroundColor: AppColors.success,
+          ),
+        );
+      }
     }
   }
 
@@ -910,26 +1173,45 @@ class _UserManagementSheetState
       context: context,
       builder: (context) {
         return AlertDialog(
-          icon: const Icon(
-            Icons.warning_amber_rounded,
-            color: AppColors.danger,
-            size: 42,
+          icon: Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: AppColors.danger.withValues(alpha: 0.1),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.warning_amber_rounded,
+              color: AppColors.danger,
+              size: 32,
+            ),
           ),
           title: const Text('¿Eliminar dependiente?'),
-          content: Text(
-            'Se desactivará el acceso de "${usuario.nombre}". ¿Deseas continuar?',
+          content: RichText(
+            text: TextSpan(
+              style: Theme.of(context).textTheme.bodyMedium,
+              children: [
+                const TextSpan(
+                  text: 'Se desactivará el acceso de ',
+                ),
+                TextSpan(
+                  text: '"${usuario.nombre}"',
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+                const TextSpan(text: '. ¿Deseas continuar?'),
+              ],
+            ),
           ),
           actions: [
             OutlinedButton(
               onPressed: () => Navigator.of(context).pop(false),
               child: const Text('Cancelar'),
             ),
-            ElevatedButton(
+            FilledButton(
               onPressed: () {
                 Haptics.warning(context);
                 Navigator.of(context).pop(true);
               },
-              style: ElevatedButton.styleFrom(
+              style: FilledButton.styleFrom(
                 backgroundColor: AppColors.danger,
               ),
               child: const Text('Eliminar'),
@@ -943,11 +1225,195 @@ class _UserManagementSheetState
       await ref
           .read(usuariosControllerProvider.notifier)
           .eliminarUsuario(usuario.id);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Usuario eliminado'),
+            backgroundColor: AppColors.danger,
+          ),
+        );
+      }
     }
   }
 }
 
-// ─── Empty usuarios ────────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════
+// User Card (UI/UX Pro Max)
+// ═══════════════════════════════════════════════════════════════════════════
+
+class _UserCard extends StatelessWidget {
+  const _UserCard({
+    super.key,
+    required this.usuario,
+    required this.index,
+    required this.onEdit,
+    required this.onDelete,
+  });
+
+  final Usuario usuario;
+  final int index;
+  final VoidCallback onEdit;
+  final VoidCallback onDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    final isAdmin = usuario.rol == UserRole.admin;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: AppColors.line,
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(16),
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.md),
+          child: Row(
+            children: [
+              // ═══ Avatar con inicial o badge de admin ═══
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: isAdmin
+                        ? [
+                            AppColors.primary.withValues(alpha: 0.2),
+                            AppColors.primary.withValues(alpha: 0.1),
+                          ]
+                        : [
+                            AppColors.warning.withValues(alpha: 0.2),
+                            AppColors.warning.withValues(alpha: 0.1),
+                          ],
+                  ),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Center(
+                  child: isAdmin
+                      ? Icon(
+                          Icons.admin_panel_settings_rounded,
+                          color: AppColors.primary,
+                          size: 24,
+                        )
+                      : Text(
+                          usuario.nombre.isNotEmpty
+                              ? usuario.nombre[0].toUpperCase()
+                              : '?',
+                          style: Theme.of(context)
+                              .textTheme
+                              .titleLarge
+                              ?.copyWith(
+                                color: AppColors.warning,
+                                fontWeight: FontWeight.bold,
+                              ),
+                        ),
+                ),
+              ),
+              const SizedBox(width: AppSpacing.md),
+              // ═══ Nombre y email ═══
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Flexible(
+                          child: Text(
+                            usuario.nombre,
+                            style: Theme.of(context)
+                                .textTheme
+                                .bodyLarge
+                                ?.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        if (isAdmin) ...[
+                          const SizedBox(width: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: AppColors.primary.withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              'ADMIN',
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .labelSmall
+                                  ?.copyWith(
+                                    color: AppColors.primary,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 10,
+                                  ),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      usuario.email,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: AppColors.muted,
+                          ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+              // ═══ Botones de acción (solo para dependientes) ═══
+              if (!isAdmin) ...[
+                IconButton(
+                  onPressed: onEdit,
+                  icon: const Icon(Icons.edit_outlined, size: 20),
+                  tooltip: 'Editar',
+                  style: IconButton.styleFrom(
+                    foregroundColor: AppColors.primary,
+                    backgroundColor:
+                        AppColors.primary.withValues(alpha: 0.1),
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.xs),
+                IconButton(
+                  onPressed: onDelete,
+                  icon: const Icon(Icons.delete_outline_rounded, size: 20),
+                  tooltip: 'Eliminar',
+                  style: IconButton.styleFrom(
+                    foregroundColor: AppColors.danger,
+                    backgroundColor: AppColors.danger.withValues(alpha: 0.1),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Empty Usuarios State
+// ═══════════════════════════════════════════════════════════════════════════
 
 class _EmptyUsuarios extends StatelessWidget {
   const _EmptyUsuarios();
@@ -955,32 +1421,52 @@ class _EmptyUsuarios extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(
-            Icons.people_outline,
-            size: 48,
-            color: AppColors.muted,
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          Text(
-            'No hay dependientes',
-            style: Theme.of(context).textTheme.titleMedium,
-          ),
-          const SizedBox(height: AppSpacing.xs),
-          Text(
-            'Crea un dependiente desde el botón +',
-            style: Theme.of(context).textTheme.bodyMedium,
-          ),
-        ],
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.xxl),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: AppColors.primary.withValues(alpha: 0.08),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.people_outline_rounded,
+                size: 48,
+                color: AppColors.primary,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.lg),
+            Text(
+              'No hay dependientes',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+            ),
+            const SizedBox(height: AppSpacing.xs),
+            Text(
+              'Crea tu primer usuario desde el botón "Nuevo"',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: AppColors.muted,
+                  ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
       ),
     );
   }
 }
 
-// ─── User dialog ───────────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════
+// User Dialog (UI/UX Pro Max)
+// ═══════════════════════════════════════════════════════════════════════════
 
+/// Diálogo para crear o editar usuarios (UI/UX Pro Max)
+/// Siguiendo §8 Forms & Feedback: validación en tiempo real, labels claros,
+/// feedback visual inmediato, campos con iconos, y acciones diferenciadas.
 class _UserDialog extends StatefulWidget {
   const _UserDialog({
     required this.title,
@@ -999,70 +1485,282 @@ class _UserDialog extends StatefulWidget {
 class _UserDialogState extends State<_UserDialog> {
   late final TextEditingController _nombreCtrl;
   late final TextEditingController _emailCtrl;
-  String? _errorText;
+  late final FocusNode _nombreFocus;
+  late final FocusNode _emailFocus;
+
+  String? _nombreError;
+  String? _emailError;
+  bool _isValid = false;
 
   @override
   void initState() {
     super.initState();
     _nombreCtrl = TextEditingController(text: widget.initialName ?? '');
     _emailCtrl = TextEditingController(text: widget.initialEmail ?? '');
+    _nombreFocus = FocusNode();
+    _emailFocus = FocusNode();
+    
+    _validateForm();
+    
+    // Auto-focus después del primer frame
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _nombreFocus.requestFocus();
+    });
   }
 
   @override
   void dispose() {
     _nombreCtrl.dispose();
     _emailCtrl.dispose();
+    _nombreFocus.dispose();
+    _emailFocus.dispose();
     super.dispose();
+  }
+
+  void _validateForm() {
+    final nombre = _nombreCtrl.text.trim();
+    final email = _emailCtrl.text.trim();
+
+    setState(() {
+      // Validar nombre
+      if (nombre.isEmpty) {
+        _nombreError = null;
+      } else if (nombre.length < 2) {
+        _nombreError = 'Mínimo 2 caracteres';
+      } else {
+        _nombreError = null;
+      }
+
+      // Validar email
+      if (email.isEmpty) {
+        _emailError = null;
+      } else if (!email.contains('@') || !email.contains('.')) {
+        _emailError = 'Email inválido';
+      } else if (email.length < 5) {
+        _emailError = 'Email muy corto';
+      } else {
+        _emailError = null;
+      }
+
+      // Formulario es válido si ambos campos tienen contenido y no tienen errores
+      _isValid = nombre.length >= 2 &&
+          email.contains('@') &&
+          email.contains('.') &&
+          email.length >= 5 &&
+          _nombreError == null &&
+          _emailError == null;
+    });
+  }
+
+  void _submit() {
+    final nombre = _nombreCtrl.text.trim();
+    final email = _emailCtrl.text.trim();
+
+    // Validaciones finales
+    if (nombre.isEmpty) {
+      setState(() => _nombreError = 'El nombre es obligatorio');
+      _nombreFocus.requestFocus();
+      return;
+    }
+    if (nombre.length < 2) {
+      setState(() => _nombreError = 'Mínimo 2 caracteres');
+      _nombreFocus.requestFocus();
+      return;
+    }
+    if (email.isEmpty || !email.contains('@') || !email.contains('.')) {
+      setState(() => _emailError = 'Introduce un email válido');
+      _emailFocus.requestFocus();
+      return;
+    }
+
+    Haptics.confirm(context);
+    Navigator.of(context).pop((nombre: nombre, email: email));
   }
 
   @override
   Widget build(BuildContext context) {
+    final isEdit = widget.initialName != null;
+    final nombreValid = _nombreCtrl.text.trim().length >= 2 && _nombreError == null;
+    final emailValid = _emailCtrl.text.trim().contains('@') && 
+                       _emailCtrl.text.trim().contains('.') && 
+                       _emailError == null;
+
     return AlertDialog(
-      title: Text(widget.title),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          TextField(
-            controller: _nombreCtrl,
-            textCapitalization: TextCapitalization.words,
-            decoration: const InputDecoration(
-              labelText: 'Nombre',
-              prefixIcon: Icon(Icons.person_outlined),
+      // ═══ Icono contextual ═══
+      icon: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: AppColors.primary.withValues(alpha: 0.1),
+          shape: BoxShape.circle,
+        ),
+        child: Icon(
+          isEdit ? Icons.edit_rounded : Icons.person_add_rounded,
+          color: AppColors.primary,
+          size: 28,
+        ),
+      ),
+      title: Text(
+        widget.title,
+        textAlign: TextAlign.center,
+      ),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // ═══ Campo de nombre ═══
+            TextField(
+              controller: _nombreCtrl,
+              focusNode: _nombreFocus,
+              textCapitalization: TextCapitalization.words,
+              textInputAction: TextInputAction.next,
+              decoration: InputDecoration(
+                labelText: 'Nombre completo',
+                hintText: 'Ej: Juan Pérez',
+                prefixIcon: Icon(
+                  Icons.person_outlined,
+                  color: _nombreError != null
+                      ? AppColors.danger
+                      : (nombreValid ? AppColors.success : AppColors.muted),
+                ),
+                errorText: _nombreError,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(
+                    color: nombreValid
+                        ? AppColors.success.withValues(alpha: 0.5)
+                        : AppColors.line,
+                    width: nombreValid ? 2 : 1,
+                  ),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(
+                    color: _nombreError != null
+                        ? AppColors.danger
+                        : AppColors.primary,
+                    width: 2,
+                  ),
+                ),
+                errorBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(
+                    color: AppColors.danger,
+                    width: 2,
+                  ),
+                ),
+              ),
+              onChanged: (_) => _validateForm(),
+              onSubmitted: (_) => _emailFocus.requestFocus(),
             ),
-          ),
-          const SizedBox(height: AppSpacing.md),
-          TextField(
-            controller: _emailCtrl,
-            keyboardType: TextInputType.emailAddress,
-            decoration: InputDecoration(
-              labelText: 'Email',
-              prefixIcon: const Icon(Icons.email_outlined),
-              errorText: _errorText,
+            const SizedBox(height: AppSpacing.lg),
+            // ═══ Campo de email ═══
+            TextField(
+              controller: _emailCtrl,
+              focusNode: _emailFocus,
+              keyboardType: TextInputType.emailAddress,
+              textInputAction: TextInputAction.done,
+              decoration: InputDecoration(
+                labelText: 'Correo electrónico',
+                hintText: 'ejemplo@correo.com',
+                prefixIcon: Icon(
+                  Icons.email_outlined,
+                  color: _emailError != null
+                      ? AppColors.danger
+                      : (emailValid ? AppColors.success : AppColors.muted),
+                ),
+                errorText: _emailError,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(
+                    color: emailValid
+                        ? AppColors.success.withValues(alpha: 0.5)
+                        : AppColors.line,
+                    width: emailValid ? 2 : 1,
+                  ),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(
+                    color: _emailError != null
+                        ? AppColors.danger
+                        : AppColors.primary,
+                    width: 2,
+                  ),
+                ),
+                errorBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(
+                    color: AppColors.danger,
+                    width: 2,
+                  ),
+                ),
+              ),
+              onChanged: (_) => _validateForm(),
+              onSubmitted: (_) {
+                if (_isValid) _submit();
+              },
             ),
-          ),
-        ],
+            // ═══ Info helper ═══
+            if (!isEdit && _nombreCtrl.text.isEmpty && _emailCtrl.text.isEmpty) ...[
+              const SizedBox(height: AppSpacing.md),
+              Container(
+                padding: const EdgeInsets.all(AppSpacing.sm),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.info_outline_rounded,
+                      size: 16,
+                      color: AppColors.primary,
+                    ),
+                    const SizedBox(width: AppSpacing.xs),
+                    Expanded(
+                      child: Text(
+                        'Crea credenciales para un nuevo dependiente',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: AppColors.primary,
+                            ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ],
+        ),
       ),
       actions: [
+        // ═══ Botón Cancelar ═══
         OutlinedButton(
           onPressed: () => Navigator.of(context).pop(),
+          style: OutlinedButton.styleFrom(
+            minimumSize: const Size(100, 44),
+          ),
           child: const Text('Cancelar'),
         ),
-        ElevatedButton(
-          onPressed: () {
-            final nombre = _nombreCtrl.text.trim();
-            final email = _emailCtrl.text.trim();
-            if (nombre.isEmpty) {
-              setState(() => _errorText = 'El nombre es obligatorio');
-              return;
-            }
-            if (email.isEmpty || !email.contains('@')) {
-              setState(() => _errorText = 'Introduce un email válido');
-              return;
-            }
-            Haptics.confirm(context);
-            Navigator.of(context).pop((nombre: nombre, email: email));
-          },
-          child: const Text('Guardar'),
+        // ═══ Botón Guardar (deshabilitado si no es válido) ═══
+        FilledButton.icon(
+          onPressed: _isValid ? _submit : null,
+          icon: Icon(
+            isEdit ? Icons.check_rounded : Icons.person_add_rounded,
+            size: 20,
+          ),
+          label: Text(isEdit ? 'Actualizar' : 'Crear'),
+          style: FilledButton.styleFrom(
+            minimumSize: const Size(120, 44),
+            disabledBackgroundColor: AppColors.muted.withValues(alpha: 0.3),
+            disabledForegroundColor: AppColors.muted,
+          ),
         ),
       ],
     );
