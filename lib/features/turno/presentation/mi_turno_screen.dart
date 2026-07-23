@@ -117,10 +117,118 @@ class _TurnoActivoView extends ConsumerWidget {
       appBar: AppBar(
         title: const Text('Mi turno'),
         actions: [
-          IconButton(
+          PopupMenuButton<String>(
             icon: const Icon(Icons.more_vert_rounded),
-            tooltip: 'Opciones',
-            onPressed: () => _showTurnoOptionsSheet(context, ref),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            offset: const Offset(0, 8),
+            elevation: 8,
+            onSelected: (value) {
+              switch (value) {
+                case 'cerrar':
+                  Haptics.confirm(context);
+                  context.push('/dependiente/turno/resumen');
+                  break;
+                case 'resumen':
+                  context.push('/dependiente/turno/resumen');
+                  break;
+              }
+            },
+            itemBuilder: (context) => [
+              PopupMenuItem(
+                value: 'cerrar',
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.lg,
+                  vertical: AppSpacing.sm,
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: AppColors.danger.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(
+                        Icons.logout_rounded,
+                        color: AppColors.danger,
+                        size: 20,
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.md),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Cerrar turno',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 15,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            'Finaliza tu jornada',
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                  color: AppColors.muted,
+                                  fontSize: 12,
+                                ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              PopupMenuItem(
+                value: 'resumen',
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.lg,
+                  vertical: AppSpacing.sm,
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: AppColors.primary.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(
+                        Icons.receipt_long_rounded,
+                        color: AppColors.primary,
+                        size: 20,
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.md),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Resumen del turno',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 15,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            'Ver estadísticas',
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                  color: AppColors.muted,
+                                  fontSize: 12,
+                                ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
           const SizedBox(width: 4),
         ],
@@ -253,98 +361,6 @@ class _TurnoActivoView extends ConsumerWidget {
     );
   }
 
-  /// Muestra un bottom sheet profesional con las opciones del turno
-  /// Siguiendo UI/UX Pro Max §2 Touch & Interaction y §8 Forms & Feedback
-  void _showTurnoOptionsSheet(BuildContext context, WidgetRef ref) {
-    showModalBottomSheet<void>(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) => Container(
-        decoration: const BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-        ),
-        child: SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Drag handle
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
-                child: Center(
-                  child: Container(
-                    width: 40,
-                    height: 5,
-                    decoration: BoxDecoration(
-                      color: AppColors.muted.withValues(alpha: 0.5),
-                      borderRadius: BorderRadius.circular(AppRadii.pill),
-                    ),
-                  ),
-                ),
-              ),
-              // Opciones
-              _TurnoOptionTile(
-                icon: Icons.logout_rounded,
-                iconColor: AppColors.danger,
-                iconBgColor: AppColors.danger.withValues(alpha: 0.1),
-                title: 'Cerrar turno',
-                subtitle: 'Finaliza tu jornada y envía el cuadre',
-                onTap: () {
-                  Navigator.pop(ctx);
-                  Haptics.confirm(context);
-                  context.push('/dependiente/turno/resumen');
-                },
-              ),
-              Divider(height: 1, indent: 72, color: AppColors.line),
-              _TurnoOptionTile(
-                icon: Icons.receipt_long_rounded,
-                iconColor: AppColors.primary,
-                iconBgColor: AppColors.primary.withValues(alpha: 0.1),
-                title: 'Resumen del turno',
-                subtitle: 'Ver estadísticas y detalles',
-                onTap: () {
-                  Navigator.pop(ctx);
-                  context.push('/dependiente/turno/resumen');
-                },
-              ),
-              Divider(height: 1, indent: 72, color: AppColors.line),
-              _TurnoOptionTile(
-                icon: Icons.print_rounded,
-                iconColor: AppColors.muted,
-                iconBgColor: AppColors.muted.withValues(alpha: 0.1),
-                title: 'Imprimir reporte',
-                subtitle: 'Próximamente',
-                enabled: false,
-                onTap: () {
-                  Navigator.pop(ctx);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Función próximamente')),
-                  );
-                },
-              ),
-              Divider(height: 1, indent: 72, color: AppColors.line),
-              _TurnoOptionTile(
-                icon: Icons.settings_rounded,
-                iconColor: AppColors.muted,
-                iconBgColor: AppColors.muted.withValues(alpha: 0.1),
-                title: 'Ajustes',
-                subtitle: 'Próximamente',
-                enabled: false,
-                onTap: () {
-                  Navigator.pop(ctx);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Función próximamente')),
-                  );
-                },
-              ),
-              const SizedBox(height: AppSpacing.md),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
   /// Muestra un bottom sheet con todas las ventas del turno
   /// Siguiendo UI/UX Pro Max §2 Touch & Interaction con lista scrollable
   void _showAllVentasSheet(BuildContext context, List<Venta> ventas) {
@@ -450,94 +466,6 @@ class _TurnoActivoView extends ConsumerWidget {
                 ),
               ],
             ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-// ═══════════════════════════════════════════════════════════════════════════
-// Turno Option Tile (UI/UX Pro Max)
-// ═══════════════════════════════════════════════════════════════════════════
-
-class _TurnoOptionTile extends StatelessWidget {
-  const _TurnoOptionTile({
-    required this.icon,
-    required this.iconColor,
-    required this.iconBgColor,
-    required this.title,
-    required this.subtitle,
-    required this.onTap,
-    this.enabled = true,
-  });
-
-  final IconData icon;
-  final Color iconColor;
-  final Color iconBgColor;
-  final String title;
-  final String subtitle;
-  final VoidCallback onTap;
-  final bool enabled;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: enabled ? onTap : null,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.xl,
-            vertical: AppSpacing.md,
-          ),
-          child: Row(
-            children: [
-              // Ícono con contenedor
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: iconBgColor,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(
-                  icon,
-                  color: enabled ? iconColor : AppColors.muted,
-                  size: 24,
-                ),
-              ),
-              const SizedBox(width: AppSpacing.md),
-              // Título y subtítulo
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                            fontWeight: FontWeight.w600,
-                            color: enabled ? null : AppColors.muted,
-                          ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      subtitle,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: AppColors.muted,
-                          ),
-                    ),
-                  ],
-                ),
-              ),
-              // Indicador de chevron
-              if (enabled)
-                Icon(
-                  Icons.chevron_right_rounded,
-                  color: AppColors.muted,
-                  size: 24,
-                ),
-            ],
           ),
         ),
       ),
