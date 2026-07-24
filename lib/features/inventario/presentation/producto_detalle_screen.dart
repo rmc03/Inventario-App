@@ -88,10 +88,14 @@ class ProductoDetalleScreen extends ConsumerWidget {
                   ),
                   child: ClipRRect(
                     borderRadius: const BorderRadius.all(Radius.circular(14)),
-                    child: ProductPhoto(
-                      url: producto.fotoUrl,
-                      size: double.infinity,
-                      iconSize: 72,
+                    child: SizedBox(
+                      width: double.infinity,
+                      height: 260,
+                      child: ProductPhoto(
+                        url: producto.fotoUrl,
+                        size: 260,
+                        iconSize: 72,
+                      ),
                     ),
                   ),
                 ),
@@ -211,7 +215,7 @@ class _FullScreenPhoto extends StatelessWidget {
             maxScale: 4.0,
             child: ProductPhoto(
               url: url,
-              size: double.infinity,
+              size: 400,
               iconSize: 72,
             ),
           ),
@@ -559,8 +563,8 @@ class _AjustarStockSheetState extends ConsumerState<_AjustarStockSheet> {
               ],
             ),
             backgroundColor: _ajuste > 0
-                ? context.colors.success
-                : context.colors.info,
+                ? context.colors.primary
+                : context.colors.danger,
             behavior: SnackBarBehavior.floating,
             duration: const Duration(seconds: 3),
           ),
@@ -691,8 +695,8 @@ class _AjustarStockSheetState extends ConsumerState<_AjustarStockSheet> {
                           style: Theme.of(context).textTheme.titleMedium?.copyWith(
                                 fontWeight: FontWeight.w700,
                                 color: estaAumentando
-                                    ? context.colors.success
-                                    : context.colors.info,
+                                    ? context.colors.primary
+                                    : context.colors.danger,
                               ),
                         ),
                       ],
@@ -719,7 +723,7 @@ class _AjustarStockSheetState extends ConsumerState<_AjustarStockSheet> {
                   child: _QuickAdjustButton(
                     label: '-10',
                     onTap: () => _setAjuste(_ajuste - 10),
-                    color: context.colors.info,
+                    color: context.colors.danger,
                     enabled: _nuevoStock - 10 >= 0,
                   ),
                 ),
@@ -728,7 +732,7 @@ class _AjustarStockSheetState extends ConsumerState<_AjustarStockSheet> {
                   child: _QuickAdjustButton(
                     label: '-5',
                     onTap: () => _setAjuste(_ajuste - 5),
-                    color: context.colors.info,
+                    color: context.colors.danger,
                     enabled: _nuevoStock - 5 >= 0,
                   ),
                 ),
@@ -737,7 +741,7 @@ class _AjustarStockSheetState extends ConsumerState<_AjustarStockSheet> {
                   child: _QuickAdjustButton(
                     label: '+5',
                     onTap: () => _setAjuste(_ajuste + 5),
-                    color: context.colors.success,
+                    color: context.colors.primary,
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -745,7 +749,7 @@ class _AjustarStockSheetState extends ConsumerState<_AjustarStockSheet> {
                   child: _QuickAdjustButton(
                     label: '+10',
                     onTap: () => _setAjuste(_ajuste + 10),
-                    color: context.colors.success,
+                    color: context.colors.primary,
                   ),
                 ),
               ],
@@ -765,8 +769,8 @@ class _AjustarStockSheetState extends ConsumerState<_AjustarStockSheet> {
                   color: sinCambios
                       ? context.colors.line
                       : (estaAumentando
-                          ? context.colors.success
-                          : context.colors.info),
+                          ? context.colors.primary
+                          : context.colors.danger),
                   width: 2,
                 ),
                 boxShadow: AppShadows.subtle,
@@ -778,7 +782,7 @@ class _AjustarStockSheetState extends ConsumerState<_AjustarStockSheet> {
                     icon: Icons.remove_rounded,
                     onPressed: _decrementar,
                     enabled: _nuevoStock > 0,
-                    color: context.colors.info,
+                    color: context.colors.danger,
                   ),
                   
                   // Display del ajuste
@@ -796,8 +800,8 @@ class _AjustarStockSheetState extends ConsumerState<_AjustarStockSheet> {
                                 color: sinCambios
                                     ? context.colors.muted
                                     : (estaAumentando
-                                        ? context.colors.success
-                                        : context.colors.info),
+                                        ? context.colors.primary
+                                        : context.colors.danger),
                                 letterSpacing: -1,
                               ),
                           textAlign: TextAlign.center,
@@ -816,7 +820,7 @@ class _AjustarStockSheetState extends ConsumerState<_AjustarStockSheet> {
                   _CounterButton(
                     icon: Icons.add_rounded,
                     onPressed: _incrementar,
-                    color: context.colors.success,
+                    color: context.colors.primary,
                   ),
                 ],
               ),
@@ -829,8 +833,8 @@ class _AjustarStockSheetState extends ConsumerState<_AjustarStockSheet> {
               style: FilledButton.styleFrom(
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 backgroundColor: estaAumentando
-                    ? context.colors.success
-                    : context.colors.info,
+                    ? context.colors.primary
+                    : context.colors.danger,
               ),
               child: _isLoading
                   ? const SizedBox(
