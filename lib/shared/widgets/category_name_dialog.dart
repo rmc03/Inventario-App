@@ -97,14 +97,14 @@ class _CategoryNameDialogState extends State<CategoryNameDialog> {
     return AlertDialog(
       // ═══ Icono contextual ═══
       icon: Container(
-        padding: const EdgeInsets.all(12),
+        padding: EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: AppColors.primary.withValues(alpha: 0.1),
+          color: context.colors.primary.withValues(alpha: 0.1),
           shape: BoxShape.circle,
         ),
         child: Icon(
           isEdit ? Icons.edit_rounded : Icons.add_rounded,
-          color: AppColors.primary,
+          color: context.colors.primary,
           size: 28,
         ),
       ),
@@ -128,8 +128,8 @@ class _CategoryNameDialogState extends State<CategoryNameDialog> {
               prefixIcon: Icon(
                 Icons.category_outlined,
                 color: _errorText != null
-                    ? AppColors.danger
-                    : (_isValid ? AppColors.success : AppColors.muted),
+                    ? context.colors.danger
+                    : (_isValid ? context.colors.success : context.colors.muted),
               ),
               errorText: _errorText,
               // Borde verde cuando es válido
@@ -140,8 +140,8 @@ class _CategoryNameDialogState extends State<CategoryNameDialog> {
                 borderRadius: BorderRadius.circular(12),
                 borderSide: BorderSide(
                   color: _isValid
-                      ? AppColors.success.withValues(alpha: 0.5)
-                      : AppColors.line,
+                      ? context.colors.success.withValues(alpha: 0.5)
+                      : context.colors.line,
                   width: _isValid ? 2 : 1,
                 ),
               ),
@@ -149,15 +149,15 @@ class _CategoryNameDialogState extends State<CategoryNameDialog> {
                 borderRadius: BorderRadius.circular(12),
                 borderSide: BorderSide(
                   color: _errorText != null
-                      ? AppColors.danger
-                      : AppColors.primary,
+                      ? context.colors.danger
+                      : context.colors.primary,
                   width: 2,
                 ),
               ),
               errorBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(
-                  color: AppColors.danger,
+                borderSide: BorderSide(
+                  color: context.colors.danger,
                   width: 2,
                 ),
               ),
@@ -169,11 +169,11 @@ class _CategoryNameDialogState extends State<CategoryNameDialog> {
           ),
           // ═══ Contador de caracteres ═══
           if (_controller.text.isNotEmpty) ...[
-            const SizedBox(height: AppSpacing.xs),
+            SizedBox(height: AppSpacing.xs),
             Text(
               '${_controller.text.trim().length} caracteres',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: AppColors.muted,
+                    color: context.colors.muted,
                   ),
             ),
           ],
@@ -197,9 +197,9 @@ class _CategoryNameDialogState extends State<CategoryNameDialog> {
           ),
           label: Text(isEdit ? 'Actualizar' : 'Crear'),
           style: FilledButton.styleFrom(
-            minimumSize: const Size(120, 44),
-            disabledBackgroundColor: AppColors.muted.withValues(alpha: 0.3),
-            disabledForegroundColor: AppColors.muted,
+            minimumSize: Size(120, 44),
+            disabledBackgroundColor: context.colors.muted.withValues(alpha: 0.3),
+            disabledForegroundColor: context.colors.muted,
           ),
         ),
       ],

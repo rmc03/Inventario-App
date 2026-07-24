@@ -13,7 +13,8 @@ class StockBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = isLow ? AppColors.danger : AppColors.success;
+    final colors = context.colors;
+    final color = isLow ? colors.danger : colors.success;
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs, vertical: AppSpacing.xs),

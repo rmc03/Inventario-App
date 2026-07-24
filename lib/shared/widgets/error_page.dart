@@ -15,34 +15,34 @@ class ErrorPage extends StatelessWidget {
       body: SafeArea(
         child: Center(
           child: Padding(
-            padding: const EdgeInsets.all(AppSpacing.xxl),
+            padding: EdgeInsets.all(AppSpacing.xxl),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 DecoratedBox(
                   decoration: BoxDecoration(
-                    color: AppColors.danger.withValues(alpha: AppAlphas.fill),
+                    color: context.colors.danger.withValues(alpha: AppAlphas.fill),
                     shape: BoxShape.circle,
                   ),
-                  child: const Padding(
+                  child: Padding(
                     padding: EdgeInsets.all(AppSpacing.xxl + AppSpacing.xs),
                     child: Icon(
                       Icons.error_outline_rounded,
                       size: 52,
-                      color: AppColors.danger,
+                      color: context.colors.danger,
                     ),
                   ),
                 ),
-                const SizedBox(height: AppSpacing.xl),
+                SizedBox(height: AppSpacing.xl),
                 Text(
                   'Página no encontrada',
                   style: Theme.of(context).textTheme.headlineMedium,
                 ),
-                const SizedBox(height: AppSpacing.sm),
+                SizedBox(height: AppSpacing.sm),
                 Text(
                   'La ruta "$uri" no existe.',
                   style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                        color: AppColors.muted,
+                        color: context.colors.muted,
                       ),
                   textAlign: TextAlign.center,
                 ),

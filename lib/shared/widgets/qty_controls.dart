@@ -43,6 +43,7 @@ class QtyBtn extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.colors;
     final enabled = onTap != null;
     return InkWell(
       onTap: onTap,
@@ -50,8 +51,8 @@ class QtyBtn extends StatelessWidget {
       child: DecoratedBox(
         decoration: BoxDecoration(
           color: enabled
-              ? AppColors.primary.withValues(alpha: AppAlphas.fill)
-              : AppColors.muted.withValues(alpha: AppAlphas.fill),
+              ? colors.primary.withValues(alpha: AppAlphas.fill)
+              : colors.muted.withValues(alpha: AppAlphas.fill),
           borderRadius: const BorderRadius.all(Radius.circular(AppRadii.sm)),
         ),
         child: SizedBox.square(
@@ -59,7 +60,7 @@ class QtyBtn extends StatelessWidget {
           child: Icon(
             icon,
             size: 18,
-            color: enabled ? AppColors.primary : AppColors.muted,
+            color: enabled ? colors.primary : colors.muted,
           ),
         ),
       ),

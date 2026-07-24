@@ -1,18 +1,21 @@
 import 'dart:async';
-import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_dimens.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../shared/models/movimiento.dart';
+import '../../../shared/widgets/movimiento_filter_sheet.dart';
+import '../../../shared/widgets/screen_popup_menu.dart';
+import '../../ventas/providers/venta_provider.dart';
 import '../data/movimiento_repository.dart';
 import '../providers/movimiento_provider.dart';
 
-/// Entrada agregada para la lista de movimientos. Cada item es o bien una
-/// cabecera de día, o bien una tarjeta de movimiento ya agregada por minuto.
+/// Item unificado para el feed único (sin pestañas).
 sealed class _MovimientoItem {
   const _MovimientoItem();
 }
@@ -28,96 +31,77 @@ class _MovimientoCardItem extends _MovimientoItem {
 }
 
 class _VentaCardItem extends _MovimientoItem {
-  const _VentaCardItem(this.ventaId, this.movimientos);
+  const _VentaCardItem(this.ventaId, this.movimientos, {this.matchedProduct});
   final String ventaId;
   final List<Movimiento> movimientos;
+  final String? matchedProduct;
 }
 
-class _ProductoAgrupado {
-  _ProductoAgrupado({
-    required this.productoId,
-    required this.productoNombre,
-    required this.totalEntradas,
-    required this.totalSalidas,
-    required this.movimientos,
-  });
-
-  final String productoId;
-  final String productoNombre;
-  final int totalEntradas;
-  final int totalSalidas;
-  final List<Movimiento> movimientos;
-
-  int get neto => totalEntradas - totalSalidas;
-  Movimiento get ultimoMovimiento => movimientos.first;
-}
-
-List<_MovimientoItem> _buildFlatItems(List<Movimiento> movimientos) {
+/// Construye la lista plana de items (headers de día + cards individuales/agrupadas).
+/// Incluye lógica de búsqueda profunda: si el query coincide con un producto dentro
+/// de una venta, la venta aparece con un indicador de "Coincide con: ...".
+List<_MovimientoItem> _buildFeedItems(
+  List<Movimiento> movimientos,
+  String searchQuery,
+) {
+  final q = searchQuery.trim().toLowerCase();
   final Map<DateTime, List<Movimiento>> grouped = {};
+  
   for (final m in movimientos) {
     final day = DateTime(m.fecha.year, m.fecha.month, m.fecha.day);
     grouped.putIfAbsent(day, () => []).add(m);
   }
-  final days = grouped.keys.toList()..sort((a, b) => b.compareTo(a));
+  
+  final days = grouped.keys.toList()..sort((a, b) => b.compareTo(a)); // Días: más reciente primero
 
   final List<_MovimientoItem> items = [];
+  
   for (final day in days) {
-    final dayList = grouped[day]!..sort((a, b) => b.fecha.compareTo(a.fecha));
-    items.add(_DayHeaderItem(day));
+    final dayList = grouped[day]!..sort((a, b) => b.fecha.compareTo(a.fecha)); // Dentro del día: más reciente primero (para reverse)
 
     final processedSales = <String>{};
+    
     for (final m in dayList) {
-      if (m.tipo == MovimientoTipo.salida &&
-          m.nota != null &&
-          m.nota!.startsWith('Venta POS')) {
-        final ventaId = m.nota!;
-        if (!processedSales.contains(ventaId)) {
-          processedSales.add(ventaId);
-          final saleItems = dayList.where((x) => x.nota == ventaId).toList();
-          items.add(_VentaCardItem(ventaId, saleItems));
+      // Agrupar ventas por ventaId (tanto salidas antiguas como nuevas ventas)
+      if ((m.tipo == MovimientoTipo.salida || m.tipo == MovimientoTipo.venta) && m.ventaId != null) {
+        if (!processedSales.contains(m.ventaId!)) {
+          processedSales.add(m.ventaId!);
+          final saleItems = dayList
+              .where((x) => x.ventaId == m.ventaId)
+              .toList();
+          
+          // Búsqueda profunda: verificar si algún producto de la venta coincide
+          String? matchedProduct;
+          if (q.isNotEmpty) {
+            for (final item in saleItems) {
+              if (item.productoNombre.toLowerCase().contains(q)) {
+                matchedProduct = item.productoNombre;
+                break;
+              }
+            }
+            // También buscar en productosVendidos si existe
+            if (matchedProduct == null && m.productosVendidos != null) {
+              for (final producto in m.productosVendidos!) {
+                if (producto.toLowerCase().contains(q)) {
+                  matchedProduct = producto;
+                  break;
+                }
+              }
+            }
+          }
+          
+          items.add(_VentaCardItem(m.ventaId!, saleItems, matchedProduct: matchedProduct));
         }
-      } else {
+      } else if (m.tipo != MovimientoTipo.salida && m.tipo != MovimientoTipo.venta) {
+        // Movimientos individuales (Entradas, Altas, Inicio Turno, Producto Eliminado)
         items.add(_MovimientoCardItem(m));
       }
     }
-  }
-  return items;
-}
 
-List<_ProductoAgrupado> _agruparPorProducto(List<Movimiento> movimientos) {
-  final map = <String, _ProductoAgrupado>{};
-  for (final m in movimientos) {
-    final entradas = m.tipo == MovimientoTipo.entrada ? m.cantidad.abs() : 0;
-    final salidas = m.tipo == MovimientoTipo.salida ? m.cantidad.abs() : 0;
-    final existing = map[m.productoId];
-    if (existing != null) {
-      map[m.productoId] = _ProductoAgrupado(
-        productoId: m.productoId,
-        productoNombre: m.productoNombre,
-        totalEntradas: existing.totalEntradas + entradas,
-        totalSalidas: existing.totalSalidas + salidas,
-        movimientos: [...existing.movimientos, m],
-      );
-    } else {
-      map[m.productoId] = _ProductoAgrupado(
-        productoId: m.productoId,
-        productoNombre: m.productoNombre,
-        totalEntradas: entradas,
-        totalSalidas: salidas,
-        movimientos: [m],
-      );
-    }
+    items.add(_DayHeaderItem(day));
   }
-  final result = map.values.toList();
-  for (final p in result) {
-    p.movimientos.sort((a, b) => b.fecha.compareTo(a.fecha));
-  }
-  // Ordenar por fecha del último movimiento (desc) para que el agrupamiento
-  // visual por día quede contiguo.
-  result.sort(
-    (a, b) => b.ultimoMovimiento.fecha.compareTo(a.ultimoMovimiento.fecha),
-  );
-  return result;
+  
+  return items;
 }
 
 class MovimientosScreen extends ConsumerStatefulWidget {
@@ -128,8 +112,6 @@ class MovimientosScreen extends ConsumerStatefulWidget {
 }
 
 class _MovimientosScreenState extends ConsumerState<MovimientosScreen> {
-  bool _mostrarProductos = true;
-
   late final TextEditingController _searchController;
   Timer? _debounce;
 
@@ -163,25 +145,70 @@ class _MovimientosScreenState extends ConsumerState<MovimientosScreen> {
   }
 
   void _showFilterSheet(BuildContext context) {
+    final filtro = ref.read(movimientosFilterProvider);
+    
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       showDragHandle: false,
-      builder: (context) => _FilterSheetContent(onLimpiar: _limpiarFiltros),
+      backgroundColor: Colors.transparent,
+      builder: (context) => MovimientoFilterSheet(
+        initialTipo: filtro.tipo,
+        initialRango: filtro.rango,
+        initialFechaInicio: filtro.fechaInicioCustom,
+        initialFechaFin: filtro.fechaFinCustom,
+        onApply: ({
+          required tipo,
+          required rango,
+          fechaInicio,
+          fechaFin,
+        }) {
+          // Aplicar filtro de tipo
+          ref.read(movimientosFilterProvider.notifier).setTipo(tipo);
+          
+          // Aplicar filtro de rango de fecha
+          if (rango == RangoFechaFiltro.personalizado) {
+            // Solo aplicar si las fechas son válidas
+            if (fechaInicio != null && fechaFin != null) {
+              ref.read(movimientosFilterProvider.notifier).setRangoPersonalizado(
+                    fechaInicio,
+                    fechaFin,
+                  );
+            }
+          } else {
+            ref.read(movimientosFilterProvider.notifier).setRango(rango);
+          }
+        },
+      ),
     );
   }
 
   String _rangoLabel(MovimientosFilterState f) {
-    final inicio = compactDateFormatter.format(f.fechaInicio);
-    final fin = compactDateFormatter.format(
-      f.fechaFin.subtract(const Duration(days: 1)),
-    );
-    return switch (f.rango) {
-      RangoFechaFiltro.hoy => 'Hoy',
-      RangoFechaFiltro.semana => 'Esta semana ($inicio–$fin)',
-      RangoFechaFiltro.mes => 'Últimos 30 días ($inicio–$fin)',
-      RangoFechaFiltro.personalizado => 'Del $inicio al $fin',
-    };
+    final months = [
+      'Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun',
+      'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'
+    ];
+    
+    String formatCompact(DateTime date) {
+      return '${date.day} ${months[date.month - 1]}';
+    }
+    
+    switch (f.rango) {
+      case RangoFechaFiltro.hoy:
+        return 'Hoy';
+      case RangoFechaFiltro.semana:
+        final inicio = formatCompact(f.fechaInicio);
+        final fin = formatCompact(f.fechaFin.subtract(const Duration(days: 1)));
+        return 'Esta semana ($inicio - $fin)';
+      case RangoFechaFiltro.mes:
+        final inicio = formatCompact(f.fechaInicio);
+        final fin = formatCompact(f.fechaFin.subtract(const Duration(days: 1)));
+        return 'Últimos 30 días ($inicio - $fin)';
+      case RangoFechaFiltro.personalizado:
+        final inicio = formatCompact(f.fechaInicio);
+        final fin = formatCompact(f.fechaFin.subtract(const Duration(days: 1)));
+        return 'Del $inicio al $fin';
+    }
   }
 
   String _dateHeader(DateTime day) {
@@ -193,66 +220,45 @@ class _MovimientosScreenState extends ConsumerState<MovimientosScreen> {
     return compactDateFormatter.format(day);
   }
 
-  Widget _dayHeaderWidget(BuildContext context, DateTime day) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
-      child: Column(
-        children: [
-          const SizedBox(height: AppSpacing.sm),
-          Center(
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              margin: const EdgeInsets.symmetric(vertical: 8),
-              decoration: BoxDecoration(
-                color: AppColors.muted.withValues(alpha: 0.06),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Text(
-                _dateHeader(day),
-                style: Theme.of(context).textTheme.labelLarge,
-              ),
-            ),
-          ),
-          const SizedBox(height: AppSpacing.sm),
-        ],
-      ),
-    );
-  }
-
-  Widget _emptyState(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.xl),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.inbox_outlined, size: 48, color: AppColors.muted),
-            const SizedBox(height: AppSpacing.sm),
-            Text(
-              'No hay movimientos en este rango',
-              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                    color: AppColors.muted,
-                  ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final filtro = ref.watch(movimientosFilterProvider);
     final source = ref.watch(movimientosFiltradosProvider);
+    final items = _buildFeedItems(source, filtro.query);
 
-    final productosItems = _agruparPorProducto(source);
-    final ventasItems = _buildFlatItems(source);
-
-    final hayChipsFiltro = filtro.tipo != TipoMovimientoFiltro.todos ||
-        filtro.rango != RangoFechaFiltro.hoy;
+    final hayFiltrosActivos = filtro.tipo != TipoMovimientoFiltro.todos;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Movimientos')),
+      appBar: AppBar(
+        title: const Text('Movimientos'),
+        actions: [
+          ScreenPopupMenu(
+            items: [
+              ScreenMenuItem(
+                value: 'ajustes',
+                icon: Icons.settings_rounded,
+                iconColor: context.colors.muted,
+                title: 'Ajustes',
+                subtitle: 'Preferencias de la app',
+              ),
+              ScreenMenuItem(
+                value: 'exportar',
+                icon: Icons.file_download_outlined,
+                iconColor: context.colors.success,
+                title: 'Exportar movimientos',
+                subtitle: 'Exportar a archivo',
+                enabled: false,
+              ),
+            ],
+            onSelected: (value) {
+              if (value == 'ajustes') {
+                context.push('/admin/configuracion');
+              }
+            },
+          ),
+          const SizedBox(width: 4),
+        ],
+      ),
       body: SafeArea(
         top: false,
         child: Center(
@@ -260,47 +266,11 @@ class _MovimientosScreenState extends ConsumerState<MovimientosScreen> {
             constraints: const BoxConstraints(maxWidth: 800),
             child: Column(
               children: [
-                // ── Toggle de vista ──
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(
-                    AppSpacing.xl,
-                    AppSpacing.sm,
-                    AppSpacing.xl,
-                    0,
-                  ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: _ToggleOption(
-                          label: 'Productos',
-                          icon: Icons.inventory_2_rounded,
-                          selected: _mostrarProductos,
-                          onTap: () => setState(() => _mostrarProductos = true),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: _ToggleOption(
-                          label: 'Por ventas',
-                          icon: Icons.receipt_long_rounded,
-                          selected: !_mostrarProductos,
-                          onTap: () =>
-                              setState(() => _mostrarProductos = false),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
                 const SizedBox(height: AppSpacing.sm),
-
-                // ── Búsqueda (debounce 350ms) ──
+                
+                // ── Barra de búsqueda + botón filtrar ──
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(
-                    AppSpacing.xl,
-                    0,
-                    AppSpacing.xl,
-                    0,
-                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
                   child: Row(
                     children: [
                       Expanded(
@@ -310,18 +280,28 @@ class _MovimientosScreenState extends ConsumerState<MovimientosScreen> {
                           decoration: InputDecoration(
                             hintText: 'Buscar producto o dependiente...',
                             prefixIcon: const Icon(Icons.search_rounded),
+                            suffixIcon: filtro.query.isNotEmpty
+                                ? IconButton(
+                                    icon: const Icon(Icons.clear_rounded),
+                                    onPressed: () {
+                                      _searchController.clear();
+                                      ref.read(movimientosFilterProvider.notifier)
+                                          .setQuery('');
+                                    },
+                                  )
+                                : null,
                             border: OutlineInputBorder(
                               borderRadius: AppRadii.pillBorder,
-                              borderSide: BorderSide(color: AppColors.line),
+                              borderSide: BorderSide(color: context.colors.line),
                             ),
                             enabledBorder: OutlineInputBorder(
                               borderRadius: AppRadii.pillBorder,
-                              borderSide: BorderSide(color: AppColors.line),
+                              borderSide: BorderSide(color: context.colors.line),
                             ),
                             focusedBorder: OutlineInputBorder(
                               borderRadius: AppRadii.pillBorder,
                               borderSide: BorderSide(
-                                color: AppColors.primary,
+                                color: context.colors.primary,
                                 width: 1.5,
                               ),
                             ),
@@ -331,59 +311,142 @@ class _MovimientosScreenState extends ConsumerState<MovimientosScreen> {
                       const SizedBox(width: AppSpacing.sm),
                       IconButton.filledTonal(
                         onPressed: () => _showFilterSheet(context),
-                        icon: const Icon(Icons.tune_rounded),
+                        icon: Badge(
+                          isLabelVisible: hayFiltrosActivos,
+                          child: const Icon(Icons.tune_rounded),
+                        ),
                         tooltip: 'Filtrar',
                       ),
                     ],
                   ),
                 ),
-                const SizedBox(height: AppSpacing.sm),
-
-                // ── Chips de filtros activos ──
-                if (hayChipsFiltro)
+                
+                // ── Chip del rango activo (solo mostrar si NO es "Hoy") ──
+                if (filtro.rango != RangoFechaFiltro.hoy)
                   Padding(
                     padding: const EdgeInsets.fromLTRB(
                       AppSpacing.xl,
-                      0,
+                      AppSpacing.sm,
+                      AppSpacing.xl,
+                      AppSpacing.sm,
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.calendar_today_rounded,
+                          size: 16,
+                          color: context.colors.muted,
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          'Mostrando: ${_rangoLabel(filtro)}',
+                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                color: context.colors.muted,
+                              ),
+                        ),
+                      ],
+                    ),
+                  ),
+                
+                // ── Chips de filtros activos (tipo) ──
+                if (filtro.tipo != TipoMovimientoFiltro.todos)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(
+                      AppSpacing.xl,
+                      AppSpacing.xs,
                       AppSpacing.xl,
                       0,
                     ),
-                    child: SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: Row(
-                        children: [
-                          if (filtro.tipo != TipoMovimientoFiltro.todos)
-                            InputChip(
-                              label: Text(
-                                filtro.tipo == TipoMovimientoFiltro.entradas
-                                    ? 'Entradas'
-                                    : 'Salidas',
-                              ),
-                              onDeleted: () => ref
-                                  .read(movimientosFilterProvider.notifier)
-                                  .setTipo(TipoMovimientoFiltro.todos),
-                            ),
-                          if (filtro.tipo != TipoMovimientoFiltro.todos &&
-                              filtro.rango != RangoFechaFiltro.hoy)
-                            const SizedBox(width: AppSpacing.sm),
-                          if (filtro.rango != RangoFechaFiltro.hoy)
-                            InputChip(
-                              label: Text(_rangoLabel(filtro)),
-                              onDeleted: () => ref
-                                  .read(movimientosFilterProvider.notifier)
-                                  .setRango(RangoFechaFiltro.hoy),
-                            ),
-                        ],
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: InputChip(
+                        avatar: Icon(
+                          switch (filtro.tipo) {
+                            TipoMovimientoFiltro.entradas => Icons.arrow_forward_rounded,
+                            TipoMovimientoFiltro.salidas => Icons.arrow_back_rounded,
+                            TipoMovimientoFiltro.ventas => Icons.shopping_cart_rounded,
+                            TipoMovimientoFiltro.inicioTurno => Icons.login_rounded,
+                            TipoMovimientoFiltro.eliminados => Icons.delete_outline_rounded,
+                            _ => Icons.filter_list_rounded,
+                          },
+                          size: 18,
+                        ),
+                        label: Text(
+                          switch (filtro.tipo) {
+                            TipoMovimientoFiltro.entradas => 'Solo Entradas',
+                            TipoMovimientoFiltro.salidas => 'Solo Disminuciones',
+                            TipoMovimientoFiltro.ventas => 'Solo Ventas',
+                            TipoMovimientoFiltro.inicioTurno => 'Solo Inicios de Turno',
+                            TipoMovimientoFiltro.eliminados => 'Solo Eliminados',
+                            _ => 'Filtrado',
+                          },
+                        ),
+                        onDeleted: () => ref
+                            .read(movimientosFilterProvider.notifier)
+                            .setTipo(TipoMovimientoFiltro.todos),
                       ),
                     ),
                   ),
+                
                 const SizedBox(height: AppSpacing.md),
 
-                // ── Contenido ──
+                // ── Feed único ──
                 Expanded(
-                  child: _mostrarProductos
-                      ? _buildProductosView(context, productosItems)
-                      : _buildVentasView(context, ventasItems),
+                  child: items.isEmpty
+                      ? _EmptyState(onLimpiar: _limpiarFiltros)
+                      : ListView.builder(
+                          padding: const EdgeInsets.only(
+                            top: AppSpacing.xl,
+                            bottom: AppSpacing.xl,
+                          ),
+                          reverse: true, // Estilo WhatsApp: mensajes recientes abajo
+                          itemCount: items.length,
+                          itemBuilder: (context, index) {
+                            final item = items[index]; // Mantener orden original (más reciente al final)
+                            return switch (item) {
+                              _DayHeaderItem(:final day) => _DayHeader(
+                                  day: day,
+                                  label: _dateHeader(day),
+                                ),
+                              _MovimientoCardItem(:final movimiento) =>
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: AppSpacing.xl,
+                                  ),
+                                  child: Column(
+                                    children: [
+                                      _MovimientoCard(
+                                        key: ValueKey(movimiento.id),
+                                        movimiento: movimiento,
+                                      ),
+                                      const SizedBox(height: AppSpacing.sm),
+                                    ],
+                                  ),
+                                ),
+                              _VentaCardItem(
+                                :final ventaId,
+                                :final movimientos,
+                                :final matchedProduct,
+                              ) =>
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: AppSpacing.xl,
+                                  ),
+                                  child: Column(
+                                    children: [
+                                      _VentaCard(
+                                        key: ValueKey(ventaId),
+                                        ventaId: ventaId,
+                                        movimientos: movimientos,
+                                        matchedProduct: matchedProduct,
+                                      ),
+                                      const SizedBox(height: AppSpacing.sm),
+                                    ],
+                                  ),
+                                ),
+                            };
+                          },
+                        ),
                 ),
               ],
             ),
@@ -392,135 +455,138 @@ class _MovimientosScreenState extends ConsumerState<MovimientosScreen> {
       ),
     );
   }
+}
 
-  Widget _buildVentasView(
-    BuildContext context,
-    List<_MovimientoItem> items,
-  ) {
-    if (items.isEmpty) return _emptyState(context);
-    return ListView.builder(
-      padding: const EdgeInsets.only(bottom: AppSpacing.xl),
-      itemCount: items.length,
-      itemBuilder: (context, index) {
-        final item = items[index];
-        return switch (item) {
-          _DayHeaderItem(:final day) => _dayHeaderWidget(context, day),
-          _MovimientoCardItem(:final movimiento) => Padding(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
-              child: Column(
-                children: [
-                  _MovimientoCard(
-                    key: ValueKey(movimiento.id),
-                    movimiento: movimiento,
-                  ),
-                  const Divider(),
-                ],
-              ),
+// ═══════════════════════════════════════════════════════════════════════════
+// Subwidgets
+// ═══════════════════════════════════════════════════════════════════════════
+
+class _DayHeader extends StatelessWidget {
+  const _DayHeader({required this.day, required this.label});
+  
+  final DateTime day;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(
+        vertical: AppSpacing.lg,
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Divider(
+              color: context.colors.line.withValues(alpha: 0.4),
+              thickness: 1,
+              endIndent: 12,
             ),
-          _VentaCardItem(:final ventaId, :final movimientos) => Padding(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
-              child: Column(
-                children: [
-                  _VentaCard(
-                    key: ValueKey(ventaId),
-                    ventaId: ventaId,
-                    movimientos: movimientos,
-                  ),
-                  const Divider(),
-                ],
-              ),
-            ),
-        };
-      },
-    );
-  }
-
-  Widget _buildProductosView(
-    BuildContext context,
-    List<_ProductoAgrupado> productos,
-  ) {
-    if (productos.isEmpty) return _emptyState(context);
-
-    DateTime? currentDay;
-    final children = <Widget>[];
-    for (final p in productos) {
-      final m = p.ultimoMovimiento;
-      final day = DateTime(m.fecha.year, m.fecha.month, m.fecha.day);
-      if (currentDay == null ||
-          day.year != currentDay.year ||
-          day.month != currentDay.month ||
-          day.day != currentDay.day) {
-        children.add(_dayHeaderWidget(context, day));
-        currentDay = day;
-      }
-      children.add(
-        Padding(
-          padding: const EdgeInsets.only(
-            left: AppSpacing.xl,
-            right: AppSpacing.xl,
-            bottom: 10,
           ),
-          child: _ProductoMovimientoCard(producto: p),
-        ),
-      );
-    }
-    return ListView(
-      padding: const EdgeInsets.only(bottom: AppSpacing.xl),
-      children: children,
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  context.colors.primary.withValues(alpha: 0.08),
+                  context.colors.primary.withValues(alpha: 0.02),
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: context.colors.primary.withValues(alpha: 0.15),
+                width: 1,
+              ),
+            ),
+            child: Text(
+              label,
+              style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: context.colors.primary,
+                    letterSpacing: 0.3,
+                  ),
+            ),
+          ),
+          Expanded(
+            child: Divider(
+              color: context.colors.line.withValues(alpha: 0.4),
+              thickness: 1,
+              indent: 12,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
 
-// ─── Subwidgets ───────────────────────────────────────────────────────────────
-
-class _ToggleOption extends StatelessWidget {
-  const _ToggleOption({
-    required this.label,
-    required this.icon,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final String label;
-  final IconData icon;
-  final bool selected;
-  final VoidCallback onTap;
+class _EmptyState extends StatelessWidget {
+  const _EmptyState({required this.onLimpiar});
+  
+  final VoidCallback onLimpiar;
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(vertical: 10),
-        decoration: BoxDecoration(
-          color: selected
-              ? AppColors.primary.withValues(alpha: 0.08)
-              : AppColors.surfaceSecondary,
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(
-            color: selected ? AppColors.primary : AppColors.line,
-            width: selected ? 1.5 : 1,
-          ),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.xl),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              icon,
-              size: 18,
-              color: selected ? AppColors.primary : AppColors.muted,
+            // Ícono con diseño mejorado
+            Container(
+              padding: const EdgeInsets.all(28),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    context.colors.primary.withValues(alpha: 0.08),
+                    context.colors.primary.withValues(alpha: 0.02),
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: context.colors.primary.withValues(alpha: 0.12),
+                  width: 2,
+                ),
+              ),
+              child: Icon(
+                Icons.inventory_2_outlined,
+                size: 80,
+                color: context.colors.primary.withValues(alpha: 0.4),
+              ),
             ),
-            const SizedBox(width: 6),
+            const SizedBox(height: AppSpacing.xl),
             Text(
-              label,
-              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                    color: selected ? AppColors.primary : AppColors.ink,
-                    fontWeight:
-                        selected ? FontWeight.w700 : FontWeight.w500,
+              'No hay movimientos',
+              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                    color: context.colors.ink,
+                    fontWeight: FontWeight.w700,
                   ),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            Text(
+              'Los movimientos de inventario\naparecerán aquí',
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                    color: context.colors.muted,
+                    height: 1.5,
+                  ),
+            ),
+            const SizedBox(height: AppSpacing.xl),
+            FilledButton.icon(
+              onPressed: onLimpiar,
+              icon: const Icon(Icons.filter_list_off_rounded),
+              label: const Text('Limpiar filtros'),
+              style: FilledButton.styleFrom(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 16,
+                ),
+                elevation: 0,
+              ),
             ),
           ],
         ),
@@ -529,8 +595,7 @@ class _ToggleOption extends StatelessWidget {
   }
 }
 
-// ─── Filter text button ────────────────────────────────────────────────────
-
+/// Card individual para movimientos de Entrada, Alta, Inicio de Turno y Producto Eliminado.
 class _MovimientoCard extends StatelessWidget {
   const _MovimientoCard({super.key, required this.movimiento});
 
@@ -538,86 +603,403 @@ class _MovimientoCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isEntrada = movimiento.tipo == MovimientoTipo.entrada;
-    final notaLower = movimiento.nota?.toLowerCase() ?? '';
-    final isPendingSale = !isEntrada &&
-        (notaLower.contains('turno') ||
-            notaLower.contains('pendiente') ||
-            notaLower.contains('ajust') ||
-            notaLower.contains('reducc') ||
-            movimiento.cantidad < 0);
-    final color = isEntrada
-        ? AppColors.success
-        : (isPendingSale ? AppColors.warning : AppColors.danger);
+    return switch (movimiento.tipo) {
+      MovimientoTipo.entrada => _buildEntradaCard(context),
+      MovimientoTipo.salida => const SizedBox.shrink(), // Las salidas individuales ya no se usan (solo ventas con ventaId)
+      MovimientoTipo.inicioTurno => _buildInicioTurnoCard(context),
+      MovimientoTipo.productoEliminado => _buildProductoEliminadoCard(context),
+      MovimientoTipo.venta => const SizedBox.shrink(), // Las ventas se manejan en _VentaCard
+    };
+  }
 
-    return Card(
+  /// 🔵 Entrada de producto (flecha azul →) | 🟠 Ajuste manual negativo
+  Widget _buildEntradaCard(BuildContext context) {
+    // Determinar si es un ajuste manual de disminución (entrada negativa)
+    final esAjusteNegativo = movimiento.cantidad < 0;
+    final esAlta = !esAjusteNegativo && 
+        (movimiento.nota?.toLowerCase().contains('alta') ?? false);
+    
+    // 🔵 Azul = Entrada positiva | 🟠 Naranja = Ajuste negativo | ⚪ Gris = Alta
+    final Color color;
+    final IconData icon;
+    final String label;
+    
+    if (esAjusteNegativo) {
+      color = context.colors.warning;
+      icon = Icons.trending_down_rounded;
+      label = 'Ajuste manual';
+    } else if (esAlta) {
+      color = context.colors.muted;
+      icon = Icons.add_circle_outline_rounded;
+      label = 'Alta de producto';
+    } else {
+      color = context.colors.info;
+      icon = Icons.trending_up_rounded;
+      label = 'Entrada de producto';
+    }
+
+    return Container(
+      decoration: BoxDecoration(
+        color: context.colors.surface,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: context.colors.ink.withValues(alpha: 0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
       child: Padding(
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.all(12),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            DecoratedBox(
+            // Ícono
+            Container(
               decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.10),
-                borderRadius: BorderRadius.circular(8),
+                color: color.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(10),
               ),
-              child: Padding(
-                padding: const EdgeInsets.all(10),
-                child: Icon(
-                  isEntrada
-                      ? Icons.arrow_downward_rounded
-                      : Icons.arrow_upward_rounded,
-                  color: color,
-                ),
-              ),
+              padding: const EdgeInsets.all(10),
+              child: Icon(icon, color: color, size: 22),
             ),
             const SizedBox(width: 12),
+            
+            // Contenido
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     movimiento.productoNombre,
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    (() {
-                      final qty = movimiento.cantidad.abs();
-                      final baseLabel = isEntrada
-                          ? movimiento.tipo.label
-                          : (isPendingSale
-                              ? 'Venta (Pendiente)'
-                              : movimiento.tipo.label);
-                      final suffix =
-                          movimiento.cantidad < 0 ? ' (reducción)' : '';
-                      return '$baseLabel \u00b7 $qty unidades$suffix';
-                    })(),
-                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                          color: color,
-                          fontWeight: FontWeight.w800,
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w600,
                         ),
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    movimiento.tipo == MovimientoTipo.entrada
-                        ? '${compactDateFormatter.format(movimiento.fecha)} ${timeFormatter.format(movimiento.fecha)}'
-                        : '${movimiento.usuarioNombre} \u00b7 ${compactDateFormatter.format(movimiento.fecha)} ${timeFormatter.format(movimiento.fecha)}',
-                    style: Theme.of(context).textTheme.bodyMedium,
+                  const SizedBox(height: 2),
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.access_time_rounded,
+                        size: 13,
+                        color: context.colors.muted,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        timeFormatter.format(movimiento.fecha),
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: context.colors.muted,
+                            ),
+                      ),
+                      const SizedBox(width: 8),
+                      Container(
+                        width: 3,
+                        height: 3,
+                        decoration: BoxDecoration(
+                          color: context.colors.muted.withValues(alpha: 0.4),
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        label,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: context.colors.muted,
+                            ),
+                      ),
+                    ],
                   ),
-                  if (movimiento.nota != null) ...[
-                    const SizedBox(height: 6),
-                    Text(movimiento.nota!),
+                  const SizedBox(height: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: color.withValues(alpha: 0.10),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      '${esAjusteNegativo ? '' : '+'}${movimiento.cantidad} ${movimiento.cantidad.abs() == 1 ? 'unidad' : 'unidades'}',
+                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                            color: color,
+                            fontWeight: FontWeight.w700,
+                          ),
+                    ),
+                  ),
+                  if (movimiento.nota != null && !esAlta) ...[
+                    const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: context.colors.muted.withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.note_outlined,
+                            size: 14,
+                            color: context.colors.muted,
+                          ),
+                          const SizedBox(width: 6),
+                          Flexible(
+                            child: Text(
+                              movimiento.nota!,
+                              style: Theme.of(context).textTheme.bodySmall,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ],
                 ],
               ),
             ),
-            if (!isEntrada && movimiento.usuarioFotoUrl != null) ...[
-              const SizedBox(width: 12),
-              RepaintBoundary(
-                child: _UsuarioAvatar(url: movimiento.usuarioFotoUrl!),
+          ],
+        ),
+      ),
+    );
+  }
+
+
+  /// 🟢 Inicio de turno (verde)
+  Widget _buildInicioTurnoCard(BuildContext context) {
+    final color = context.colors.success;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: context.colors.surface,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: context.colors.ink.withValues(alpha: 0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Ícono
+            Container(
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(10),
               ),
-            ],
+              padding: const EdgeInsets.all(10),
+              child: Icon(Icons.login_rounded, color: color, size: 22),
+            ),
+            const SizedBox(width: 12),
+            
+            // Contenido
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Inicio de turno',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                  ),
+                  const SizedBox(height: 2),
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.access_time_rounded,
+                        size: 13,
+                        color: context.colors.muted,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        timeFormatter.format(movimiento.fecha),
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: context.colors.muted,
+                            ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: color.withValues(alpha: 0.10),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.person_rounded,
+                          size: 16,
+                          color: color,
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          movimiento.usuarioNombre,
+                          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                                color: color,
+                                fontWeight: FontWeight.w700,
+                              ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// 🔴 Producto eliminado (rojo con basura)
+  Widget _buildProductoEliminadoCard(BuildContext context) {
+    final color = context.colors.danger;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: context.colors.surface,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: context.colors.ink.withValues(alpha: 0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Ícono
+            Container(
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              padding: const EdgeInsets.all(10),
+              child: Icon(Icons.delete_outline_rounded, color: color, size: 22),
+            ),
+            const SizedBox(width: 12),
+            
+            // Contenido
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    movimiento.productoNombre,
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w600,
+                          color: color,
+                        ),
+                  ),
+                  const SizedBox(height: 2),
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.access_time_rounded,
+                        size: 13,
+                        color: context.colors.muted,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        timeFormatter.format(movimiento.fecha),
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: context.colors.muted,
+                            ),
+                      ),
+                      const SizedBox(width: 8),
+                      Container(
+                        width: 3,
+                        height: 3,
+                        decoration: BoxDecoration(
+                          color: context.colors.muted.withValues(alpha: 0.4),
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Producto eliminado',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: context.colors.muted,
+                            ),
+                      ),
+                    ],
+                  ),
+                  if (movimiento.cantidad > 0) ...[
+                    const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: color.withValues(alpha: 0.10),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.inventory_2_outlined,
+                            size: 16,
+                            color: color,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            'Stock: ${movimiento.cantidad} ${movimiento.cantidad == 1 ? 'unidad' : 'unidades'}',
+                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                  color: color,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                  if (movimiento.nota != null) ...[
+                    const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: color.withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.info_outline_rounded,
+                            size: 14,
+                            color: color,
+                          ),
+                          const SizedBox(width: 6),
+                          Flexible(
+                            child: Text(
+                              'Motivo: ${movimiento.nota!}',
+                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: color,
+                                  ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
           ],
         ),
       ),
@@ -625,473 +1007,470 @@ class _MovimientoCard extends StatelessWidget {
   }
 }
 
-class _UsuarioAvatar extends StatelessWidget {
-  const _UsuarioAvatar({required this.url});
-  final String url;
-
-  @override
-  Widget build(BuildContext context) {
-    const cacheSize = 160;
-    final image = url.startsWith('http')
-        ? ResizeImage(NetworkImage(url), width: cacheSize, height: cacheSize)
-        : ResizeImage(FileImage(File(url)), width: cacheSize, height: cacheSize)
-            as ImageProvider;
-    return CircleAvatar(radius: 20, backgroundImage: image);
-  }
-}
-
-class _VentaCard extends StatelessWidget {
+/// Card agrupada para Ventas con detalles expandibles.
+/// Muestra un resumen y al tocar la flecha se expanden los productos vendidos.
+class _VentaCard extends ConsumerStatefulWidget {
   const _VentaCard({
     super.key,
     required this.ventaId,
     required this.movimientos,
+    this.matchedProduct,
   });
 
   final String ventaId;
   final List<Movimiento> movimientos;
+  final String? matchedProduct;
 
   @override
-  Widget build(BuildContext context) {
-    if (movimientos.isEmpty) return const SizedBox.shrink();
+  ConsumerState<_VentaCard> createState() => _VentaCardState();
+}
 
-    final first = movimientos.first;
-    final totalUnits = movimientos.fold(0, (sum, m) => sum + m.cantidad.abs());
+class _VentaCardState extends ConsumerState<_VentaCard> with SingleTickerProviderStateMixin {
+  bool _expandido = false;
+  late AnimationController _animationController;
+  late Animation<double> _rotationAnimation;
+  late Animation<double> _expansionAnimation;
 
-    return Card(
-      child: Theme(
-        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
-        child: ExpansionTile(
-          tilePadding: const EdgeInsets.fromLTRB(14, 4, 14, 4),
-          childrenPadding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
-          leading: DecoratedBox(
-            decoration: BoxDecoration(
-              color: AppColors.primary.withValues(alpha: 0.10),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: const Padding(
-              padding: EdgeInsets.all(10),
-              child: Icon(
-                Icons.shopping_cart_rounded,
-                color: AppColors.primary,
-              ),
-            ),
-          ),
-          title: Text(
-            'Venta (POS)',
-            style: Theme.of(context).textTheme.titleMedium,
-          ),
-          subtitle: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SizedBox(height: 4),
-              Text(
-                '$totalUnits ${pluralize('unidad', 'unidades', totalUnits)}',
-                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      color: AppColors.primary,
-                      fontWeight: FontWeight.w800,
-                    ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                '${first.usuarioNombre} \u00b7 ${compactDateFormatter.format(first.fecha)} ${timeFormatter.format(first.fecha)}',
-                style: Theme.of(context).textTheme.bodyMedium,
-              ),
-            ],
-          ),
-          children: [
-            const Divider(height: 1),
-            const SizedBox(height: 12),
-            for (final m in movimientos)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 8),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        '${m.cantidad.abs()}x ${m.productoNombre}',
-                        style: Theme.of(context).textTheme.bodyMedium,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-          ],
-        ),
-      ),
+  @override
+  void initState() {
+    super.initState();
+    _animationController = AnimationController(
+      duration: const Duration(milliseconds: 300),
+      vsync: this,
+    );
+    
+    _rotationAnimation = Tween<double>(
+      begin: 0.0,
+      end: 0.5, // 180 grados (0.5 * π)
+    ).animate(CurvedAnimation(
+      parent: _animationController,
+      curve: Curves.easeInOutCubic,
+    ));
+    
+    _expansionAnimation = CurvedAnimation(
+      parent: _animationController,
+      curve: Curves.easeInOutCubic,
     );
   }
-}
-
-class _ProductoMovimientoCard extends StatelessWidget {
-  const _ProductoMovimientoCard({required this.producto});
-
-  final _ProductoAgrupado producto;
-
-  Color _netoColor(BuildContext context) {
-    if (producto.neto > 0) return AppColors.success;
-    if (producto.neto < 0) return AppColors.danger;
-    return AppColors.muted;
-  }
-
-  IconData _netoIcon() {
-    if (producto.neto > 0) return Icons.trending_up_rounded;
-    if (producto.neto < 0) return Icons.trending_down_rounded;
-    return Icons.remove_rounded;
-  }
-
-  String _breakdown(BuildContext context) {
-    final entradas = producto.totalEntradas;
-    final salidas = producto.totalSalidas;
-    if (entradas > 0 && salidas > 0) {
-      return '↓ $entradas ${pluralize('entrada', 'entradas', entradas)} \u00b7 '
-          '↑ $salidas ${pluralize('salida', 'salidas', salidas)}';
-    }
-    if (entradas > 0) {
-      return '+$entradas ${pluralize('unidad', 'unidades', entradas)}';
-    }
-    if (salidas > 0) {
-      return '-$salidas ${pluralize('unidad', 'unidades', salidas)}';
-    }
-    return '0 ${pluralize('unidad', 'unidades', 0)}';
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final color = _netoColor(context);
-    final ultimo = producto.ultimoMovimiento;
-
-    return Card(
-      child: Theme(
-        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
-        child: ExpansionTile(
-          tilePadding: const EdgeInsets.fromLTRB(14, 4, 14, 4),
-          childrenPadding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
-          leading: Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.10),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Icon(
-              _netoIcon(),
-              color: color,
-              size: 20,
-            ),
-          ),
-          title: Text(
-            producto.productoNombre,
-            style: Theme.of(context).textTheme.titleMedium,
-          ),
-          subtitle: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SizedBox(height: 4),
-              Row(
-                children: [
-                  Icon(_netoIcon(), color: color, size: 16),
-                  const SizedBox(width: 6),
-                  Text(
-                    _breakdown(context),
-                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                          color: color,
-                          fontWeight: FontWeight.w800,
-                        ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 4),
-              Text(
-                '${producto.movimientos.length} '
-                '${pluralize('movimiento', 'movimientos', producto.movimientos.length)}',
-                style: Theme.of(context).textTheme.bodyMedium,
-              ),
-              const SizedBox(height: 4),
-              Text(
-                'Último \u00b7 ${ultimo.usuarioNombre} \u00b7 '
-                '${compactDateFormatter.format(ultimo.fecha)} '
-                '${timeFormatter.format(ultimo.fecha)}',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: AppColors.muted,
-                    ),
-              ),
-            ],
-          ),
-          children: [
-            const Divider(height: 1),
-            const SizedBox(height: 12),
-            for (final m in producto.movimientos)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 8),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 8,
-                      height: 8,
-                      decoration: BoxDecoration(
-                        color: m.tipo == MovimientoTipo.entrada
-                            ? AppColors.success
-                            : AppColors.danger,
-                        shape: BoxShape.circle,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      '${m.cantidad.abs()}',
-                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                            fontWeight: FontWeight.w700,
-                          ),
-                    ),
-                    const SizedBox(width: 4),
-                    Expanded(
-                      child: Text(
-                        m.tipo == MovimientoTipo.entrada ? 'Entrada' : 'Salida',
-                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                          color: m.tipo == MovimientoTipo.entrada
-                              ? AppColors.success
-                              : AppColors.danger,
-                        ),
-                      ),
-                    ),
-                    Text(
-                      '${compactDateFormatter.format(m.fecha)} ${timeFormatter.format(m.fecha)}',
-                      style: Theme.of(context).textTheme.bodyMedium,
-                    ),
-                    const SizedBox(width: 6),
-                    Text(
-                      m.usuarioNombre,
-                      style: Theme.of(context).textTheme.bodyMedium,
-                    ),
-                  ],
-                ),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ─── Filter bottom sheet (estilo Inventario) ─────────────────────────────────
-
-class _FilterSheetContent extends ConsumerStatefulWidget {
-  const _FilterSheetContent({required this.onLimpiar});
-
-  final VoidCallback onLimpiar;
-
-  @override
-  ConsumerState<_FilterSheetContent> createState() =>
-      _FilterSheetContentState();
-}
-
-class _FilterSheetContentState extends ConsumerState<_FilterSheetContent> {
-  final _sheetController = DraggableScrollableController();
-  bool _isDragging = false;
 
   @override
   void dispose() {
-    _sheetController.dispose();
+    _animationController.dispose();
     super.dispose();
   }
 
-  Future<void> _seleccionarRangoPersonalizado() async {
-    final filtro = ref.read(movimientosFilterProvider);
-    final initial = filtro.rango == RangoFechaFiltro.personalizado &&
-            filtro.fechaInicioCustom != null &&
-            filtro.fechaFinCustom != null
-        ? DateTimeRange(
-            start: filtro.fechaInicioCustom!,
-            end: filtro.fechaFinCustom!,
-          )
-        : DateTimeRange(
-            start: DateTime.now().subtract(const Duration(days: 7)),
-            end: DateTime.now(),
-          );
-
-    final picked = await showDateRangePicker(
-      context: context,
-      firstDate: DateTime(2020),
-      lastDate: DateTime.now().add(const Duration(days: 1)),
-      initialDateRange: initial,
-      locale: const Locale('es'),
-      builder: (context, child) => Theme(
-        data: Theme.of(context).copyWith(
-          colorScheme: Theme.of(context).colorScheme.copyWith(
-                primary: AppColors.primary,
-              ),
-        ),
-        child: child ?? const SizedBox.shrink(),
-      ),
-    );
-
-    // Si cancela o no completa el rango, se mantiene el filtro anterior
-    // activo (no se dispara ninguna query nueva).
-    if (picked != null && mounted) {
-      ref
-          .read(movimientosFilterProvider.notifier)
-          .setRangoPersonalizado(picked.start, picked.end);
-    }
+  void _toggleExpansion() {
+    setState(() {
+      _expandido = !_expandido;
+      if (_expandido) {
+        _animationController.forward();
+      } else {
+        _animationController.reverse();
+      }
+    });
   }
 
   @override
   Widget build(BuildContext context) {
-    return DraggableScrollableSheet(
-      controller: _sheetController,
-      initialChildSize: 0.55,
-      minChildSize: 0.35,
-      maxChildSize: 0.95,
-      expand: false,
-      builder: (context, scrollController) {
-        final filtro = ref.watch(movimientosFilterProvider);
-        final notifier = ref.read(movimientosFilterProvider.notifier);
-        return SafeArea(
-          child: Column(
-            children: [
-              GestureDetector(
-                onVerticalDragStart: (_) => setState(() => _isDragging = true),
-                onVerticalDragUpdate: (details) {
-                  final delta = -details.primaryDelta! /
-                      MediaQuery.of(context).size.height;
-                  _sheetController.jumpTo(
-                    (_sheetController.size + delta).clamp(0.35, 0.95),
-                  );
-                },
-                onVerticalDragEnd: (_) =>
-                    setState(() => _isDragging = false),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
-                  child: Center(
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 200),
-                      width: 40,
-                      height: 5,
+    if (widget.movimientos.isEmpty) return const SizedBox.shrink();
+
+    final first = widget.movimientos.first;
+    
+    // Calcular totales desde los movimientos
+    final totalUnits = widget.movimientos.fold(0, (sum, m) => sum + m.cantidad.abs());
+    final totalAmount = first.totalVenta ?? widget.movimientos.fold<double>(
+      0.0,
+      (sum, m) => sum + ((m.precioUnitario ?? 0) * m.cantidad.abs()),
+    );
+
+    // 🔵 Azul primario = Venta (la acción principal del negocio)
+    final color = context.colors.primary;
+
+    // Buscar la venta en el turno actual
+    final ventas = ref.read(ventasDelTurnoProvider);
+    final venta = ventas.where((v) => v.id == widget.ventaId).firstOrNull;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: context.colors.surface,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: context.colors.ink.withValues(alpha: 0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        children: [
+          // ── Card principal (toca para ver detalles de la venta) ──
+          Material(
+            color: Colors.transparent,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(12),
+              onTap: venta != null
+                  ? () => context.push('/dependiente/turno/venta/${venta.id}', extra: venta)
+                  : null,
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Ícono animado
+                    AnimatedContainer(
+                      duration: const Duration(milliseconds: 300),
+                      curve: Curves.easeInOutCubic,
                       decoration: BoxDecoration(
-                        color: _isDragging ? AppColors.primary : AppColors.muted,
-                        borderRadius: BorderRadius.circular(AppRadii.pill),
+                        color: color.withValues(alpha: _expandido ? 0.15 : 0.12),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      padding: const EdgeInsets.all(10),
+                      child: Icon(
+                        Icons.shopping_bag_rounded,
+                        color: color,
+                        size: 22,
                       ),
                     ),
+                    const SizedBox(width: 12),
+                    
+                    // Contenido
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  'Venta',
+                                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                ),
+                              ),
+                              // Botón de flecha (intercepta tap para expandir/colapsar)
+                              GestureDetector(
+                                onTap: () {
+                                  _toggleExpansion();
+                                },
+                                child: AnimatedContainer(
+                                  duration: const Duration(milliseconds: 300),
+                                  curve: Curves.easeInOutCubic,
+                                  padding: const EdgeInsets.all(6),
+                                  decoration: BoxDecoration(
+                                    color: _expandido 
+                                        ? color.withValues(alpha: 0.12)
+                                        : context.colors.muted.withValues(alpha: 0.08),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: RotationTransition(
+                                    turns: _rotationAnimation,
+                                    child: Icon(
+                                      Icons.keyboard_arrow_down_rounded,
+                                      color: _expandido ? color : context.colors.muted,
+                                      size: 20,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 2),
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.access_time_rounded,
+                                size: 13,
+                                color: context.colors.muted,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                timeFormatter.format(first.fecha),
+                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                      color: context.colors.muted,
+                                    ),
+                              ),
+                              const SizedBox(width: 8),
+                              Container(
+                                width: 3,
+                                height: 3,
+                                decoration: BoxDecoration(
+                                  color: context.colors.muted.withValues(alpha: 0.4),
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Icon(
+                                Icons.person_outline_rounded,
+                                size: 13,
+                                color: context.colors.muted,
+                              ),
+                              const SizedBox(width: 4),
+                              Expanded(
+                                child: Text(
+                                  first.usuarioNombre,
+                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                        color: context.colors.muted,
+                                      ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Row(
+                            children: [
+                              // Badge de unidades
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                decoration: BoxDecoration(
+                                  color: context.colors.info.withValues(alpha: 0.10),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      Icons.inventory_2_outlined,
+                                      size: 14,
+                                      color: context.colors.info,
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      '$totalUnits ${totalUnits == 1 ? 'ud' : 'uds'}',
+                                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                            color: context.colors.info,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              // Badge de monto
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                decoration: BoxDecoration(
+                                  color: context.colors.success.withValues(alpha: 0.10),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      Icons.attach_money_rounded,
+                                      size: 16,
+                                      color: context.colors.success,
+                                    ),
+                                    Text(
+                                      formatCurrency(totalAmount).replaceAll('\$', ''),
+                                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                                            color: context.colors.success,
+                                            fontWeight: FontWeight.w700,
+                                          ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          
+          // ── Submenú expandible con animación (solo vista rápida) ──
+          SizeTransition(
+            sizeFactor: _expansionAnimation,
+            alignment: Alignment.topCenter,
+            child: Container(
+              width: double.infinity,
+              decoration: BoxDecoration(
+                color: context.colors.surfaceSecondary,
+                border: Border(
+                  top: BorderSide(
+                    color: context.colors.line.withValues(alpha: 0.3),
+                    width: 1,
                   ),
                 ),
               ),
-              Expanded(
-                child: SingleChildScrollView(
-                  controller: scrollController,
-                  padding: EdgeInsets.fromLTRB(
-                    AppSpacing.xl,
-                    0,
-                    AppSpacing.xl,
-                    MediaQuery.of(context).viewInsets.bottom + AppSpacing.xl,
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Filtrar',
-                        style: Theme.of(context).textTheme.titleLarge,
-                      ),
-                      const SizedBox(height: AppSpacing.xl),
-                      Text(
-                        'Tipo de movimiento',
-                        style: Theme.of(context).textTheme.titleMedium,
-                      ),
-                      const SizedBox(height: AppSpacing.sm),
-                      _RadioTile(
-                        label: 'Todos',
-                        selected: filtro.tipo == TipoMovimientoFiltro.todos,
-                        onTap: () =>
-                            notifier.setTipo(TipoMovimientoFiltro.todos),
-                      ),
-                      _RadioTile(
-                        label: 'Entradas',
-                        selected:
-                            filtro.tipo == TipoMovimientoFiltro.entradas,
-                        onTap: () =>
-                            notifier.setTipo(TipoMovimientoFiltro.entradas),
-                      ),
-                      _RadioTile(
-                        label: 'Salidas',
-                        selected: filtro.tipo == TipoMovimientoFiltro.salidas,
-                        onTap: () =>
-                            notifier.setTipo(TipoMovimientoFiltro.salidas),
-                      ),
-                      const Divider(),
-                      const SizedBox(height: AppSpacing.md),
-                      Text(
-                        'Rango de fecha',
-                        style: Theme.of(context).textTheme.titleMedium,
-                      ),
-                      const SizedBox(height: AppSpacing.sm),
-                      _RadioTile(
-                        label: 'Hoy',
-                        selected: filtro.rango == RangoFechaFiltro.hoy,
-                        onTap: () => notifier.setRango(RangoFechaFiltro.hoy),
-                      ),
-                      _RadioTile(
-                        label: 'Semana',
-                        selected: filtro.rango == RangoFechaFiltro.semana,
-                        onTap: () => notifier.setRango(RangoFechaFiltro.semana),
-                      ),
-                      _RadioTile(
-                        label: 'Mes',
-                        selected: filtro.rango == RangoFechaFiltro.mes,
-                        onTap: () => notifier.setRango(RangoFechaFiltro.mes),
-                      ),
-                      _RadioTile(
-                        label: 'Personalizado',
-                        selected:
-                            filtro.rango == RangoFechaFiltro.personalizado,
-                        onTap: _seleccionarRangoPersonalizado,
-                      ),
-                      const SizedBox(height: AppSpacing.xl),
-                      SizedBox(
-                        width: double.infinity,
-                        child: OutlinedButton.icon(
-                          onPressed: widget.onLimpiar,
-                          icon: const Icon(Icons.filter_alt_off_rounded),
-                          label: const Text('Limpiar filtros'),
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: AppColors.danger,
-                            side: const BorderSide(color: AppColors.danger),
-                            minimumSize: const Size.fromHeight(48),
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: BoxDecoration(
+                            color: color.withValues(alpha: 0.10),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Icon(
+                            Icons.receipt_long_rounded,
+                            size: 14,
+                            color: color,
                           ),
                         ),
-                      ),
-                      const SizedBox(height: AppSpacing.md),
-                    ],
+                        const SizedBox(width: 8),
+                        Text(
+                          'Productos vendidos',
+                          style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                                color: context.colors.ink,
+                                fontWeight: FontWeight.w600,
+                                letterSpacing: 0.3,
+                              ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    // Lista de productos desde productosVendidos o desde los movimientos
+                    if (first.productosVendidos != null)
+                      ...first.productosVendidos!.asMap().entries.map((entry) {
+                        final index = entry.key;
+                        final producto = entry.value;
+                        return TweenAnimationBuilder<double>(
+                          duration: Duration(milliseconds: 200 + (index * 50)),
+                          curve: Curves.easeOutCubic,
+                          tween: Tween(begin: 0.0, end: 1.0),
+                          builder: (context, value, child) {
+                            return Opacity(
+                              opacity: value,
+                              child: Transform.translate(
+                                offset: Offset(0, 10 * (1 - value)),
+                                child: child,
+                              ),
+                            );
+                          },
+                          child: Padding(
+                            padding: const EdgeInsets.only(bottom: 6),
+                            child: Row(
+                              children: [
+                                Container(
+                                  width: 5,
+                                  height: 5,
+                                  decoration: BoxDecoration(
+                                    color: color.withValues(alpha: 0.5),
+                                    shape: BoxShape.circle,
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Text(
+                                    producto,
+                                    style: Theme.of(context).textTheme.bodyMedium,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      })
+                    else
+                      ...widget.movimientos.asMap().entries.map((entry) {
+                        final index = entry.key;
+                        final mov = entry.value;
+                        return TweenAnimationBuilder<double>(
+                          duration: Duration(milliseconds: 200 + (index * 50)),
+                          curve: Curves.easeOutCubic,
+                          tween: Tween(begin: 0.0, end: 1.0),
+                          builder: (context, value, child) {
+                            return Opacity(
+                              opacity: value,
+                              child: Transform.translate(
+                                offset: Offset(0, 10 * (1 - value)),
+                                child: child,
+                              ),
+                            );
+                          },
+                          child: Padding(
+                            padding: const EdgeInsets.only(bottom: 6),
+                            child: Row(
+                              children: [
+                                Container(
+                                  width: 5,
+                                  height: 5,
+                                  decoration: BoxDecoration(
+                                    color: color.withValues(alpha: 0.5),
+                                    shape: BoxShape.circle,
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Text(
+                                    '${mov.cantidad}x ${mov.productoNombre}',
+                                    style: Theme.of(context).textTheme.bodyMedium,
+                                  ),
+                                ),
+                                if (mov.precioUnitario != null)
+                                  Text(
+                                    formatCurrency((mov.precioUnitario! * mov.cantidad).toDouble()),
+                                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                          fontWeight: FontWeight.w600,
+                                          color: context.colors.success,
+                                        ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                        );
+                      }),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          
+          // Indicador de coincidencia (búsqueda profunda)
+          if (widget.matchedProduct != null && !_expandido) ...[
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(
+                horizontal: 14,
+                vertical: 8,
+              ),
+              decoration: BoxDecoration(
+                color: context.colors.warning.withValues(alpha: 0.08),
+                borderRadius: const BorderRadius.only(
+                  bottomLeft: Radius.circular(12),
+                  bottomRight: Radius.circular(12),
+                ),
+                border: Border(
+                  top: BorderSide(
+                    color: context.colors.warning.withValues(alpha: 0.2),
                   ),
                 ),
               ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-}
-
-class _RadioTile extends StatelessWidget {
-  const _RadioTile({
-    required this.label,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return ListTile(
-      contentPadding: EdgeInsets.zero,
-      title: Text(label),
-      leading: Icon(
-        selected
-            ? Icons.radio_button_checked_rounded
-            : Icons.radio_button_unchecked_rounded,
-        color: selected ? AppColors.primary : null,
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.search_rounded,
+                    size: 14,
+                    color: context.colors.warning,
+                  ),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      'Coincide con: ${widget.matchedProduct}',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: context.colors.warning,
+                            fontWeight: FontWeight.w600,
+                          ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ],
       ),
-      onTap: onTap,
     );
   }
 }

@@ -123,12 +123,12 @@ class VentaEnCursoController extends Notifier<Venta?> {
     // 1. Añadir al historial del turno actual
     ref.read(ventasDelTurnoProvider.notifier).addVentaCompletada(venta);
 
-    // 2. Descontar stock y registrar movimientos
+    // 2. Descontar stock y registrar movimientos individuales por producto
     final inv = ref.read(inventarioControllerProvider.notifier);
     final movRepo = ref.read(movimientoRepositoryProvider);
 
     for (final item in venta.items) {
-      // Registrar movimiento de salida
+      // Registrar movimiento de salida (para compatibilidad con sistema anterior)
       movRepo.addMovimiento(
         Movimiento(
           id: const Uuid().v4(),
@@ -140,8 +140,11 @@ class VentaEnCursoController extends Notifier<Venta?> {
           tipo: MovimientoTipo.salida,
           cantidad: item.cantidad,
           fecha: venta.fecha,
-          nota: 'Venta POS #${venta.id.substring(0, 8)}',
+          nota: 'Venta #${venta.id.substring(0, 8)}',
           createdAt: DateTime.now(),
+          synced: false,
+          ventaId: venta.id,
+          precioUnitario: item.precioUnitario,
         ),
       );
 
@@ -153,7 +156,19 @@ class VentaEnCursoController extends Notifier<Venta?> {
       );
     }
 
-    // 3. Limpiar la venta en curso
+    // 3. Registrar venta agrupada como movimiento tipo "venta"
+    ref.read(movimientoControllerProvider.notifier).registrarVenta(
+      ventaId: venta.id,
+      dependiente: ref.read(authControllerProvider).user!,
+      productos: venta.items.map((item) => {
+        'nombre': item.productoNombre,
+        'cantidad': item.cantidad,
+        'precio': item.precioUnitario,
+      }).toList(),
+      totalVenta: venta.total,
+    );
+
+    // 4. Limpiar la venta en curso
     state = null;
   }
 

@@ -28,7 +28,7 @@ class IndicadorConexion extends ConsumerWidget {
       return const SizedBox.shrink();
     }
 
-    final color = AppColors.warning;
+    final color = context.colors.warning;
 
     return Container(
       padding: const EdgeInsets.symmetric(
@@ -45,11 +45,11 @@ class IndicadorConexion extends ConsumerWidget {
               shape: BoxShape.circle,
             ),
           ),
-          const SizedBox(width: AppSpacing.sm),
+          SizedBox(width: AppSpacing.sm),
           Text(
             'Offline',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: AppColors.muted,
+              color: context.colors.muted,
               fontWeight: FontWeight.w500,
             ),
           ),

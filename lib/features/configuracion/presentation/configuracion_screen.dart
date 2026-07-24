@@ -9,18 +9,15 @@ import 'package:path/path.dart' as p;
 import 'package:uuid/uuid.dart';
 
 import '../../../core/local_db/local_database.dart';
+import '../../../core/providers/theme_provider.dart';
 import '../../../core/theme/app_dimens.dart';
 import '../../../core/theme/app_theme.dart';
-import '../../../core/utils/formatters.dart';
 import '../../../core/utils/haptics.dart';
 import '../../../shared/models/usuario.dart';
-import '../../../shared/models/categoria.dart';
-import '../../../shared/widgets/category_name_dialog.dart';
 import '../../auth/providers/auth_provider.dart';
-import '../../inventario/providers/inventario_provider.dart';
 import '../../turno/providers/turno_provider.dart';
-import '../../usuarios/providers/usuario_provider.dart';
 import '../../ventas/providers/venta_provider.dart';
+
 
 class ConfiguracionScreen extends ConsumerWidget {
   const ConfiguracionScreen({super.key, this.isAdmin = true});
@@ -34,16 +31,12 @@ class ConfiguracionScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Ajustes'),
+        leading: IconButton(
+          onPressed: () => context.pop(),
+          icon: const Icon(Icons.arrow_back_rounded),
+          tooltip: 'Volver',
+        ),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.dark_mode_outlined),
-            tooltip: 'Modo oscuro (próximamente)',
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Próximamente')),
-              );
-            },
-          ),
           IconButton(
             onPressed: () =>
                 ref.read(authControllerProvider.notifier).signOut(),
@@ -58,114 +51,138 @@ class ConfiguracionScreen extends ConsumerWidget {
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 800),
             child: ListView(
-          padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
-          children: [
-            if (user != null)
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Row(
-                    children: [
-                      _ProfileAvatar(user: user),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              user.nombre,
-                              style: Theme.of(context).textTheme.titleMedium,
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+              children: [
+                // ── PERFIL ──
+                const _SectionHeader(
+                  icon: Icons.person_rounded,
+                  label: 'Perfil',
+                ),
+                if (user != null)
+                  Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Row(
+                        children: [
+                          _ProfileAvatar(user: user),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  user.nombre,
+                                  style:
+                                      Theme.of(context).textTheme.titleMedium,
+                                ),
+                                Text(user.email),
+                              ],
                             ),
-                            Text(user.email),
-                          ],
-                        ),
+                          ),
+                          if (!isAdmin)
+                            IconButton(
+                              onPressed: () =>
+                                  _showEditProfileDialog(context, ref, user),
+                              icon: const Icon(Icons.edit_rounded),
+                              tooltip: 'Editar perfil',
+                            ),
+                        ],
                       ),
-                      if (!isAdmin)
-                        IconButton(
-                          onPressed: () =>
-                              _showEditProfileDialog(context, ref, user),
-                          icon: const Icon(Icons.edit_rounded),
-                          tooltip: 'Editar perfil',
-                        ),
-                    ],
+                    ),
+                  ),
+                const SizedBox(height: 18),
+
+                // ── APARIENCIA ──
+                const _SectionHeader(
+                  icon: Icons.brightness_6_rounded,
+                  label: 'Apariencia',
+                ),
+                const _AparienciaExpandable(),
+                const SizedBox(height: 18),
+
+                // ── ACCESIBILIDAD ──
+                Card(
+                  child: ListTile(
+                    leading: const Icon(Icons.accessibility_new_rounded),
+                    title: const Text('Accesibilidad'),
+                    subtitle: const Text('Tamaño de texto, contraste y más'),
+                    trailing: const Icon(Icons.chevron_right_rounded),
+                    onTap: () => context.push(
+                      isAdmin
+                          ? '/admin/configuracion/accesibilidad'
+                          : '/dependiente/configuracion/accesibilidad',
+                    ),
                   ),
                 ),
-              ),
-            const SizedBox(height: 12),
-            if (!isAdmin)
-              Card(
-                child: ListTile(
-                  leading: const Icon(Icons.history_rounded),
-                  title: const Text('Historial de cuadres'),
-                  subtitle: const Text('Ver mis cuadres anteriores'),
-                  trailing: const Icon(Icons.chevron_right_rounded),
-                  onTap: () => context.push('/dependiente/cuadres/historial'),
-                ),
-              ),
-            if (!isAdmin) const SizedBox(height: 12),
-            Card(
-              child: SwitchListTile(
-                secondary: const Icon(Icons.vibration_rounded),
-                title: const Text('Vibración en botones'),
-                subtitle: const Text(
-                  'Feedback táctil en acciones importantes',
-                ),
-                value: ref.watch(hapticsEnabledProvider),
-                onChanged: (v) {
-                  ref.read(hapticsEnabledProvider.notifier).setEnabled(v);
-                  if (v) Haptics.tap(context);
-                },
-              ),
+                const SizedBox(height: 18),
+
+                // ── CUADRES (solo dependiente) ──
+                if (!isAdmin) ...[
+                  const _SectionHeader(
+                    icon: Icons.receipt_long_rounded,
+                    label: 'Cuadres',
+                  ),
+                  Card(
+                    child: ListTile(
+                      leading: const Icon(Icons.history_rounded),
+                      title: const Text('Historial de cuadres'),
+                      subtitle: const Text('Ver mis cuadres anteriores'),
+                      trailing: const Icon(Icons.chevron_right_rounded),
+                      onTap: () =>
+                          context.push('/dependiente/cuadres/historial'),
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+                ],
+
+                // ── TURNO (solo dependiente) ──
+                if (!isAdmin) ...[
+                  const _SectionHeader(
+                    icon: Icons.storefront_rounded,
+                    label: 'Turno',
+                  ),
+                  const _TurnoCard(),
+                  const SizedBox(height: 18),
+                ],
+
+                // ── GESTIÓN (solo admin) ──
+                if (isAdmin) ...[
+                  const _SectionHeader(
+                    icon: Icons.settings_rounded,
+                    label: 'Gestión',
+                  ),
+                  Card(
+                    child: Column(
+                      children: [
+                        ListTile(
+                          leading: const Icon(Icons.people_outline),
+                          title: const Text('Equipo'),
+                          subtitle:
+                              const Text('Administrar miembros del equipo'),
+                          trailing: const Icon(Icons.chevron_right_rounded),
+                          onTap: () => context.push(
+                            '/admin/configuracion/equipo',
+                          ),
+                        ),
+                        const Divider(height: 1, indent: 16, endIndent: 16),
+                        ListTile(
+                          leading: const Icon(Icons.category_outlined),
+                          title: const Text('Categorías'),
+                          subtitle: const Text('Organizar productos'),
+                          trailing: const Icon(Icons.chevron_right_rounded),
+                          onTap: () => context.push(
+                            '/admin/configuracion/categorias',
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ],
             ),
-            if (!isAdmin) ...[
-              const SizedBox(height: 12),
-              _TurnoCard(),
-            ],
-            if (isAdmin) ...[
-              const SizedBox(height: 18),
-              Card(
-                child: ListTile(
-                  leading: const Icon(Icons.people_outline),
-                  title: const Text('Gestionar dependientes'),
-                  subtitle: const Text('Administrar usuarios internos'),
-                  trailing: const Icon(Icons.chevron_right_rounded),
-                  onTap: () => _showUserManagement(context, ref),
-                ),
-              ),
-              const SizedBox(height: 12),
-              Card(
-                child: ListTile(
-                  leading: const Icon(Icons.category_outlined),
-                  title: const Text('Gestionar categorías'),
-                  subtitle: const Text('Crear, editar y eliminar categorías'),
-                  trailing: const Icon(Icons.chevron_right_rounded),
-                  onTap: () => _showCategoryManagement(context, ref),
-                ),
-              ),
-            ],
-          ],
+          ),
         ),
       ),
-        ),
-      ),
-    );
-  }
-
-  void _showCategoryManagement(BuildContext context, WidgetRef ref) {
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      showDragHandle: false,
-      builder: (ctx) => _CategoryManagementSheet(),
-    );
-  }
-
-  void _showUserManagement(BuildContext context, WidgetRef ref) {
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      showDragHandle: false,
-      builder: (ctx) => _UserManagementSheet(),
     );
   }
 
@@ -190,7 +207,8 @@ class ConfiguracionScreen extends ConsumerWidget {
                 children: [
                   TextField(
                     controller: nameCtrl,
-                    decoration: const InputDecoration(labelText: 'Nombre'),
+                    decoration:
+                        const InputDecoration(labelText: 'Nombre'),
                     textCapitalization: TextCapitalization.words,
                   ),
                   const SizedBox(height: 8),
@@ -244,14 +262,155 @@ class ConfiguracionScreen extends ConsumerWidget {
     emailCtrl.dispose();
     if (result ?? false) {
       if (context.mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Perfil actualizado')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Perfil actualizado')),
+        );
       }
     }
   }
-
 }
+
+// ─── Section Header ─────────────────────────────────────────────────────────
+
+class _SectionHeader extends StatelessWidget {
+  const _SectionHeader({required this.icon, required this.label});
+
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(4, 0, 4, 8),
+      child: Row(
+        children: [
+          Icon(icon, size: 20, color: context.colors.primary),
+          const SizedBox(width: 8),
+          Text(
+            label,
+            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                  color: context.colors.muted,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 0.5,
+                ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─── Apariencia Expandable ──────────────────────────────────────────────────
+
+class _AparienciaExpandable extends StatefulWidget {
+  const _AparienciaExpandable();
+
+  @override
+  State<_AparienciaExpandable> createState() => _AparienciaExpandableState();
+}
+
+class _AparienciaExpandableState extends State<_AparienciaExpandable> {
+  bool _isExpanded = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        children: [
+          InkWell(
+            onTap: () => setState(() => _isExpanded = !_isExpanded),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              child: Row(
+                children: [
+                  const Icon(Icons.brightness_6_rounded),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Apariencia',
+                          style: Theme.of(context).textTheme.bodyLarge,
+                        ),
+                        Consumer(
+                          builder: (context, ref, _) {
+                            final mode = ref.watch(themeModeProvider);
+                            return Text(
+                              _getThemeModeLabel(mode),
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodySmall
+                                  ?.copyWith(color: context.colors.muted),
+                            );
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                  AnimatedRotation(
+                    turns: _isExpanded ? 0.5 : 0,
+                    duration: const Duration(milliseconds: 200),
+                    child: Icon(
+                      Icons.expand_more_rounded,
+                      color: context.colors.muted,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          AnimatedCrossFade(
+            firstChild: const SizedBox.shrink(),
+            secondChild: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+              child: Column(
+                children: [
+                  const Divider(),
+                  const SizedBox(height: 8),
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(Icons.palette_rounded),
+                    title: const Text('Tema de apariencia'),
+                    trailing: const _ThemeModeSelector(),
+                  ),
+                  const Divider(height: 1),
+                  Consumer(
+                    builder: (context, ref, _) {
+                      return SwitchListTile(
+                        contentPadding: EdgeInsets.zero,
+                        secondary: const Icon(Icons.vibration_rounded),
+                        title: const Text('Vibración en botones'),
+                        subtitle: const Text(
+                          'Feedback táctil en acciones importantes',
+                        ),
+                        value: ref.watch(hapticsEnabledProvider),
+                        onChanged: (v) {
+                          ref
+                              .read(hapticsEnabledProvider.notifier)
+                              .setEnabled(v);
+                          if (v) Haptics.tap(context);
+                        },
+                      );
+                    },
+                  ),
+                ],
+              ),
+            ),
+            crossFadeState: _isExpanded
+                ? CrossFadeState.showSecond
+                : CrossFadeState.showFirst,
+            duration: const Duration(milliseconds: 250),
+            sizeCurve: Curves.easeInOut,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─── Profile Avatar ─────────────────────────────────────────────────────────
 
 class _ProfileAvatar extends ConsumerStatefulWidget {
   const _ProfileAvatar({this.user, super.key});
@@ -298,10 +457,10 @@ class _ProfileAvatarState extends ConsumerState<_ProfileAvatar> {
     final url = widget.user?.fotoUrl;
     Widget avatar;
     if (url == null) {
-      avatar = const CircleAvatar(
-        backgroundColor: AppColors.primary,
-        foregroundColor: AppColors.surface,
-        child: Icon(Icons.person),
+      avatar = CircleAvatar(
+        backgroundColor: context.colors.primary,
+        foregroundColor: context.colors.surface,
+        child: const Icon(Icons.person),
       );
     } else if (url.startsWith('http')) {
       avatar = CircleAvatar(backgroundImage: NetworkImage(url));
@@ -315,10 +474,10 @@ class _ProfileAvatarState extends ConsumerState<_ProfileAvatar> {
         alignment: Alignment.bottomRight,
         children: [
           avatar,
-          const CircleAvatar(
+          CircleAvatar(
             radius: 10,
-            backgroundColor: Colors.white,
-            child: Icon(Icons.camera_alt_rounded, size: 14),
+            backgroundColor: context.colors.surface,
+            child: const Icon(Icons.camera_alt_rounded, size: 14),
           ),
         ],
       ),
@@ -326,7 +485,7 @@ class _ProfileAvatarState extends ConsumerState<_ProfileAvatar> {
   }
 }
 
-// ─── Turno card ────────────────────────────────────────────────────────────
+// ─── Turno Card ─────────────────────────────────────────────────────────────
 
 class _TurnoCard extends ConsumerWidget {
   const _TurnoCard();
@@ -344,14 +503,14 @@ class _TurnoCard extends ConsumerWidget {
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: context.colors.surface,
         borderRadius: AppRadii.mdBorder,
-        border: const Border(
-          left: BorderSide(color: AppColors.success, width: 4),
+        border: Border(
+          left: BorderSide(color: context.colors.success, width: 4),
         ),
         boxShadow: [
           BoxShadow(
-            color: AppColors.success.withValues(alpha: 0.08),
+            color: context.colors.success.withValues(alpha: 0.08),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -363,61 +522,39 @@ class _TurnoCard extends ConsumerWidget {
           Row(
             children: [
               Container(
-                width: 8,
-                height: 8,
-                decoration: const BoxDecoration(
-                  color: AppColors.success,
+                width: 10,
+                height: 10,
+                decoration: BoxDecoration(
+                  color: context.colors.success,
                   shape: BoxShape.circle,
                 ),
               ),
               const SizedBox(width: 8),
               Text(
-                'Turno activo${turno.horaInicio != null ? ' \u00b7 Desde ${timeFormatter.format(turno.horaInicio!)}' : ''}',
-                style: const TextStyle(
-                  fontSize: 13,
-                  color: AppColors.success,
-                  fontWeight: FontWeight.w600,
-                ),
+                'Turno activo',
+                style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      color: context.colors.success,
+                    ),
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 10),
           Row(
             children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Ventas de hoy',
-                      style: Theme.of(context).textTheme.bodyMedium,
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      formatCurrency(totalTurno),
-                      style: Theme.of(context)
-                          .textTheme
-                          .headlineMedium
-                          ?.copyWith(
-                            color: AppColors.primary,
-                            fontWeight: FontWeight.w800,
-                          ),
-                    ),
-                  ],
-                ),
+              _CompactValor(
+                valor: '\$${totalTurno.toStringAsFixed(0)}',
+                label: 'total',
               ),
+              const SizedBox(width: 16),
               _CompactValor(
                 valor: '$cantidadVentas',
                 label: 'ventas',
               ),
               const SizedBox(width: 16),
-              SizedBox(
-                height: 36,
-                child: VerticalDivider(width: 1, color: AppColors.line),
-              ),
-              const SizedBox(width: 16),
               _CompactValor(
-                valor: '${ventas.fold(0, (sum, v) => sum + v.totalUnidades)}',
+                valor:
+                    '${ventas.fold(0, (sum, v) => sum + v.totalUnidades)}',
                 label: 'uds.',
               ),
             ],
@@ -433,8 +570,8 @@ class _TurnoCard extends ConsumerWidget {
               icon: const Icon(Icons.logout_rounded, size: 18),
               label: const Text('Cerrar turno'),
               style: OutlinedButton.styleFrom(
-                foregroundColor: AppColors.danger,
-                side: const BorderSide(color: AppColors.danger),
+                foregroundColor: context.colors.danger,
+                side: BorderSide(color: context.colors.danger),
                 minimumSize: const Size.fromHeight(40),
               ),
             ),
@@ -469,1300 +606,117 @@ class _CompactValor extends StatelessWidget {
   }
 }
 
-// ─── Category management sheet (UI/UX Pro Max) ─────────────────────────────
+// ─── Theme Mode Helpers ─────────────────────────────────────────────────────
 
-class _CategoryManagementSheet extends ConsumerStatefulWidget {
-  @override
-  ConsumerState<_CategoryManagementSheet> createState() =>
-      _CategoryManagementSheetState();
-}
-
-class _CategoryManagementSheetState
-    extends ConsumerState<_CategoryManagementSheet> {
-  final _sheetController = DraggableScrollableController();
-  bool _isDragging = false;
-
-  @override
-  void dispose() {
-    _sheetController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final categorias = ref.watch(
-      inventarioControllerProvider.select((s) => s.categorias),
-    );
-
-    return DraggableScrollableSheet(
-      controller: _sheetController,
-      initialChildSize: 0.7,
-      minChildSize: 0.5,
-      maxChildSize: 0.95,
-      expand: false,
-      builder: (context, scrollController) {
-        return SafeArea(
-          child: Column(
-            children: [
-              // ═══ Drag Handle Profesional ═══
-              GestureDetector(
-                onVerticalDragStart: (_) =>
-                    setState(() => _isDragging = true),
-                onVerticalDragUpdate: (details) {
-                  final delta = -details.primaryDelta! /
-                      MediaQuery.of(context).size.height;
-                  _sheetController.jumpTo(
-                    (_sheetController.size + delta).clamp(0.5, 0.95),
-                  );
-                },
-                onVerticalDragEnd: (_) =>
-                    setState(() => _isDragging = false),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    vertical: AppSpacing.md,
-                  ),
-                  child: Center(
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 200),
-                      width: _isDragging ? 50 : 40,
-                      height: 5,
-                      decoration: BoxDecoration(
-                        color: _isDragging
-                            ? AppColors.primary
-                            : AppColors.muted,
-                        borderRadius: BorderRadius.circular(AppRadii.pill),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              // ═══ Header con título e icono ═══
-              Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacing.xl,
-                ),
-                child: Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: AppColors.primary.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Icon(
-                        Icons.category_rounded,
-                        size: 24,
-                        color: AppColors.primary,
-                      ),
-                    ),
-                    const SizedBox(width: AppSpacing.md),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Categorías',
-                            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                ),
-                          ),
-                          Text(
-                            '${categorias.length} ${categorias.length == 1 ? 'categoría' : 'categorías'}',
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                  color: AppColors.muted,
-                                ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    FilledButton.icon(
-                      onPressed: () => _showCategoryDialog(context, ref),
-                      icon: const Icon(Icons.add_rounded, size: 20),
-                      label: const Text('Nueva'),
-                      style: FilledButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: AppSpacing.md,
-                          vertical: AppSpacing.sm,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: AppSpacing.xl),
-              // ═══ Lista de Categorías ═══
-              Expanded(
-                child: categorias.isEmpty
-                    ? const _EmptyCategorias()
-                    : ListView(
-                        controller: scrollController,
-                        padding: const EdgeInsets.fromLTRB(
-                          AppSpacing.xl,
-                          0,
-                          AppSpacing.xl,
-                          AppSpacing.xl,
-                        ),
-                        children: [
-                          for (int i = 0; i < categorias.length; i++) ...[
-                            _CategoryCard(
-                              key: ValueKey(categorias[i].id),
-                              categoria: categorias[i],
-                              index: i + 1,
-                              onEdit: () => _showCategoryDialog(
-                                context,
-                                ref,
-                                categoria: categorias[i],
-                              ),
-                              onDelete: () => _confirmDeleteCategoria(
-                                context,
-                                ref,
-                                categorias[i],
-                              ),
-                            ),
-                            if (i < categorias.length - 1)
-                              const SizedBox(height: AppSpacing.sm),
-                          ],
-                        ],
-                      ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  Future<void> _showCategoryDialog(
-    BuildContext context,
-    WidgetRef ref, {
-    Categoria? categoria,
-  }) async {
-    final isEdit = categoria != null;
-    final name = await showDialog<String>(
-      context: context,
-      builder: (_) => CategoryNameDialog(
-        title: isEdit ? 'Editar categoría' : 'Crear categoría',
-        initialName: isEdit ? categoria.nombre : null,
-        categoryExists: (value) => ref
-            .read(inventarioControllerProvider.notifier)
-            .existsCategoriaConNombre(
-              value,
-              excludeId: isEdit ? categoria.id : null,
-            ),
-      ),
-    );
-
-    if (name != null && name.isNotEmpty) {
-      ref
-          .read(inventarioControllerProvider.notifier)
-          .upsertCategoria(
-            Categoria(
-              id: isEdit ? categoria.id : const Uuid().v4(),
-              nombre: name,
-              createdAt: isEdit ? categoria.createdAt : DateTime.now(),
-            ),
-          );
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(isEdit
-                ? 'Categoría actualizada'
-                : 'Categoría creada correctamente'),
-            backgroundColor: AppColors.success,
-          ),
-        );
-      }
-    }
-  }
-
-  Future<void> _confirmDeleteCategoria(
-    BuildContext context,
-    WidgetRef ref,
-    Categoria categoria,
-  ) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          icon: Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: AppColors.danger.withValues(alpha: 0.1),
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(
-              Icons.warning_amber_rounded,
-              color: AppColors.danger,
-              size: 32,
-            ),
-          ),
-          title: const Text('¿Eliminar categoría?'),
-          content: RichText(
-            text: TextSpan(
-              style: Theme.of(context).textTheme.bodyMedium,
-              children: [
-                const TextSpan(
-                  text: 'Esta acción no se puede deshacer. ¿Deseas eliminar la categoría ',
-                ),
-                TextSpan(
-                  text: '"${categoria.nombre}"',
-                  style: const TextStyle(fontWeight: FontWeight.bold),
-                ),
-                const TextSpan(text: '?'),
-              ],
-            ),
-          ),
-          actions: [
-            OutlinedButton(
-              onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('Cancelar'),
-            ),
-            FilledButton(
-              onPressed: () {
-                Haptics.warning(context);
-                Navigator.of(context).pop(true);
-              },
-              style: FilledButton.styleFrom(
-                backgroundColor: AppColors.danger,
-              ),
-              child: const Text('Eliminar'),
-            ),
-          ],
-        );
-      },
-    );
-
-    if (confirmed ?? false) {
-      ref
-          .read(inventarioControllerProvider.notifier)
-          .deleteCategoria(categoria.id);
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Categoría eliminada'),
-            backgroundColor: AppColors.danger,
-          ),
-        );
-      }
-    }
+String _getThemeModeLabel(ThemeMode mode) {
+  switch (mode) {
+    case ThemeMode.light:
+      return 'Modo claro';
+    case ThemeMode.dark:
+      return 'Modo oscuro';
+    case ThemeMode.system:
+      return 'Automático (sistema)';
   }
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
-// Category Card (UI/UX Pro Max)
-// ═══════════════════════════════════════════════════════════════════════════
+// ─── Theme Mode Selector ────────────────────────────────────────────────────
 
-class _CategoryCard extends StatelessWidget {
-  const _CategoryCard({
-    super.key,
-    required this.categoria,
-    required this.index,
-    required this.onEdit,
-    required this.onDelete,
-  });
-
-  final Categoria categoria;
-  final int index;
-  final VoidCallback onEdit;
-  final VoidCallback onDelete;
+class _ThemeModeSelector extends ConsumerWidget {
+  const _ThemeModeSelector();
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final currentMode = ref.watch(themeModeProvider);
+
     return Container(
+      padding: const EdgeInsets.all(3),
       decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: AppColors.line,
-          width: 1,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
+        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _ThemeModeButton(
+            icon: Icons.light_mode_rounded,
+            isSelected: currentMode == ThemeMode.light,
+            onTap: () {
+              ref
+                  .read(themeModeProvider.notifier)
+                  .setThemeMode(ThemeMode.light);
+              Haptics.tap(context);
+            },
+            tooltip: 'Claro',
+          ),
+          const SizedBox(width: 2),
+          _ThemeModeButton(
+            icon: Icons.dark_mode_rounded,
+            isSelected: currentMode == ThemeMode.dark,
+            onTap: () {
+              ref
+                  .read(themeModeProvider.notifier)
+                  .setThemeMode(ThemeMode.dark);
+              Haptics.tap(context);
+            },
+            tooltip: 'Oscuro',
+          ),
+          const SizedBox(width: 2),
+          _ThemeModeButton(
+            icon: Icons.brightness_auto_rounded,
+            isSelected: currentMode == ThemeMode.system,
+            onTap: () {
+              ref
+                  .read(themeModeProvider.notifier)
+                  .setThemeMode(ThemeMode.system);
+              Haptics.tap(context);
+            },
+            tooltip: 'Auto',
           ),
         ],
       ),
-      child: Material(
-        color: Colors.transparent,
-        borderRadius: BorderRadius.circular(16),
-        child: Padding(
-          padding: const EdgeInsets.all(AppSpacing.md),
-          child: Row(
-            children: [
-              // ═══ Número de índice ═══
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      AppColors.primary.withValues(alpha: 0.15),
-                      AppColors.primary.withValues(alpha: 0.05),
-                    ],
-                  ),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Center(
-                  child: Text(
-                    '$index',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          color: AppColors.primary,
-                          fontWeight: FontWeight.bold,
-                        ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: AppSpacing.md),
-              // ═══ Nombre de la categoría ═══
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      categoria.nombre,
-                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                            fontWeight: FontWeight.w600,
-                          ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      'Creada ${_formatDate(categoria.createdAt)}',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: AppColors.muted,
-                          ),
-                    ),
-                  ],
-                ),
-              ),
-              // ═══ Botones de acción ═══
-              IconButton(
-                onPressed: onEdit,
-                icon: const Icon(Icons.edit_outlined, size: 20),
-                tooltip: 'Editar',
-                style: IconButton.styleFrom(
-                  foregroundColor: AppColors.primary,
-                  backgroundColor: AppColors.primary.withValues(alpha: 0.1),
-                ),
-              ),
-              const SizedBox(width: AppSpacing.xs),
-              IconButton(
-                onPressed: onDelete,
-                icon: const Icon(Icons.delete_outline_rounded, size: 20),
-                tooltip: 'Eliminar',
-                style: IconButton.styleFrom(
-                  foregroundColor: AppColors.danger,
-                  backgroundColor: AppColors.danger.withValues(alpha: 0.1),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  String _formatDate(DateTime date) {
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    final dateOnly = DateTime(date.year, date.month, date.day);
-    final diff = today.difference(dateOnly).inDays;
-
-    if (diff == 0) return 'hoy';
-    if (diff == 1) return 'ayer';
-    if (diff < 7) return 'hace $diff días';
-    if (diff < 30) return 'hace ${(diff / 7).floor()} semanas';
-    if (diff < 365) return 'hace ${(diff / 30).floor()} meses';
-    return 'hace ${(diff / 365).floor()} años';
-  }
-}
-
-// ═══════════════════════════════════════════════════════════════════════════
-// Empty Categorias State
-// ═══════════════════════════════════════════════════════════════════════════
-
-class _EmptyCategorias extends StatelessWidget {
-  const _EmptyCategorias();
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.xxl),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: AppColors.primary.withValues(alpha: 0.08),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                Icons.category_outlined,
-                size: 48,
-                color: AppColors.primary,
-              ),
-            ),
-            const SizedBox(height: AppSpacing.lg),
-            Text(
-              'No hay categorías',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
-            ),
-            const SizedBox(height: AppSpacing.xs),
-            Text(
-              'Crea tu primera categoría desde el botón "Nueva"',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: AppColors.muted,
-                  ),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-      ),
     );
   }
 }
 
-// ─── User management sheet (UI/UX Pro Max) ─────────────────────────────────
-
-class _UserManagementSheet extends ConsumerStatefulWidget {
-  @override
-  ConsumerState<_UserManagementSheet> createState() =>
-      _UserManagementSheetState();
-}
-
-class _UserManagementSheetState
-    extends ConsumerState<_UserManagementSheet> {
-  final _sheetController = DraggableScrollableController();
-  bool _isDragging = false;
-
-  @override
-  void dispose() {
-    _sheetController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final state = ref.watch(usuariosControllerProvider);
-    final usuarios = state.usuarios;
-
-    return DraggableScrollableSheet(
-      controller: _sheetController,
-      initialChildSize: 0.7,
-      minChildSize: 0.5,
-      maxChildSize: 0.95,
-      expand: false,
-      builder: (context, scrollController) {
-        return SafeArea(
-          child: Column(
-            children: [
-              // ═══ Drag Handle Profesional ═══
-              GestureDetector(
-                onVerticalDragStart: (_) =>
-                    setState(() => _isDragging = true),
-                onVerticalDragUpdate: (details) {
-                  final delta = -details.primaryDelta! /
-                      MediaQuery.of(context).size.height;
-                  _sheetController.jumpTo(
-                    (_sheetController.size + delta).clamp(0.5, 0.95),
-                  );
-                },
-                onVerticalDragEnd: (_) =>
-                    setState(() => _isDragging = false),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    vertical: AppSpacing.md,
-                  ),
-                  child: Center(
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 200),
-                      width: _isDragging ? 50 : 40,
-                      height: 5,
-                      decoration: BoxDecoration(
-                        color: _isDragging
-                            ? AppColors.primary
-                            : AppColors.muted,
-                        borderRadius: BorderRadius.circular(AppRadii.pill),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              // ═══ Header con título e icono ═══
-              Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacing.xl,
-                ),
-                child: Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: AppColors.primary.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Icon(
-                        Icons.people_rounded,
-                        size: 24,
-                        color: AppColors.primary,
-                      ),
-                    ),
-                    const SizedBox(width: AppSpacing.md),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Dependientes',
-                            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                ),
-                          ),
-                          Text(
-                            '${usuarios.length} ${usuarios.length == 1 ? 'usuario' : 'usuarios'}',
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                  color: AppColors.muted,
-                                ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    FilledButton.icon(
-                      onPressed: () => _showUserDialog(context, ref),
-                      icon: const Icon(Icons.add_rounded, size: 20),
-                      label: const Text('Nuevo'),
-                      style: FilledButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: AppSpacing.md,
-                          vertical: AppSpacing.sm,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: AppSpacing.xl),
-              // ═══ Lista de Usuarios ═══
-              Expanded(
-                child: state.isLoading
-                    ? const Center(child: CircularProgressIndicator())
-                    : usuarios.isEmpty
-                        ? const _EmptyUsuarios()
-                        : ListView(
-                            controller: scrollController,
-                            padding: const EdgeInsets.fromLTRB(
-                              AppSpacing.xl,
-                              0,
-                              AppSpacing.xl,
-                              AppSpacing.xl,
-                            ),
-                            children: [
-                              for (int i = 0; i < usuarios.length; i++) ...[
-                                _UserCard(
-                                  key: ValueKey(usuarios[i].id),
-                                  usuario: usuarios[i],
-                                  index: i + 1,
-                                  onEdit: () => _showUserDialog(
-                                    context,
-                                    ref,
-                                    usuario: usuarios[i],
-                                  ),
-                                  onDelete: () => _confirmDeleteUser(
-                                    context,
-                                    ref,
-                                    usuarios[i],
-                                  ),
-                                ),
-                                if (i < usuarios.length - 1)
-                                  const SizedBox(height: AppSpacing.sm),
-                              ],
-                            ],
-                          ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  Future<void> _showUserDialog(
-    BuildContext context,
-    WidgetRef ref, {
-    Usuario? usuario,
-  }) async {
-    final isEdit = usuario != null;
-    final result = await showDialog<({String nombre, String email})>(
-      context: context,
-      builder: (_) => _UserDialog(
-        title: isEdit ? 'Editar dependiente' : 'Crear dependiente',
-        initialName: isEdit ? usuario.nombre : null,
-        initialEmail: isEdit ? usuario.email : null,
-      ),
-    );
-
-    if (result == null) return;
-
-    final nombre = result.nombre.trim();
-    final email = result.email.trim().toLowerCase();
-
-    final repo = ref.read(usuarioRepositoryProvider);
-    final exists = await repo.existsEmail(
-      email,
-      excludeId: isEdit ? usuario.id : null,
-    );
-    if (exists) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Ya existe un usuario con este email'),
-            backgroundColor: AppColors.danger,
-          ),
-        );
-      }
-      return;
-    }
-
-    if (isEdit) {
-      await ref
-          .read(usuariosControllerProvider.notifier)
-          .actualizarUsuario(usuario.copyWith(
-            nombre: nombre,
-            email: email,
-          ));
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Usuario actualizado correctamente'),
-            backgroundColor: AppColors.success,
-          ),
-        );
-      }
-    } else {
-      await ref
-          .read(usuariosControllerProvider.notifier)
-          .crearUsuario(
-            nombre: nombre,
-            email: email,
-            rol: UserRole.dependiente,
-          );
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Usuario creado correctamente'),
-            backgroundColor: AppColors.success,
-          ),
-        );
-      }
-    }
-  }
-
-  Future<void> _confirmDeleteUser(
-    BuildContext context,
-    WidgetRef ref,
-    Usuario usuario,
-  ) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          icon: Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: AppColors.danger.withValues(alpha: 0.1),
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(
-              Icons.warning_amber_rounded,
-              color: AppColors.danger,
-              size: 32,
-            ),
-          ),
-          title: const Text('¿Eliminar dependiente?'),
-          content: RichText(
-            text: TextSpan(
-              style: Theme.of(context).textTheme.bodyMedium,
-              children: [
-                const TextSpan(
-                  text: 'Se desactivará el acceso de ',
-                ),
-                TextSpan(
-                  text: '"${usuario.nombre}"',
-                  style: const TextStyle(fontWeight: FontWeight.bold),
-                ),
-                const TextSpan(text: '. ¿Deseas continuar?'),
-              ],
-            ),
-          ),
-          actions: [
-            OutlinedButton(
-              onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('Cancelar'),
-            ),
-            FilledButton(
-              onPressed: () {
-                Haptics.warning(context);
-                Navigator.of(context).pop(true);
-              },
-              style: FilledButton.styleFrom(
-                backgroundColor: AppColors.danger,
-              ),
-              child: const Text('Eliminar'),
-            ),
-          ],
-        );
-      },
-    );
-
-    if (confirmed ?? false) {
-      await ref
-          .read(usuariosControllerProvider.notifier)
-          .eliminarUsuario(usuario.id);
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Usuario eliminado'),
-            backgroundColor: AppColors.danger,
-          ),
-        );
-      }
-    }
-  }
-}
-
-// ═══════════════════════════════════════════════════════════════════════════
-// User Card (UI/UX Pro Max)
-// ═══════════════════════════════════════════════════════════════════════════
-
-class _UserCard extends StatelessWidget {
-  const _UserCard({
-    super.key,
-    required this.usuario,
-    required this.index,
-    required this.onEdit,
-    required this.onDelete,
+class _ThemeModeButton extends StatelessWidget {
+  const _ThemeModeButton({
+    required this.icon,
+    required this.isSelected,
+    required this.onTap,
+    required this.tooltip,
   });
 
-  final Usuario usuario;
-  final int index;
-  final VoidCallback onEdit;
-  final VoidCallback onDelete;
+  final IconData icon;
+  final bool isSelected;
+  final VoidCallback onTap;
+  final String tooltip;
 
   @override
   Widget build(BuildContext context) {
-    final isAdmin = usuario.rol == UserRole.admin;
-
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: AppColors.line,
-          width: 1,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
+    return Tooltip(
+      message: tooltip,
       child: Material(
-        color: Colors.transparent,
-        borderRadius: BorderRadius.circular(16),
-        child: Padding(
-          padding: const EdgeInsets.all(AppSpacing.md),
-          child: Row(
-            children: [
-              // ═══ Avatar con inicial o badge de admin ═══
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: isAdmin
-                        ? [
-                            AppColors.primary.withValues(alpha: 0.2),
-                            AppColors.primary.withValues(alpha: 0.1),
-                          ]
-                        : [
-                            AppColors.warning.withValues(alpha: 0.2),
-                            AppColors.warning.withValues(alpha: 0.1),
-                          ],
-                  ),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Center(
-                  child: isAdmin
-                      ? Icon(
-                          Icons.admin_panel_settings_rounded,
-                          color: AppColors.primary,
-                          size: 24,
-                        )
-                      : Text(
-                          usuario.nombre.isNotEmpty
-                              ? usuario.nombre[0].toUpperCase()
-                              : '?',
-                          style: Theme.of(context)
-                              .textTheme
-                              .titleLarge
-                              ?.copyWith(
-                                color: AppColors.warning,
-                                fontWeight: FontWeight.bold,
-                              ),
-                        ),
-                ),
-              ),
-              const SizedBox(width: AppSpacing.md),
-              // ═══ Nombre y email ═══
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Flexible(
-                          child: Text(
-                            usuario.nombre,
-                            style: Theme.of(context)
-                                .textTheme
-                                .bodyLarge
-                                ?.copyWith(
-                                  fontWeight: FontWeight.w600,
-                                ),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                        if (isAdmin) ...[
-                          const SizedBox(width: 6),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 2,
-                            ),
-                            decoration: BoxDecoration(
-                              color: AppColors.primary.withValues(alpha: 0.15),
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: Text(
-                              'ADMIN',
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .labelSmall
-                                  ?.copyWith(
-                                    color: AppColors.primary,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 10,
-                                  ),
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      usuario.email,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: AppColors.muted,
-                          ),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
-                ),
-              ),
-              // ═══ Botones de acción (solo para dependientes) ═══
-              if (!isAdmin) ...[
-                IconButton(
-                  onPressed: onEdit,
-                  icon: const Icon(Icons.edit_outlined, size: 20),
-                  tooltip: 'Editar',
-                  style: IconButton.styleFrom(
-                    foregroundColor: AppColors.primary,
-                    backgroundColor:
-                        AppColors.primary.withValues(alpha: 0.1),
-                  ),
-                ),
-                const SizedBox(width: AppSpacing.xs),
-                IconButton(
-                  onPressed: onDelete,
-                  icon: const Icon(Icons.delete_outline_rounded, size: 20),
-                  tooltip: 'Eliminar',
-                  style: IconButton.styleFrom(
-                    foregroundColor: AppColors.danger,
-                    backgroundColor: AppColors.danger.withValues(alpha: 0.1),
-                  ),
-                ),
-              ],
-            ],
+        color: isSelected
+            ? Theme.of(context).colorScheme.primaryContainer
+            : Colors.transparent,
+        borderRadius: BorderRadius.circular(6),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(6),
+          child: Container(
+            width: 32,
+            height: 32,
+            alignment: Alignment.center,
+            child: Icon(
+              icon,
+              size: 18,
+              color: isSelected
+                  ? Theme.of(context).colorScheme.onPrimaryContainer
+                  : Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
           ),
         ),
       ),
-    );
-  }
-}
-
-// ═══════════════════════════════════════════════════════════════════════════
-// Empty Usuarios State
-// ═══════════════════════════════════════════════════════════════════════════
-
-class _EmptyUsuarios extends StatelessWidget {
-  const _EmptyUsuarios();
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.xxl),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: AppColors.primary.withValues(alpha: 0.08),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                Icons.people_outline_rounded,
-                size: 48,
-                color: AppColors.primary,
-              ),
-            ),
-            const SizedBox(height: AppSpacing.lg),
-            Text(
-              'No hay dependientes',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
-            ),
-            const SizedBox(height: AppSpacing.xs),
-            Text(
-              'Crea tu primer usuario desde el botón "Nuevo"',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: AppColors.muted,
-                  ),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ═══════════════════════════════════════════════════════════════════════════
-// User Dialog (UI/UX Pro Max)
-// ═══════════════════════════════════════════════════════════════════════════
-
-/// Diálogo para crear o editar usuarios (UI/UX Pro Max)
-/// Siguiendo §8 Forms & Feedback: validación en tiempo real, labels claros,
-/// feedback visual inmediato, campos con iconos, y acciones diferenciadas.
-class _UserDialog extends StatefulWidget {
-  const _UserDialog({
-    required this.title,
-    this.initialName,
-    this.initialEmail,
-  });
-
-  final String title;
-  final String? initialName;
-  final String? initialEmail;
-
-  @override
-  State<_UserDialog> createState() => _UserDialogState();
-}
-
-class _UserDialogState extends State<_UserDialog> {
-  late final TextEditingController _nombreCtrl;
-  late final TextEditingController _emailCtrl;
-  late final FocusNode _nombreFocus;
-  late final FocusNode _emailFocus;
-
-  String? _nombreError;
-  String? _emailError;
-  bool _isValid = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _nombreCtrl = TextEditingController(text: widget.initialName ?? '');
-    _emailCtrl = TextEditingController(text: widget.initialEmail ?? '');
-    _nombreFocus = FocusNode();
-    _emailFocus = FocusNode();
-    
-    _validateForm();
-    
-    // Auto-focus después del primer frame
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _nombreFocus.requestFocus();
-    });
-  }
-
-  @override
-  void dispose() {
-    _nombreCtrl.dispose();
-    _emailCtrl.dispose();
-    _nombreFocus.dispose();
-    _emailFocus.dispose();
-    super.dispose();
-  }
-
-  void _validateForm() {
-    final nombre = _nombreCtrl.text.trim();
-    final email = _emailCtrl.text.trim();
-
-    setState(() {
-      // Validar nombre
-      if (nombre.isEmpty) {
-        _nombreError = null;
-      } else if (nombre.length < 2) {
-        _nombreError = 'Mínimo 2 caracteres';
-      } else {
-        _nombreError = null;
-      }
-
-      // Validar email
-      if (email.isEmpty) {
-        _emailError = null;
-      } else if (!email.contains('@') || !email.contains('.')) {
-        _emailError = 'Email inválido';
-      } else if (email.length < 5) {
-        _emailError = 'Email muy corto';
-      } else {
-        _emailError = null;
-      }
-
-      // Formulario es válido si ambos campos tienen contenido y no tienen errores
-      _isValid = nombre.length >= 2 &&
-          email.contains('@') &&
-          email.contains('.') &&
-          email.length >= 5 &&
-          _nombreError == null &&
-          _emailError == null;
-    });
-  }
-
-  void _submit() {
-    final nombre = _nombreCtrl.text.trim();
-    final email = _emailCtrl.text.trim();
-
-    // Validaciones finales
-    if (nombre.isEmpty) {
-      setState(() => _nombreError = 'El nombre es obligatorio');
-      _nombreFocus.requestFocus();
-      return;
-    }
-    if (nombre.length < 2) {
-      setState(() => _nombreError = 'Mínimo 2 caracteres');
-      _nombreFocus.requestFocus();
-      return;
-    }
-    if (email.isEmpty || !email.contains('@') || !email.contains('.')) {
-      setState(() => _emailError = 'Introduce un email válido');
-      _emailFocus.requestFocus();
-      return;
-    }
-
-    Haptics.confirm(context);
-    Navigator.of(context).pop((nombre: nombre, email: email));
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final isEdit = widget.initialName != null;
-    final nombreValid = _nombreCtrl.text.trim().length >= 2 && _nombreError == null;
-    final emailValid = _emailCtrl.text.trim().contains('@') && 
-                       _emailCtrl.text.trim().contains('.') && 
-                       _emailError == null;
-
-    return AlertDialog(
-      // ═══ Icono contextual ═══
-      icon: Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: AppColors.primary.withValues(alpha: 0.1),
-          shape: BoxShape.circle,
-        ),
-        child: Icon(
-          isEdit ? Icons.edit_rounded : Icons.person_add_rounded,
-          color: AppColors.primary,
-          size: 28,
-        ),
-      ),
-      title: Text(
-        widget.title,
-        textAlign: TextAlign.center,
-      ),
-      content: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // ═══ Campo de nombre ═══
-            TextField(
-              controller: _nombreCtrl,
-              focusNode: _nombreFocus,
-              textCapitalization: TextCapitalization.words,
-              textInputAction: TextInputAction.next,
-              decoration: InputDecoration(
-                labelText: 'Nombre completo',
-                hintText: 'Ej: Juan Pérez',
-                prefixIcon: Icon(
-                  Icons.person_outlined,
-                  color: _nombreError != null
-                      ? AppColors.danger
-                      : (nombreValid ? AppColors.success : AppColors.muted),
-                ),
-                errorText: _nombreError,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(
-                    color: nombreValid
-                        ? AppColors.success.withValues(alpha: 0.5)
-                        : AppColors.line,
-                    width: nombreValid ? 2 : 1,
-                  ),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(
-                    color: _nombreError != null
-                        ? AppColors.danger
-                        : AppColors.primary,
-                    width: 2,
-                  ),
-                ),
-                errorBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(
-                    color: AppColors.danger,
-                    width: 2,
-                  ),
-                ),
-              ),
-              onChanged: (_) => _validateForm(),
-              onSubmitted: (_) => _emailFocus.requestFocus(),
-            ),
-            const SizedBox(height: AppSpacing.lg),
-            // ═══ Campo de email ═══
-            TextField(
-              controller: _emailCtrl,
-              focusNode: _emailFocus,
-              keyboardType: TextInputType.emailAddress,
-              textInputAction: TextInputAction.done,
-              decoration: InputDecoration(
-                labelText: 'Correo electrónico',
-                hintText: 'ejemplo@correo.com',
-                prefixIcon: Icon(
-                  Icons.email_outlined,
-                  color: _emailError != null
-                      ? AppColors.danger
-                      : (emailValid ? AppColors.success : AppColors.muted),
-                ),
-                errorText: _emailError,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(
-                    color: emailValid
-                        ? AppColors.success.withValues(alpha: 0.5)
-                        : AppColors.line,
-                    width: emailValid ? 2 : 1,
-                  ),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(
-                    color: _emailError != null
-                        ? AppColors.danger
-                        : AppColors.primary,
-                    width: 2,
-                  ),
-                ),
-                errorBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(
-                    color: AppColors.danger,
-                    width: 2,
-                  ),
-                ),
-              ),
-              onChanged: (_) => _validateForm(),
-              onSubmitted: (_) {
-                if (_isValid) _submit();
-              },
-            ),
-            // ═══ Info helper ═══
-            if (!isEdit && _nombreCtrl.text.isEmpty && _emailCtrl.text.isEmpty) ...[
-              const SizedBox(height: AppSpacing.md),
-              Container(
-                padding: const EdgeInsets.all(AppSpacing.sm),
-                decoration: BoxDecoration(
-                  color: AppColors.primary.withValues(alpha: 0.08),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.info_outline_rounded,
-                      size: 16,
-                      color: AppColors.primary,
-                    ),
-                    const SizedBox(width: AppSpacing.xs),
-                    Expanded(
-                      child: Text(
-                        'Crea credenciales para un nuevo dependiente',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: AppColors.primary,
-                            ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ],
-        ),
-      ),
-      actions: [
-        // ═══ Botón Cancelar ═══
-        OutlinedButton(
-          onPressed: () => Navigator.of(context).pop(),
-          style: OutlinedButton.styleFrom(
-            minimumSize: const Size(100, 44),
-          ),
-          child: const Text('Cancelar'),
-        ),
-        // ═══ Botón Guardar (deshabilitado si no es válido) ═══
-        FilledButton.icon(
-          onPressed: _isValid ? _submit : null,
-          icon: Icon(
-            isEdit ? Icons.check_rounded : Icons.person_add_rounded,
-            size: 20,
-          ),
-          label: Text(isEdit ? 'Actualizar' : 'Crear'),
-          style: FilledButton.styleFrom(
-            minimumSize: const Size(120, 44),
-            disabledBackgroundColor: AppColors.muted.withValues(alpha: 0.3),
-            disabledForegroundColor: AppColors.muted,
-          ),
-        ),
-      ],
     );
   }
 }

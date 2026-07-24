@@ -133,7 +133,7 @@ class _ProductoFormScreenState extends ConsumerState<ProductoFormScreen> {
 
     final dropdownBorder = OutlineInputBorder(
       borderRadius: AppRadii.smBorder,
-      borderSide: const BorderSide(color: AppColors.line),
+      borderSide: BorderSide(color: context.colors.line),
     );
 
     return Scaffold(
@@ -207,49 +207,49 @@ class _ProductoFormScreenState extends ConsumerState<ProductoFormScreen> {
                             enabledBorder: dropdownBorder,
                             focusedBorder: OutlineInputBorder(
                               borderRadius: AppRadii.smBorder,
-                              borderSide: const BorderSide(
-                                color: AppColors.primary,
+                              borderSide: BorderSide(
+                                color: context.colors.primary,
                                 width: 1.5,
                               ),
                             ),
                             errorBorder: OutlineInputBorder(
                               borderRadius: AppRadii.smBorder,
-                              borderSide: const BorderSide(
-                                color: AppColors.danger,
+                              borderSide: BorderSide(
+                                color: context.colors.danger,
                               ),
                             ),
                             focusedErrorBorder: OutlineInputBorder(
                               borderRadius: AppRadii.smBorder,
-                              borderSide: const BorderSide(
-                                color: AppColors.danger,
+                              borderSide: BorderSide(
+                                color: context.colors.danger,
                                 width: 1.5,
                               ),
                             ),
                             isDense: true,
-                            contentPadding: const EdgeInsets.symmetric(
+                            contentPadding: EdgeInsets.symmetric(
                               horizontal: AppSpacing.md,
                               vertical: AppSpacing.md,
                             ),
                             hintText: 'Seleccionar categoría',
                             hintStyle: Theme.of(context).textTheme.bodyLarge
                                 ?.copyWith(
-                                  color: AppColors.muted.withValues(
+                                  color: context.colors.muted.withValues(
                                     alpha: 0.72,
                                   ),
                                   fontWeight: FontWeight.w400,
                                 ),
                           ),
-                          icon: const Icon(
+                          icon: Icon(
                             Icons.keyboard_arrow_down_rounded,
-                            color: AppColors.muted,
+                            color: context.colors.muted,
                             size: 22,
                           ),
                           style: Theme.of(context).textTheme.bodyLarge
                               ?.copyWith(
-                                color: AppColors.ink,
+                                color: context.colors.ink,
                                 fontWeight: FontWeight.w500,
                               ),
-                          dropdownColor: AppColors.surface,
+                          dropdownColor: context.colors.surface,
                           borderRadius: AppRadii.mdBorder,
                           key: ValueKey(_categoriaDropdownVersion),
                           items: [
@@ -263,17 +263,17 @@ class _ProductoFormScreenState extends ConsumerState<ProductoFormScreen> {
                               value: '__create_new__',
                               child: Row(
                                 children: [
-                                  const Icon(
+                                  Icon(
                                     Icons.add,
-                                    color: AppColors.primary,
+                                    color: context.colors.primary,
                                     size: 20,
                                   ),
-                                  const SizedBox(width: AppSpacing.sm),
+                                  SizedBox(width: AppSpacing.sm),
                                   Text(
                                     'Crear nueva categoría',
                                     style: Theme.of(context).textTheme.bodyLarge
                                         ?.copyWith(
-                                          color: AppColors.primary,
+                                          color: context.colors.primary,
                                           fontWeight: FontWeight.w600,
                                         ),
                                   ),
@@ -532,7 +532,7 @@ class _ProductPhotoComposer extends StatelessWidget {
                 borderRadius: AppRadii.mdBorder,
                 child: hasImage
                     ? ProductPhoto(url: fotoUrl, size: 104, iconSize: 42)
-                    : const _PhotoPlaceholder(),
+                    : _PhotoPlaceholder(),
               ),
             ),
           ),
@@ -551,7 +551,7 @@ class _ProductPhotoComposer extends StatelessWidget {
                       ? 'Puedes cambiarla o quitarla antes de guardar.'
                       : 'Opcional. JPG, PNG o WebP. Máx. 5 MB.',
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: const Color(0xFF636366),
+                    color: context.colors.muted,
                   ),
                 ),
                 const SizedBox(height: AppSpacing.lg),
@@ -581,7 +581,7 @@ class _ProductPhotoComposer extends StatelessWidget {
 
     return DecoratedBox(
       decoration: ShapeDecoration(
-        color: AppColors.surface,
+        color: context.colors.surface,
         shape: RoundedRectangleBorder(borderRadius: AppRadii.lgBorder),
         shadows: AppShadows.subtle,
       ),
@@ -599,13 +599,16 @@ class _PhotoPlaceholder extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return DecoratedBox(
-      decoration: const BoxDecoration(color: AppColors.surfaceSecondary),
+      decoration: BoxDecoration(color: context.colors.surfaceSecondary),
       child: CustomPaint(
-        painter: const _DashedRoundedRectPainter(borderRadius: AppRadii.md),
+        painter: _DashedRoundedRectPainter(
+          borderRadius: AppRadii.md,
+          color: context.colors.primary,
+        ),
         child: Center(
           child: Icon(
             Icons.add_a_photo_outlined,
-            color: AppColors.primary.withValues(alpha: AppAlphas.overlay),
+            color: context.colors.primary.withValues(alpha: AppAlphas.overlay),
             size: 38,
           ),
         ),
@@ -631,7 +634,7 @@ class _SectionHeader extends StatelessWidget {
       child: Text(
         title,
         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-          color: const Color(0xFF636366),
+          color: context.colors.muted,
           fontWeight: FontWeight.w700,
           letterSpacing: 0.5,
         ),
@@ -649,7 +652,7 @@ class _GroupedFormCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return DecoratedBox(
       decoration: ShapeDecoration(
-        color: AppColors.surface,
+        color: context.colors.surface,
         shape: RoundedRectangleBorder(borderRadius: AppRadii.lgBorder),
         shadows: AppShadows.subtle,
       ),
@@ -670,14 +673,14 @@ class _FormItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.all(AppSpacing.lg),
+      padding: EdgeInsets.all(AppSpacing.lg),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text(
             label,
             style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-              color: AppColors.ink,
+              color: context.colors.ink,
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -728,7 +731,7 @@ class _PlainTextEditor extends StatelessWidget {
 
     final border = OutlineInputBorder(
       borderRadius: AppRadii.smBorder,
-      borderSide: const BorderSide(color: AppColors.line),
+      borderSide: BorderSide(color: context.colors.line),
     );
 
     return TextFormField(
@@ -743,7 +746,7 @@ class _PlainTextEditor extends StatelessWidget {
       textAlign: textAlign,
       textInputAction: textInputAction,
       style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-        color: AppColors.ink,
+        color: context.colors.ink,
         fontWeight: FontWeight.w500,
       ),
       decoration: InputDecoration(
@@ -753,15 +756,15 @@ class _PlainTextEditor extends StatelessWidget {
         enabledBorder: border,
         focusedBorder: OutlineInputBorder(
           borderRadius: AppRadii.smBorder,
-          borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
+          borderSide: BorderSide(color: context.colors.primary, width: 1.5),
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: AppRadii.smBorder,
-          borderSide: const BorderSide(color: AppColors.danger),
+          borderSide: BorderSide(color: context.colors.danger),
         ),
         focusedErrorBorder: OutlineInputBorder(
           borderRadius: AppRadii.smBorder,
-          borderSide: const BorderSide(color: AppColors.danger, width: 1.5),
+          borderSide: BorderSide(color: context.colors.danger, width: 1.5),
         ),
         isDense: true,
         contentPadding: EdgeInsets.symmetric(
@@ -769,16 +772,16 @@ class _PlainTextEditor extends StatelessWidget {
           vertical: isMultiline ? AppSpacing.lg : AppSpacing.md,
         ),
         errorText: errorText,
-        errorStyle: const TextStyle(
-          color: AppColors.danger,
+        errorStyle: TextStyle(
+          color: context.colors.danger,
           fontWeight: FontWeight.w600,
         ),
         counterStyle: Theme.of(
           context,
-        ).textTheme.bodyMedium?.copyWith(color: const Color(0xFF636366)),
+        ).textTheme.bodyMedium?.copyWith(color: context.colors.muted),
         hintText: hintText,
         hintStyle: Theme.of(context).textTheme.bodyLarge?.copyWith(
-          color: AppColors.muted.withValues(alpha: 0.72),
+          color: context.colors.muted.withValues(alpha: 0.72),
           fontWeight: FontWeight.w400,
         ),
       ),
@@ -808,9 +811,9 @@ class _StickyActionBar extends StatelessWidget {
   Widget build(BuildContext context) {
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: AppColors.background.withValues(alpha: 0.9),
+        color: context.colors.background.withValues(alpha: 0.9),
         border: Border(
-          top: BorderSide(color: AppColors.line.withValues(alpha: 0.7)),
+          top: BorderSide(color: context.colors.line.withValues(alpha: 0.7)),
         ),
       ),
       child: SafeArea(
@@ -847,15 +850,19 @@ class _StickyActionBar extends StatelessWidget {
 }
 
 class _DashedRoundedRectPainter extends CustomPainter {
-  const _DashedRoundedRectPainter({required this.borderRadius});
+  const _DashedRoundedRectPainter({
+    required this.borderRadius,
+    required this.color,
+  });
 
   final double borderRadius;
+  final Color color;
 
   @override
   void paint(Canvas canvas, Size size) {
     const strokeWidth = 1.5;
     final paint = Paint()
-      ..color = AppColors.primary.withValues(alpha: AppAlphas.border)
+      ..color = color.withValues(alpha: AppAlphas.border)
       ..strokeWidth = strokeWidth
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round;

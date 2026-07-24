@@ -4,9 +4,13 @@ import 'package:go_router/go_router.dart';
 
 import '../../features/auth/presentation/login_screen.dart';
 import '../../features/auth/providers/auth_provider.dart';
+import '../../features/configuracion/presentation/accesibilidad_screen.dart';
+import '../../features/configuracion/presentation/categorias_screen.dart';
 import '../../features/configuracion/presentation/configuracion_screen.dart';
+import '../../features/configuracion/presentation/equipo_screen.dart';
 import '../../features/cuadres/presentation/cuadre_detalle_screen.dart';
 import '../../features/cuadres/presentation/cuadres_screen.dart';
+import '../../features/cuadres/presentation/cuadres_historial_screen.dart';
 import '../../features/inventario/presentation/inventario_screen.dart';
 import '../../features/inventario/presentation/producto_detalle_screen.dart';
 import '../../features/inventario/presentation/producto_form_screen.dart';
@@ -106,6 +110,18 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             path: '/admin/configuracion',
             builder: (context, state) => const ConfiguracionScreen(isAdmin: true),
           ),
+          GoRoute(
+            path: '/admin/configuracion/accesibilidad',
+            builder: (context, state) => const AccesibilidadScreen(),
+          ),
+          GoRoute(
+            path: '/admin/configuracion/equipo',
+            builder: (context, state) => const EquipoScreen(),
+          ),
+          GoRoute(
+            path: '/admin/configuracion/categorias',
+            builder: (context, state) => const CategoriasScreen(),
+          ),
         ],
       ),
       ShellRoute(
@@ -150,8 +166,16 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             },
           ),
           GoRoute(
+            path: '/dependiente/cuadres/historial',
+            builder: (context, state) => const CuadresHistorialScreen(),
+          ),
+          GoRoute(
             path: '/dependiente/configuracion',
             builder: (context, state) => const ConfiguracionScreen(isAdmin: false),
+          ),
+          GoRoute(
+            path: '/dependiente/configuracion/accesibilidad',
+            builder: (context, state) => const AccesibilidadScreen(),
           ),
         ],
       ),

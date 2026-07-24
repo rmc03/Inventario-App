@@ -3,17 +3,15 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 
-import '../../../core/local_db/local_database.dart';
 import '../../../shared/models/movimiento.dart';
 import '../../../shared/models/producto.dart';
 import '../../../shared/models/usuario.dart';
 import '../data/movimiento_repository.dart';
-import '../data/sqlite_movimiento_repository.dart';
+import '../data/in_memory_movimiento_repository.dart';
 
 final movimientoRepositoryProvider = Provider<MovimientoRepository>((ref) {
-  // Use the local sqlite repository by default. Swap for a Supabase
-  // implementation later without touching the rest of the code.
-  return SqliteMovimientoRepository(LocalDatabase.instance);
+  // Using InMemory repository with test data for development
+  return InMemoryMovimientoRepository();
 });
 
 // ─── Estado de filtros compartido (una sola fuente para toda la pantalla) ───
@@ -112,6 +110,90 @@ class MovimientoController extends Notifier<List<Movimiento>> {
       tipo: tipo,
       cantidad: cantidad,
       nota: nota == null || nota.trim().isEmpty ? null : nota.trim(),
+      fecha: now,
+      synced: false,
+      createdAt: now,
+    );
+
+    _repository.addMovimiento(movimiento);
+    state = _repository.fetchMovimientos();
+  }
+
+  /// Registra el inicio de turno de un dependiente
+  void registrarInicioTurno({
+    required Usuario dependiente,
+  }) {
+    final now = DateTime.now();
+    final movimiento = Movimiento(
+      id: const Uuid().v4(),
+      productoId: '', // No aplica para inicio de turno
+      productoNombre: '', // No aplica
+      usuarioId: dependiente.id,
+      usuarioNombre: dependiente.nombre,
+      usuarioFotoUrl: dependiente.fotoUrl,
+      tipo: MovimientoTipo.inicioTurno,
+      cantidad: 0, // No aplica
+      nota: 'Inicio de turno de ${dependiente.nombre}',
+      fecha: now,
+      synced: false,
+      createdAt: now,
+    );
+
+    _repository.addMovimiento(movimiento);
+    state = _repository.fetchMovimientos();
+  }
+
+  /// Registra una venta completa con todos sus productos
+  void registrarVenta({
+    required String ventaId,
+    required Usuario dependiente,
+    required List<Map<String, dynamic>> productos, // [{nombre: String, cantidad: int, precio: double}]
+    required double totalVenta,
+  }) {
+    final now = DateTime.now();
+    final productosNombres = productos.map((p) => 
+      '${p['cantidad']}x ${p['nombre']}'
+    ).toList();
+
+    final movimiento = Movimiento(
+      id: const Uuid().v4(),
+      productoId: '', // Para ventas agrupadas, no hay un solo producto
+      productoNombre: '${productos.length} productos',
+      usuarioId: dependiente.id,
+      usuarioNombre: dependiente.nombre,
+      usuarioFotoUrl: dependiente.fotoUrl,
+      tipo: MovimientoTipo.venta,
+      cantidad: productos.fold<int>(0, (sum, p) => sum + (p['cantidad'] as int)),
+      nota: 'Venta #${ventaId.substring(0, 8)}',
+      fecha: now,
+      synced: false,
+      createdAt: now,
+      ventaId: ventaId,
+      totalVenta: totalVenta,
+      productosVendidos: productosNombres,
+    );
+
+    _repository.addMovimiento(movimiento);
+    state = _repository.fetchMovimientos();
+  }
+
+  /// Registra la eliminación de un producto
+  void registrarProductoEliminado({
+    required Producto producto,
+    required Usuario admin,
+    String? motivo,
+  }) {
+    final now = DateTime.now();
+    final movimiento = Movimiento(
+      id: const Uuid().v4(),
+      productoId: producto.id,
+      productoNombre: producto.nombre,
+      usuarioId: admin.id,
+      usuarioNombre: admin.nombre,
+      usuarioFotoUrl: admin.fotoUrl,
+      tipo: MovimientoTipo.productoEliminado,
+      cantidad: producto.stockActual, // Guardamos el stock que tenía
+      nota: motivo,
       fecha: now,
       synced: false,
       createdAt: now,

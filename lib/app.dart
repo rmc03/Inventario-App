@@ -8,6 +8,8 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'core/router/app_router.dart';
 import 'core/theme/app_theme.dart';
 import 'core/app_startup.dart';
+import 'core/providers/theme_provider.dart';
+import 'core/providers/accessibility_provider.dart';
 
 /// Internal splash overlay shown while optional background initialization
 /// (e.g. Supabase) completes. Keeps visuals identical to the native splash
@@ -76,6 +78,8 @@ class _SplashOverlayState extends State<_SplashOverlay> {
   @override
   Widget build(BuildContext context) {
     final child = widget.child;
+    final colors = Theme.of(context).extension<AppColorsExtension>() ?? AppColorsExtension.light;
+    
     return Stack(
       children: [
         child,
@@ -86,7 +90,7 @@ class _SplashOverlayState extends State<_SplashOverlay> {
           child: IgnorePointer(
             ignoring: !_visible,
             child: Container(
-              color: const Color(0xFFF2F2F7),
+              color: colors.background,
               child: Center(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -94,7 +98,7 @@ class _SplashOverlayState extends State<_SplashOverlay> {
                     Icon(
                       Icons.inventory_2,
                       size: 92,
-                      color: Theme.of(context).colorScheme.primary,
+                      color: colors.primary,
                     ),
                     const SizedBox(height: 12),
                     Text(
@@ -118,11 +122,21 @@ class InventarioApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final router = ref.watch(appRouterProvider);
+    final themeMode = ref.watch(themeModeProvider);
+    final accessibility = ref.watch(accessibilityProvider);
 
     return MaterialApp.router(
       title: 'Inventario App',
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.light(),
+      theme: AppTheme.light(
+        textScaleFactor: accessibility.textSizeLevel.scale,
+        boldText: accessibility.boldText,
+      ),
+      darkTheme: AppTheme.dark(
+        textScaleFactor: accessibility.textSizeLevel.scale,
+        boldText: accessibility.boldText,
+      ),
+      themeMode: themeMode,
       routerConfig: router,
       localizationsDelegates: const [
         GlobalMaterialLocalizations.delegate,

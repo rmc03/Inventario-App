@@ -311,10 +311,10 @@ class _BadgedIcon extends StatelessWidget {
               width: 10,
               height: 10,
               decoration: BoxDecoration(
-                color: AppColors.danger,
+                color: context.colors.danger,
                 shape: BoxShape.circle,
                 border: Border.all(
-                  color: AppColors.surface,
+                  color: context.colors.surface,
                   width: 1.5,
                 ),
               ),
@@ -349,12 +349,6 @@ List<ShellItem> _adminItems(WidgetRef ref) {
       activeIcon: Icons.fact_check,
       badge: hasPending,
     ),
-    ShellItem(
-      path: '/admin/configuracion',
-      label: 'Ajustes',
-      icon: Icons.settings_outlined,
-      activeIcon: Icons.settings,
-    ),
   ];
 }
 
@@ -370,11 +364,5 @@ const _dependienteItems = [
     label: 'Inventario',
     icon: Icons.inventory_2_outlined,
     activeIcon: Icons.inventory_2,
-  ),
-  ShellItem(
-    path: '/dependiente/configuracion',
-    label: 'Ajustes',
-    icon: Icons.settings_outlined,
-    activeIcon: Icons.settings,
   ),
 ];

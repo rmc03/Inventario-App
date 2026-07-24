@@ -8,6 +8,7 @@ import '../../../core/utils/formatters.dart';
 import '../../../core/utils/haptics.dart';
 import '../../../shared/models/pago.dart';
 import '../../../shared/models/venta.dart';
+import '../../../shared/widgets/screen_popup_menu.dart';
 import '../../ventas/providers/venta_provider.dart';
 import '../providers/turno_provider.dart';
 
@@ -36,27 +37,48 @@ class _SinTurnoView extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Mi turno')),
+      appBar: AppBar(
+        title: const Text('Mi turno'),
+        actions: [
+          ScreenPopupMenu(
+            items: [
+              ScreenMenuItem(
+                value: 'ajustes',
+                icon: Icons.settings_rounded,
+                iconColor: context.colors.muted,
+                title: 'Ajustes',
+                subtitle: 'Preferencias de la app',
+              ),
+            ],
+            onSelected: (value) {
+              if (value == 'ajustes') {
+                context.push('/dependiente/configuracion');
+              }
+            },
+          ),
+          const SizedBox(width: 4),
+        ],
+      ),
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 800),
+            constraints: BoxConstraints(maxWidth: 800),
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(24, 0, 24, 32),
+              padding: EdgeInsets.fromLTRB(24, 0, 24, 32),
               child: Column(
                 children: [
-                  const Spacer(),
+                  Spacer(),
                   DecoratedBox(
                     decoration: BoxDecoration(
-                      color: AppColors.primary.withValues(alpha: 0.08),
+                      color: context.colors.primary.withValues(alpha: 0.08),
                       shape: BoxShape.circle,
                     ),
-                    child: const Padding(
+                    child: Padding(
                       padding: EdgeInsets.all(28),
                       child: Icon(
                         Icons.work_outline_rounded,
                         size: 56,
-                        color: AppColors.primary,
+                        color: context.colors.primary,
                       ),
                     ),
                   ),
@@ -65,12 +87,12 @@ class _SinTurnoView extends ConsumerWidget {
                     compactDateFormatter.format(DateTime.now()),
                     style: Theme.of(context).textTheme.titleLarge,
                   ),
-                  const SizedBox(height: 8),
+                  SizedBox(height: 8),
                   Text(
                     'Aún no has iniciado tu turno',
                     style: Theme.of(
                       context,
-                    ).textTheme.bodyLarge?.copyWith(color: AppColors.muted),
+                    ).textTheme.bodyLarge?.copyWith(color: context.colors.muted),
                     textAlign: TextAlign.center,
                   ),
                   const Spacer(),
@@ -130,29 +152,29 @@ class _TurnoActivoView extends ConsumerWidget {
                   Haptics.confirm(context);
                   context.push('/dependiente/turno/resumen');
                   break;
-                case 'resumen':
-                  context.push('/dependiente/turno/resumen');
+                case 'ajustes':
+                  context.push('/dependiente/configuracion');
                   break;
               }
             },
             itemBuilder: (context) => [
               PopupMenuItem(
                 value: 'cerrar',
-                padding: const EdgeInsets.symmetric(
+                padding: EdgeInsets.symmetric(
                   horizontal: AppSpacing.lg,
                   vertical: AppSpacing.sm,
                 ),
                 child: Row(
                   children: [
                     Container(
-                      padding: const EdgeInsets.all(8),
+                      padding: EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: AppColors.danger.withValues(alpha: 0.1),
+                        color: context.colors.danger.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(8),
                       ),
-                      child: const Icon(
+                      child: Icon(
                         Icons.logout_rounded,
-                        color: AppColors.danger,
+                        color: context.colors.danger,
                         size: 20,
                       ),
                     ),
@@ -168,11 +190,11 @@ class _TurnoActivoView extends ConsumerWidget {
                               fontSize: 15,
                             ),
                           ),
-                          const SizedBox(height: 2),
+                          SizedBox(height: 2),
                           Text(
                             'Finaliza tu jornada',
                             style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                  color: AppColors.muted,
+                                  color: context.colors.muted,
                                   fontSize: 12,
                                 ),
                           ),
@@ -183,22 +205,22 @@ class _TurnoActivoView extends ConsumerWidget {
                 ),
               ),
               PopupMenuItem(
-                value: 'resumen',
-                padding: const EdgeInsets.symmetric(
+                value: 'ajustes',
+                padding: EdgeInsets.symmetric(
                   horizontal: AppSpacing.lg,
                   vertical: AppSpacing.sm,
                 ),
                 child: Row(
                   children: [
                     Container(
-                      padding: const EdgeInsets.all(8),
+                      padding: EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: AppColors.primary.withValues(alpha: 0.1),
+                        color: context.colors.muted.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(8),
                       ),
-                      child: const Icon(
-                        Icons.receipt_long_rounded,
-                        color: AppColors.primary,
+                      child: Icon(
+                        Icons.settings_rounded,
+                        color: context.colors.muted,
                         size: 20,
                       ),
                     ),
@@ -208,17 +230,17 @@ class _TurnoActivoView extends ConsumerWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           const Text(
-                            'Resumen del turno',
+                            'Ajustes',
                             style: TextStyle(
                               fontWeight: FontWeight.w600,
                               fontSize: 15,
                             ),
                           ),
-                          const SizedBox(height: 2),
+                          SizedBox(height: 2),
                           Text(
-                            'Ver estadísticas',
+                            'Preferencias de la app',
                             style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                  color: AppColors.muted,
+                                  color: context.colors.muted,
                                   fontSize: 12,
                                 ),
                           ),
@@ -373,8 +395,8 @@ class _TurnoActivoView extends ConsumerWidget {
         minChildSize: 0.5,
         maxChildSize: 0.95,
         builder: (context, scrollController) => Container(
-          decoration: const BoxDecoration(
-            color: AppColors.surface,
+          decoration: BoxDecoration(
+            color: context.colors.surface,
             borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
           ),
           child: SafeArea(
@@ -382,13 +404,13 @@ class _TurnoActivoView extends ConsumerWidget {
               children: [
                 // Drag handle
                 Padding(
-                  padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
+                  padding: EdgeInsets.symmetric(vertical: AppSpacing.md),
                   child: Center(
                     child: Container(
                       width: 40,
                       height: 5,
                       decoration: BoxDecoration(
-                        color: AppColors.muted.withValues(alpha: 0.5),
+                        color: context.colors.muted.withValues(alpha: 0.5),
                         borderRadius: BorderRadius.circular(AppRadii.pill),
                       ),
                     ),
@@ -405,15 +427,15 @@ class _TurnoActivoView extends ConsumerWidget {
                   child: Row(
                     children: [
                       Container(
-                        padding: const EdgeInsets.all(10),
+                        padding: EdgeInsets.all(10),
                         decoration: BoxDecoration(
-                          color: AppColors.primary.withValues(alpha: 0.1),
+                          color: context.colors.primary.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        child: const Icon(
+                        child: Icon(
                           Icons.receipt_long_rounded,
                           size: 24,
-                          color: AppColors.primary,
+                          color: context.colors.primary,
                         ),
                       ),
                       const SizedBox(width: AppSpacing.md),
@@ -436,7 +458,7 @@ class _TurnoActivoView extends ConsumerWidget {
                                   .textTheme
                                   .bodySmall
                                   ?.copyWith(
-                                    color: AppColors.muted,
+                                    color: context.colors.muted,
                                   ),
                             ),
                           ],
@@ -488,24 +510,24 @@ class _ResumenDelDiaCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(AppSpacing.lg),
+      padding: EdgeInsets.all(AppSpacing.lg),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            AppColors.primary.withValues(alpha: 0.08),
-            AppColors.primary.withValues(alpha: 0.03),
+            context.colors.primary.withValues(alpha: 0.08),
+            context.colors.primary.withValues(alpha: 0.03),
           ],
         ),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: AppColors.primary.withValues(alpha: 0.15),
+          color: context.colors.primary.withValues(alpha: 0.15),
           width: 1.5,
         ),
         boxShadow: [
           BoxShadow(
-            color: AppColors.primary.withValues(alpha: 0.08),
+            color: context.colors.primary.withValues(alpha: 0.08),
             blurRadius: 16,
             offset: const Offset(0, 4),
           ),
@@ -520,32 +542,32 @@ class _ResumenDelDiaCard extends StatelessWidget {
                 Row(
                   children: [
                     Container(
-                      padding: const EdgeInsets.all(6),
+                      padding: EdgeInsets.all(6),
                       decoration: BoxDecoration(
-                        color: AppColors.primary.withValues(alpha: 0.15),
+                        color: context.colors.primary.withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(8),
                       ),
-                      child: const Icon(
+                      child: Icon(
                         Icons.monetization_on_rounded,
-                        color: AppColors.primary,
+                        color: context.colors.primary,
                         size: 16,
                       ),
                     ),
-                    const SizedBox(width: 8),
+                    SizedBox(width: 8),
                     Text(
                       'Ventas de hoy',
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                             fontWeight: FontWeight.w600,
-                            color: AppColors.primary,
+                            color: context.colors.primary,
                           ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 8),
+                SizedBox(height: 8),
                 Text(
                   formatCurrency(totalVentas),
                   style: Theme.of(context).textTheme.headlineLarge?.copyWith(
-                        color: AppColors.primary,
+                        color: context.colors.primary,
                         fontWeight: FontWeight.w900,
                         letterSpacing: -0.5,
                       ),
@@ -553,12 +575,12 @@ class _ResumenDelDiaCard extends StatelessWidget {
               ],
             ),
           ),
-          const SizedBox(width: AppSpacing.md),
+          SizedBox(width: AppSpacing.md),
           // Divisor vertical
           Container(
             width: 1,
             height: 60,
-            color: AppColors.line.withValues(alpha: 0.5),
+            color: context.colors.line.withValues(alpha: 0.5),
           ),
           const SizedBox(width: AppSpacing.md),
           // Métricas compactas
@@ -599,15 +621,15 @@ class _MetricaBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(
+      padding: EdgeInsets.symmetric(
         horizontal: 10,
         vertical: 6,
       ),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: context.colors.surface,
         borderRadius: BorderRadius.circular(8),
         border: Border.all(
-          color: AppColors.line.withValues(alpha: 0.5),
+          color: context.colors.line.withValues(alpha: 0.5),
         ),
       ),
       child: Row(
@@ -616,21 +638,21 @@ class _MetricaBadge extends StatelessWidget {
           Icon(
             icon,
             size: 14,
-            color: AppColors.primary,
+            color: context.colors.primary,
           ),
-          const SizedBox(width: 6),
+          SizedBox(width: 6),
           Text(
             valor,
             style: Theme.of(context).textTheme.titleSmall?.copyWith(
                   fontWeight: FontWeight.w800,
-                  color: AppColors.primary,
+                  color: context.colors.primary,
                 ),
           ),
-          const SizedBox(width: 4),
+          SizedBox(width: 4),
           Text(
             label,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: AppColors.muted,
+                  color: context.colors.muted,
                 ),
           ),
         ],
@@ -647,9 +669,9 @@ class _BadgeChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: AppColors.surfaceSecondary,
+        color: context.colors.surfaceSecondary,
         borderRadius: BorderRadius.circular(20),
       ),
       child: Row(
@@ -658,17 +680,17 @@ class _BadgeChip extends StatelessWidget {
           Container(
             width: 6,
             height: 6,
-            decoration: const BoxDecoration(
-              color: AppColors.success,
+            decoration: BoxDecoration(
+              color: context.colors.success,
               shape: BoxShape.circle,
             ),
           ),
           const SizedBox(width: 6),
           Text(
             'Turno activo \u00b7 Desde ${timeFormatter.format(horaInicio)}',
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 12,
-              color: AppColors.success,
+              color: context.colors.success,
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -685,21 +707,21 @@ class _EmptyItems extends StatelessWidget {
   Widget build(BuildContext context) {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 32, 16, 16),
+        padding: EdgeInsets.fromLTRB(16, 32, 16, 16),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(
               Icons.shopping_bag_outlined,
               size: 40,
-              color: AppColors.muted.withValues(alpha: 0.4),
+              color: context.colors.muted.withValues(alpha: 0.4),
             ),
-            const SizedBox(height: 10),
+            SizedBox(height: 10),
             Text(
               'Sin ventas aún',
               style: Theme.of(
                 context,
-              ).textTheme.titleMedium?.copyWith(color: AppColors.muted),
+              ).textTheme.titleMedium?.copyWith(color: context.colors.muted),
             ),
             const SizedBox(height: 4),
             Text(
@@ -726,15 +748,15 @@ class _VentaCard extends StatelessWidget {
 
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: context.colors.surface,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: AppColors.line,
+          color: context.colors.line,
           width: 1,
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
+            color: context.colors.ink.withValues(alpha: 0.03),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -760,15 +782,15 @@ class _VentaCard extends StatelessWidget {
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                       colors: [
-                        AppColors.primary.withValues(alpha: 0.15),
-                        AppColors.primary.withValues(alpha: 0.05),
+                        context.colors.primary.withValues(alpha: 0.15),
+                        context.colors.primary.withValues(alpha: 0.05),
                       ],
                     ),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: const Icon(
+                  child: Icon(
                     Icons.shopping_cart_rounded,
-                    color: AppColors.primary,
+                    color: context.colors.primary,
                     size: 22,
                   ),
                 ),
@@ -789,30 +811,30 @@ class _VentaCard extends StatelessWidget {
                         children: [
                           // Badge de artículos
                           Container(
-                            padding: const EdgeInsets.symmetric(
+                            padding: EdgeInsets.symmetric(
                               horizontal: 8,
                               vertical: 3,
                             ),
                             decoration: BoxDecoration(
-                              color: AppColors.primary.withValues(alpha: 0.08),
+                              color: context.colors.primary.withValues(alpha: 0.08),
                               borderRadius: BorderRadius.circular(6),
                             ),
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                const Icon(
+                                Icon(
                                   Icons.inventory_2_rounded,
                                   size: 12,
-                                  color: AppColors.primary,
+                                  color: context.colors.primary,
                                 ),
-                                const SizedBox(width: 4),
+                                SizedBox(width: 4),
                                 Text(
                                   articulosLabel(venta.totalUnidades),
                                   style: Theme.of(context)
                                       .textTheme
                                       .bodySmall
                                       ?.copyWith(
-                                        color: AppColors.primary,
+                                        color: context.colors.primary,
                                         fontWeight: FontWeight.w600,
                                         fontSize: 11,
                                       ),
@@ -824,14 +846,14 @@ class _VentaCard extends StatelessWidget {
                           // Badge de método de pago (si aplica)
                           if (metodoPago != null)
                             Container(
-                              padding: const EdgeInsets.symmetric(
+                              padding: EdgeInsets.symmetric(
                                 horizontal: 8,
                                 vertical: 3,
                               ),
                               decoration: BoxDecoration(
                                 color: metodoPago == MetodoPago.efectivo
-                                    ? AppColors.success.withValues(alpha: 0.08)
-                                    : AppColors.warning.withValues(alpha: 0.08),
+                                    ? context.colors.success.withValues(alpha: 0.08)
+                                    : context.colors.warning.withValues(alpha: 0.08),
                                 borderRadius: BorderRadius.circular(6),
                               ),
                               child: Row(
@@ -843,8 +865,8 @@ class _VentaCard extends StatelessWidget {
                                         : Icons.credit_card_rounded,
                                     size: 12,
                                     color: metodoPago == MetodoPago.efectivo
-                                        ? AppColors.success
-                                        : AppColors.warning,
+                                        ? context.colors.success
+                                        : context.colors.warning,
                                   ),
                                   const SizedBox(width: 4),
                                   Text(
@@ -856,8 +878,8 @@ class _VentaCard extends StatelessWidget {
                                         .bodySmall
                                         ?.copyWith(
                                           color: metodoPago == MetodoPago.efectivo
-                                              ? AppColors.success
-                                              : AppColors.warning,
+                                              ? context.colors.success
+                                              : context.colors.warning,
                                           fontWeight: FontWeight.w600,
                                           fontSize: 11,
                                         ),
@@ -880,20 +902,20 @@ class _VentaCard extends StatelessWidget {
                       style: Theme.of(
                         context,
                       ).textTheme.titleLarge?.copyWith(
-                            color: AppColors.primary,
+                            color: context.colors.primary,
                             fontWeight: FontWeight.w800,
                           ),
                     ),
-                    const SizedBox(height: 4),
+                    SizedBox(height: 4),
                     Container(
-                      padding: const EdgeInsets.all(4),
+                      padding: EdgeInsets.all(4),
                       decoration: BoxDecoration(
-                        color: AppColors.primary.withValues(alpha: 0.08),
+                        color: context.colors.primary.withValues(alpha: 0.08),
                         shape: BoxShape.circle,
                       ),
-                      child: const Icon(
+                      child: Icon(
                         Icons.chevron_right_rounded,
-                        color: AppColors.primary,
+                        color: context.colors.primary,
                         size: 18,
                       ),
                     ),
@@ -916,28 +938,49 @@ class _CuadreEnviadoView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Mi turno')),
+      appBar: AppBar(
+        title: const Text('Mi turno'),
+        actions: [
+          ScreenPopupMenu(
+            items: [
+              ScreenMenuItem(
+                value: 'ajustes',
+                icon: Icons.settings_rounded,
+                iconColor: context.colors.muted,
+                title: 'Ajustes',
+                subtitle: 'Preferencias de la app',
+              ),
+            ],
+            onSelected: (value) {
+              if (value == 'ajustes') {
+                context.push('/dependiente/configuracion');
+              }
+            },
+          ),
+          const SizedBox(width: 4),
+        ],
+      ),
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 800),
+            constraints: BoxConstraints(maxWidth: 800),
             child: Center(
               child: Padding(
-                padding: const EdgeInsets.all(32),
+                padding: EdgeInsets.all(32),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     DecoratedBox(
                       decoration: BoxDecoration(
-                        color: AppColors.success.withValues(alpha: 0.10),
+                        color: context.colors.success.withValues(alpha: 0.10),
                         shape: BoxShape.circle,
                       ),
-                      child: const Padding(
+                      child: Padding(
                         padding: EdgeInsets.all(28),
                         child: Icon(
                           Icons.check_circle_outline_rounded,
                           size: 56,
-                          color: AppColors.success,
+                          color: context.colors.success,
                         ),
                       ),
                     ),
@@ -946,12 +989,12 @@ class _CuadreEnviadoView extends StatelessWidget {
                       'Cuadre enviado',
                       style: Theme.of(context).textTheme.headlineMedium,
                     ),
-                    const SizedBox(height: 8),
+                    SizedBox(height: 8),
                     Text(
                       'Pendiente de revisión por el jefe.',
                       style: Theme.of(
                         context,
-                      ).textTheme.bodyLarge?.copyWith(color: AppColors.muted),
+                      ).textTheme.bodyLarge?.copyWith(color: context.colors.muted),
                       textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 6),

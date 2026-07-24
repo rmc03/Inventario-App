@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 
-import 'app_theme.dart';
-
 /// Design tokens centralizados.
 ///
 /// Reemplazan los magic numbers dispersos por la app (radios de 6/8/10/12/14/20,
@@ -61,7 +59,7 @@ class AppShadows {
   /// que había en `producto_form_screen.dart`.
   static final subtle = <BoxShadow>[
     BoxShadow(
-      color: AppColors.ink.withValues(alpha: 0.04),
+      color: const Color(0xFF1C1C1E).withValues(alpha: 0.04),
       blurRadius: 16,
       offset: const Offset(0, 4),
     ),

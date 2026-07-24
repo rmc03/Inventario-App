@@ -43,9 +43,7 @@ class SqliteMovimientoRepository implements MovimientoRepository {
   void addMovimiento(Movimiento movimiento) {
     _cache.insert(0, movimiento);
     _db.database.then((d) async {
-      final map = movimiento.toLocalMap()
-        ..['synced'] = movimiento.synced ? 1 : 0;
-      await d.insert('movimientos', map);
+      await d.insert('movimientos', movimiento.toLocalMap());
       _controller.add(List.unmodifiable(_cache));
     });
   }

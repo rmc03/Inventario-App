@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../shared/models/cuadre.dart';
+import '../../../shared/widgets/screen_popup_menu.dart';
 import '../providers/cuadre_provider.dart';
 
 class CuadresScreen extends ConsumerWidget {
@@ -15,7 +16,36 @@ class CuadresScreen extends ConsumerWidget {
     final cuadres = ref.watch(cuadreControllerProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Cuadres')),
+      appBar: AppBar(
+        title: const Text('Cuadres'),
+        actions: [
+          ScreenPopupMenu(
+            items: [
+              ScreenMenuItem(
+                value: 'ajustes',
+                icon: Icons.settings_rounded,
+                iconColor: context.colors.muted,
+                title: 'Ajustes',
+                subtitle: 'Preferencias de la app',
+              ),
+              ScreenMenuItem(
+                value: 'filtrar',
+                icon: Icons.filter_list_rounded,
+                iconColor: context.colors.primary,
+                title: 'Filtrar por fecha',
+                subtitle: 'Rango de fechas',
+                enabled: false,
+              ),
+            ],
+            onSelected: (value) {
+              if (value == 'ajustes') {
+                context.push('/admin/configuracion');
+              }
+            },
+          ),
+          const SizedBox(width: 4),
+        ],
+      ),
       body: SafeArea(
         top: false,
         child: Center(
@@ -57,9 +87,9 @@ class _EstadoBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = switch (estado) {
-      CuadreEstado.aprobado => AppColors.success,
-      CuadreEstado.rechazado => AppColors.danger,
-      CuadreEstado.pendiente => AppColors.warning,
+      CuadreEstado.aprobado => context.colors.success,
+      CuadreEstado.rechazado => context.colors.danger,
+      CuadreEstado.pendiente => context.colors.warning,
     };
 
     return DecoratedBox(

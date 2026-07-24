@@ -24,7 +24,7 @@ class ProductPhoto extends StatelessWidget {
       child: ClipRRect(
         borderRadius: const BorderRadius.all(Radius.circular(AppRadii.md)),
         child: DecoratedBox(
-          decoration: const BoxDecoration(color: AppColors.surfaceSecondary),
+          decoration: BoxDecoration(color: context.colors.surfaceSecondary),
           child: _buildImage(imageUrl),
         ),
       ),
@@ -33,7 +33,7 @@ class ProductPhoto extends StatelessWidget {
 
   Widget _buildImage(String? imageUrl) {
     if (imageUrl == null || imageUrl.isEmpty) {
-      return _placeholder();
+      return Builder(builder: (context) => _placeholder(context));
     }
 
     // Decode at 2× the display size for retina sharpness — avoids full-res
@@ -48,7 +48,7 @@ class ProductPhoto extends StatelessWidget {
         height: size,
         cacheWidth: cacheSize,
         cacheHeight: cacheSize,
-        errorBuilder: (context, error, stackTrace) => _placeholder(),
+        errorBuilder: (context, error, stackTrace) => _placeholder(context),
       );
     }
 
@@ -60,7 +60,7 @@ class ProductPhoto extends StatelessWidget {
         height: size,
         cacheWidth: cacheSize,
         cacheHeight: cacheSize,
-        errorBuilder: (context, error, stackTrace) => _placeholder(),
+        errorBuilder: (context, error, stackTrace) => _placeholder(context),
       );
     }
 
@@ -75,7 +75,7 @@ class ProductPhoto extends StatelessWidget {
           child: CupertinoActivityIndicator(radius: 9),
         ),
       ),
-      errorWidget: (context, url, error) => _placeholder(),
+      errorWidget: (context, url, error) => _placeholder(context),
     );
   }
 
@@ -87,10 +87,10 @@ class ProductPhoto extends StatelessWidget {
     return value.startsWith('http://') || value.startsWith('https://');
   }
 
-  Widget _placeholder() {
+  Widget _placeholder(BuildContext context) {
     return Icon(
       Icons.inventory_2_outlined,
-      color: AppColors.muted,
+      color: context.colors.muted,
       size: iconSize ?? size * 0.40,
     );
   }

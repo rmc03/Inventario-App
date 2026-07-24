@@ -44,7 +44,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 vertical: AppSpacing.lg,
               ),
               child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 430),
+                constraints: BoxConstraints(maxWidth: 430),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -52,17 +52,17 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       children: [
                         DecoratedBox(
                           decoration: BoxDecoration(
-                            color: AppColors.surface,
-                            borderRadius: const BorderRadius.all(
+                            color: context.colors.surface,
+                            borderRadius: BorderRadius.all(
                               Radius.circular(AppRadii.md),
                             ),
                             boxShadow: AppShadows.subtle,
                           ),
-                          child: const Padding(
+                          child: Padding(
                             padding: EdgeInsets.all(AppSpacing.md),
                             child: Icon(
                               Icons.inventory_2_outlined,
-                              color: AppColors.primary,
+                              color: context.colors.primary,
                               size: 30,
                             ),
                           ),
@@ -81,12 +81,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       'Ingresar',
                       style: Theme.of(context).textTheme.headlineMedium,
                     ),
-                    const SizedBox(height: AppSpacing.sm),
+                    SizedBox(height: AppSpacing.sm),
                     Text(
                       'Acceso interno para jefe y dependientes.',
                       style: Theme.of(
                         context,
-                      ).textTheme.bodyLarge?.copyWith(color: AppColors.muted),
+                      ).textTheme.bodyLarge?.copyWith(color: context.colors.muted),
                     ),
                     const SizedBox(height: AppSpacing.xl),
                     SegmentedButton<UserRole>(
@@ -134,11 +134,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       ),
                     ),
                     if (authState.error != null) ...[
-                      const SizedBox(height: AppSpacing.sm),
+                      SizedBox(height: AppSpacing.sm),
                       Text(
                         authState.error!,
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: AppColors.danger,
+                          color: context.colors.danger,
                           fontWeight: FontWeight.w500,
                         ),
                       ),

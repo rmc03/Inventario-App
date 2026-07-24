@@ -11,35 +11,35 @@ class StatCard extends StatelessWidget {
     super.key,
     required this.label,
     required this.value,
-    this.tint = AppColors.primary,
+    this.tint,
   });
 
   final String label;
   final String value;
-  final Color tint;
+  final Color? tint;
 
   @override
   Widget build(BuildContext context) {
     return Expanded(
       child: DecoratedBox(
         decoration: ShapeDecoration(
-          color: AppColors.surface,
+          color: context.colors.surface,
           shape: const RoundedRectangleBorder(
             borderRadius: AppRadii.mdBorder,
           ),
           shadows: AppShadows.subtle,
         ),
         child: Padding(
-          padding: const EdgeInsets.all(AppSpacing.lg),
+          padding: EdgeInsets.all(AppSpacing.lg),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(label, style: Theme.of(context).textTheme.bodyMedium),
-              const SizedBox(height: AppSpacing.sm),
+              SizedBox(height: AppSpacing.sm),
               Text(
                 value,
                 style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  color: tint,
+                  color: tint ?? context.colors.primary,
                   fontSize: 22,
                 ),
               ),

@@ -1,6 +1,6 @@
 import '../../../shared/models/movimiento.dart';
 
-enum TipoMovimientoFiltro { todos, entradas, salidas }
+enum TipoMovimientoFiltro { todos, entradas, salidas, ventas, inicioTurno, eliminados }
 
 enum RangoFechaFiltro { hoy, semana, mes, personalizado }
 
@@ -100,7 +100,13 @@ List<Movimiento> filtrarMovimientos(
         (filtro.tipo == TipoMovimientoFiltro.entradas &&
             m.tipo == MovimientoTipo.entrada) ||
         (filtro.tipo == TipoMovimientoFiltro.salidas &&
-            m.tipo == MovimientoTipo.salida);
+            m.tipo == MovimientoTipo.salida) ||
+        (filtro.tipo == TipoMovimientoFiltro.ventas &&
+            m.tipo == MovimientoTipo.venta) ||
+        (filtro.tipo == TipoMovimientoFiltro.inicioTurno &&
+            m.tipo == MovimientoTipo.inicioTurno) ||
+        (filtro.tipo == TipoMovimientoFiltro.eliminados &&
+            m.tipo == MovimientoTipo.productoEliminado);
     if (!tipoOk) return false;
 
     // Fecha: [inicio, fin)

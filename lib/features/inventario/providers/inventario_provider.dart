@@ -3,22 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../shared/models/categoria.dart';
 import '../../../shared/models/movimiento.dart';
 import '../../../shared/models/producto.dart';
+import '../../../shared/widgets/filter_sort_sheet.dart';
 import '../data/producto_repository.dart';
 
 final productoRepositoryProvider = Provider<ProductoRepository>((ref) {
   return InMemoryProductoRepository();
 });
-
-enum ProductoSortBy {
-  nombreAsc('Nombre (A-Z)'),
-  precioAsc('Precio (Menor a Mayor)'),
-  precioDesc('Precio (Mayor a Menor)'),
-  stockAsc('Stock (Menor a Mayor)'),
-  stockDesc('Stock (Mayor a Menor)');
-
-  const ProductoSortBy(this.label);
-  final String label;
-}
 
 final inventarioControllerProvider =
     NotifierProvider<InventarioController, InventarioState>(

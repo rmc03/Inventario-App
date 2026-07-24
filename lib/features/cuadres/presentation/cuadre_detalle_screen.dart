@@ -696,9 +696,9 @@ class _ComentarioJefe extends StatelessWidget {
           children: [
             Row(
               children: [
-                const Icon(
+                Icon(
                   Icons.comment_outlined,
-                  color: AppColors.danger,
+                  color: context.colors.danger,
                   size: 16,
                 ),
                 const SizedBox(width: 8),
@@ -798,12 +798,12 @@ class _AccionesBar extends ConsumerWidget {
                     ? null
                     : () => _confirmarRechazo(context, ref),
                 icon: isRejecting
-                    ? const SizedBox(
+                    ? SizedBox(
                         width: 16,
                         height: 16,
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
-                          color: AppColors.danger,
+                          color: context.colors.danger,
                         ),
                       )
                     : const Icon(Icons.cancel_outlined, size: 20),

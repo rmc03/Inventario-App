@@ -19,7 +19,7 @@ class LocalDatabase {
     final dbPath = await getDatabasesPath();
     final database = await openDatabase(
       p.join(dbPath, 'inventario_app.db'),
-      version: 7,
+      version: 8,
       onCreate: (db, version) async {
         await db.execute('''
 CREATE TABLE productos (
@@ -58,7 +58,11 @@ CREATE TABLE movimientos (
   nota TEXT,
   fecha TEXT NOT NULL,
   synced INTEGER NOT NULL DEFAULT 0,
-  created_at TEXT NOT NULL
+  created_at TEXT NOT NULL,
+  venta_id TEXT,
+  precio_unitario REAL,
+  total_venta REAL,
+  productos_vendidos TEXT
 )
 ''');
         await db.execute('''
@@ -141,6 +145,21 @@ CREATE TABLE IF NOT EXISTS usuarios (
         if (oldVersion < 7) {
           try {
             await db.execute('ALTER TABLE cuadres ADD COLUMN ventas_json TEXT');
+          } catch (_) {}
+        }
+        if (oldVersion < 8) {
+          // Agregar nuevas columnas para soporte de ventas en movimientos
+          try {
+            await db.execute('ALTER TABLE movimientos ADD COLUMN venta_id TEXT');
+          } catch (_) {}
+          try {
+            await db.execute('ALTER TABLE movimientos ADD COLUMN precio_unitario REAL');
+          } catch (_) {}
+          try {
+            await db.execute('ALTER TABLE movimientos ADD COLUMN total_venta REAL');
+          } catch (_) {}
+          try {
+            await db.execute('ALTER TABLE movimientos ADD COLUMN productos_vendidos TEXT');
           } catch (_) {}
         }
       },

@@ -21,7 +21,7 @@ class LoadingOverlay extends StatelessWidget {
         if (isLoading)
           Positioned.fill(
             child: ColoredBox(
-              color: AppColors.ink.withValues(alpha: AppAlphas.overlay),
+              color: context.colors.ink.withValues(alpha: AppAlphas.overlay),
               child: const Center(
                 child: CupertinoActivityIndicator(radius: 14),
               ),

@@ -6,11 +6,11 @@ import '../../../core/theme/app_dimens.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../core/utils/haptics.dart';
-import '../../../shared/models/categoria.dart';
 import '../../../shared/models/cuadre_item.dart';
 import '../../../shared/models/producto.dart';
 import '../../../shared/widgets/product_photo.dart';
 import '../../../shared/widgets/qty_controls.dart';
+import '../../../shared/widgets/filter_sort_sheet.dart';
 import '../../inventario/data/producto_repository.dart';
 import '../../inventario/providers/inventario_provider.dart';
 import '../../turno/providers/turno_provider.dart';
@@ -136,18 +136,18 @@ class _NuevaVentaScreenState extends ConsumerState<NuevaVentaScreen> {
                               },
                             )
                           : null,
-                      border: const OutlineInputBorder(
+                      border: OutlineInputBorder(
                         borderRadius: AppRadii.pillBorder,
-                        borderSide: BorderSide(color: AppColors.line),
+                        borderSide: BorderSide(color: context.colors.line),
                       ),
-                      enabledBorder: const OutlineInputBorder(
+                      enabledBorder: OutlineInputBorder(
                         borderRadius: AppRadii.pillBorder,
-                        borderSide: BorderSide(color: AppColors.line),
+                        borderSide: BorderSide(color: context.colors.line),
                       ),
-                      focusedBorder: const OutlineInputBorder(
+                      focusedBorder: OutlineInputBorder(
                         borderRadius: AppRadii.pillBorder,
                         borderSide: BorderSide(
-                          color: AppColors.primary,
+                          color: context.colors.primary,
                           width: 1.5,
                         ),
                       ),
@@ -346,228 +346,32 @@ class _NuevaVentaScreenState extends ConsumerState<NuevaVentaScreen> {
   }
 
   void _showFilterSheet(BuildContext context) {
+    final categorias = ref.read(inventarioControllerProvider).categorias.isEmpty
+        ? demoCategorias()
+        : ref.read(inventarioControllerProvider).categorias;
+    
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       showDragHandle: false,
-      builder: (ctx) => _VentaFilterSheetContent(
+      builder: (ctx) => FilterSortSheet(
         initialSortBy: _selectedSortBy,
         initialCategoriaId: _selectedCategoriaId,
         initialSoloStockBajo: _soloStockBajo,
-        categorias: ref.read(inventarioControllerProvider).categorias.isEmpty
-            ? demoCategorias()
-            : ref.read(inventarioControllerProvider).categorias,
-        onChanged: ({sortBy, categoriaId, soloStockBajo}) {
+        categorias: categorias,
+        title: 'Ordenar y Filtrar',
+        onApply: ({
+          required sortBy,
+          required categoriaId,
+          required soloStockBajo,
+        }) {
           setState(() {
-            if (sortBy != null) _selectedSortBy = sortBy;
-            if (categoriaId != null) _selectedCategoriaId = categoriaId;
-            if (soloStockBajo != null) _soloStockBajo = soloStockBajo;
+            _selectedSortBy = sortBy;
+            _selectedCategoriaId = categoriaId;
+            _soloStockBajo = soloStockBajo;
           });
         },
       ),
-    );
-  }
-}
-
-// ─── Filter sheet con drag handle personalizado ─────────────────────────────
-
-class _VentaFilterSheetContent extends StatefulWidget {
-  const _VentaFilterSheetContent({
-    required this.initialSortBy,
-    required this.initialCategoriaId,
-    required this.initialSoloStockBajo,
-    required this.categorias,
-    required this.onChanged,
-  });
-
-  final ProductoSortBy initialSortBy;
-  final String? initialCategoriaId;
-  final bool initialSoloStockBajo;
-  final List<Categoria> categorias;
-  final void Function({
-    ProductoSortBy? sortBy,
-    String? categoriaId,
-    bool? soloStockBajo,
-  }) onChanged;
-
-  @override
-  State<_VentaFilterSheetContent> createState() => _VentaFilterSheetContentState();
-}
-
-class _VentaFilterSheetContentState extends State<_VentaFilterSheetContent> {
-  late ProductoSortBy _sortBy;
-  String? _categoriaId;
-  late bool _soloStockBajo;
-  final _sheetController = DraggableScrollableController();
-  bool _isDragging = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _sortBy = widget.initialSortBy;
-    _categoriaId = widget.initialCategoriaId;
-    _soloStockBajo = widget.initialSoloStockBajo;
-  }
-
-  @override
-  void dispose() {
-    _sheetController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return DraggableScrollableSheet(
-      controller: _sheetController,
-      initialChildSize: 0.5,
-      minChildSize: 0.3,
-      maxChildSize: 0.95,
-      expand: false,
-      builder: (context, scrollController) {
-        return SafeArea(
-          child: Column(
-            children: [
-              GestureDetector(
-                onVerticalDragStart: (_) =>
-                    setState(() => _isDragging = true),
-                onVerticalDragUpdate: (details) {
-                  final delta = -details.primaryDelta! /
-                      MediaQuery.of(context).size.height;
-                  _sheetController.jumpTo(
-                    (_sheetController.size + delta).clamp(0.3, 0.95),
-                  );
-                },
-                onVerticalDragEnd: (_) =>
-                    setState(() => _isDragging = false),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    vertical: AppSpacing.md,
-                  ),
-                  child: Center(
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 200),
-                      width: 40,
-                      height: 5,
-                      decoration: BoxDecoration(
-                        color: _isDragging
-                            ? AppColors.primary
-                            : AppColors.muted,
-                        borderRadius: BorderRadius.circular(AppRadii.pill),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              Expanded(
-                child: SingleChildScrollView(
-                  controller: scrollController,
-                  padding: EdgeInsets.fromLTRB(
-                    AppSpacing.xl,
-                    0,
-                    AppSpacing.xl,
-                    MediaQuery.of(context).viewInsets.bottom + AppSpacing.xl,
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Ordenar y Filtrar',
-                        style: Theme.of(context).textTheme.titleLarge,
-                      ),
-                      const SizedBox(height: AppSpacing.xl),
-                      Text(
-                        'Ordenar por',
-                        style: Theme.of(context).textTheme.titleMedium,
-                      ),
-                      const SizedBox(height: AppSpacing.sm),
-                      DropdownButtonFormField<ProductoSortBy>(
-                        initialValue: _sortBy,
-                        decoration: const InputDecoration(
-                          isDense: true,
-                          contentPadding: EdgeInsets.symmetric(
-                            horizontal: AppSpacing.sm,
-                            vertical: AppSpacing.sm,
-                          ),
-                        ),
-                        items: ProductoSortBy.values
-                            .map(
-                              (s) => DropdownMenuItem(
-                                value: s,
-                                child: Text(s.label),
-                              ),
-                            )
-                            .toList(),
-                        onChanged: (val) {
-                          if (val != null) {
-                            setState(() => _sortBy = val);
-                            widget.onChanged(sortBy: val);
-                          }
-                        },
-                      ),
-                      const SizedBox(height: AppSpacing.xl),
-                      SwitchListTile(
-                        contentPadding: EdgeInsets.zero,
-                        title: const Text('Solo stock bajo'),
-                        subtitle: const Text(
-                          'Muestra productos con 3 unidades o menos disponibles',
-                        ),
-                        value: _soloStockBajo,
-                        onChanged: (val) {
-                          setState(() => _soloStockBajo = val);
-                          widget.onChanged(soloStockBajo: val);
-                        },
-                      ),
-                      const Divider(),
-                      Text(
-                        'Categoría',
-                        style: Theme.of(context).textTheme.titleMedium,
-                      ),
-                      const SizedBox(height: AppSpacing.sm),
-                      ListView(
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        children: [
-                          ListTile(
-                            contentPadding: EdgeInsets.zero,
-                            leading: const Icon(Icons.apps_rounded),
-                            title: const Text('Todos'),
-                            trailing: _categoriaId == null
-                                ? const Icon(
-                                    Icons.check_rounded,
-                                    color: AppColors.primary,
-                                  )
-                                : null,
-                            onTap: () {
-                              setState(() => _categoriaId = null);
-                              widget.onChanged(categoriaId: _categoriaId);
-                            },
-                          ),
-                          for (final categoria in widget.categorias)
-                            ListTile(
-                              contentPadding: EdgeInsets.zero,
-                              leading: const Icon(Icons.category_outlined),
-                              title: Text(categoria.nombre),
-                              trailing: _categoriaId == categoria.id
-                                  ? const Icon(
-                                      Icons.check_rounded,
-                                      color: AppColors.primary,
-                                    )
-                                  : null,
-                              onTap: () {
-                                setState(() => _categoriaId = categoria.id);
-                                widget.onChanged(categoriaId: _categoriaId);
-                              },
-                            ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-        );
-      },
     );
   }
 }
@@ -598,13 +402,13 @@ class _CategoryChip extends StatelessWidget {
         duration: const Duration(milliseconds: 180),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         decoration: BoxDecoration(
-          color: selected ? AppColors.primary : AppColors.surfaceSecondary,
+          color: selected ? context.colors.primary : context.colors.surfaceSecondary,
           borderRadius: AppRadii.pillBorder,
         ),
         child: Text(
           label,
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-            color: selected ? Colors.white : AppColors.ink,
+            color: selected ? Colors.white : context.colors.ink,
             fontWeight: FontWeight.w700,
           ),
         ),
@@ -636,7 +440,7 @@ class _ProductoVentaTile extends StatelessWidget {
     final isSelected = qtyInCart > 0;
 
     return Card(
-      color: AppColors.surface,
+      color: context.colors.surface,
       elevation: 0,
       margin: EdgeInsets.zero,
       shape: const RoundedRectangleBorder(borderRadius: AppRadii.lgBorder),
@@ -650,7 +454,7 @@ class _ProductoVentaTile extends StatelessWidget {
             AnimatedContainer(
               duration: const Duration(milliseconds: 180),
               width: 5,
-              color: isSelected ? AppColors.primary : Colors.transparent,
+              color: isSelected ? context.colors.primary : Colors.transparent,
             ),
             Expanded(
               child: Padding(
@@ -674,10 +478,10 @@ class _ProductoVentaTile extends StatelessWidget {
                           Text.rich(
                             TextSpan(
                               text: 'Stock: ${producto.stockActual} ',
-                              children: const [
+                              children: [
                                 TextSpan(
                                   text: 'disponibles',
-                                  style: TextStyle(color: AppColors.success),
+                                  style: TextStyle(color: context.colors.success),
                                 ),
                               ],
                             ),
@@ -697,7 +501,7 @@ class _ProductoVentaTile extends StatelessWidget {
                             formatCurrency(producto.precio),
                             style: Theme.of(context).textTheme.titleMedium
                                 ?.copyWith(
-                                  color: AppColors.primary,
+                                  color: context.colors.primary,
                                   fontWeight: FontWeight.w800,
                                 ),
                           ),
@@ -746,10 +550,10 @@ class _AddProductButton extends StatelessWidget {
     return OutlinedButton(
       onPressed: onPressed,
       style: OutlinedButton.styleFrom(
-        foregroundColor: AppColors.primary,
+        foregroundColor: context.colors.primary,
         minimumSize: const Size(0, 34),
         padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-        side: const BorderSide(color: AppColors.primary),
+        side: BorderSide(color: context.colors.primary),
         shape: const RoundedRectangleBorder(borderRadius: AppRadii.pillBorder),
         textStyle: const TextStyle(
           fontSize: 13,
@@ -782,8 +586,8 @@ class _InlineQtySelector extends StatelessWidget {
         _QtyRoundButton(
           icon: Icons.remove_rounded,
           onPressed: onDecrement,
-          backgroundColor: AppColors.surfaceSecondary,
-          foregroundColor: AppColors.ink,
+          backgroundColor: context.colors.surfaceSecondary,
+          foregroundColor: context.colors.ink,
         ),
         Container(
           height: 34,
@@ -792,7 +596,7 @@ class _InlineQtySelector extends StatelessWidget {
           margin: const EdgeInsets.symmetric(horizontal: 6),
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
           decoration: BoxDecoration(
-            border: Border.all(color: AppColors.line),
+            border: Border.all(color: context.colors.line),
             borderRadius: AppRadii.smBorder,
           ),
           child: Text(
@@ -805,8 +609,8 @@ class _InlineQtySelector extends StatelessWidget {
         _QtyRoundButton(
           icon: Icons.add_rounded,
           onPressed: onIncrement,
-          backgroundColor: AppColors.surfaceSecondary,
-          foregroundColor: AppColors.ink,
+          backgroundColor: context.colors.surfaceSecondary,
+          foregroundColor: context.colors.ink,
         ),
       ],
     );
@@ -836,8 +640,8 @@ class _QtyRoundButton extends StatelessWidget {
         color: foregroundColor,
         style: IconButton.styleFrom(
           backgroundColor: backgroundColor,
-          disabledBackgroundColor: AppColors.surfaceSecondary,
-          disabledForegroundColor: AppColors.muted,
+          disabledBackgroundColor: context.colors.surfaceSecondary,
+          disabledForegroundColor: context.colors.muted,
           padding: EdgeInsets.zero,
           shape: const RoundedRectangleBorder(borderRadius: AppRadii.smBorder),
         ),
@@ -861,12 +665,12 @@ class _EmptyProductList extends StatelessWidget {
               width: 68,
               height: 68,
               decoration: BoxDecoration(
-                color: AppColors.surfaceSecondary,
+                color: context.colors.surfaceSecondary,
                 borderRadius: AppRadii.xlBorder,
               ),
-              child: const Icon(
+              child: Icon(
                 Icons.search_off_rounded,
-                color: AppColors.muted,
+                color: context.colors.muted,
                 size: 34,
               ),
             ),
@@ -1004,11 +808,11 @@ class _CartBottomBar extends StatelessWidget {
         final hasItems = totalArticulos > 0;
 
         return DecoratedBox(
-          decoration: const BoxDecoration(
-            color: AppColors.surface,
+          decoration: BoxDecoration(
+            color: context.colors.surface,
             boxShadow: [
               BoxShadow(
-                color: Color(0x1A000000),
+                color: context.colors.ink.withValues(alpha: 0.10),
                 blurRadius: 18,
                 offset: Offset(0, -6),
               ),
@@ -1029,14 +833,14 @@ class _CartBottomBar extends StatelessWidget {
                           width: 46,
                           height: 46,
                           decoration: BoxDecoration(
-                            color: AppColors.primary.withValues(
+                            color: context.colors.primary.withValues(
                               alpha: 0.10,
                             ),
                             borderRadius: AppRadii.lgBorder,
                           ),
-                          child: const Icon(
+                          child: Icon(
                             Icons.shopping_cart_rounded,
-                            color: AppColors.primary,
+                            color: context.colors.primary,
                           ),
                         ),
                         const SizedBox(width: AppSpacing.sm),
@@ -1056,12 +860,12 @@ class _CartBottomBar extends StatelessWidget {
                                 Text(
                                   'Ver carrito',
                                   style: Theme.of(context).textTheme.bodyMedium
-                                      ?.copyWith(color: AppColors.primary),
+                                      ?.copyWith(color: context.colors.primary),
                                 ),
-                                const Icon(
+                                Icon(
                                   Icons.keyboard_arrow_down_rounded,
                                   size: 16,
-                                  color: AppColors.primary,
+                                  color: context.colors.primary,
                                 ),
                               ],
                             ),
@@ -1143,7 +947,7 @@ class _CartSheet extends ConsumerWidget {
                     formatCurrency(venta.total),
                     style: Theme.of(
                       context,
-                    ).textTheme.titleMedium?.copyWith(color: AppColors.primary),
+                    ).textTheme.titleMedium?.copyWith(color: context.colors.primary),
                   ),
                 ],
               ),
@@ -1206,9 +1010,9 @@ class _CartSheet extends ConsumerWidget {
                           ),
                           const SizedBox(width: 8),
                           IconButton(
-                            icon: const Icon(
+                            icon: Icon(
                               Icons.delete_outline_rounded,
-                              color: AppColors.danger,
+                              color: context.colors.danger,
                             ),
                             onPressed: () => ctrl.eliminarItem(item.productoId),
                           ),

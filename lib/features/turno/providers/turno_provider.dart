@@ -1,5 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../auth/providers/auth_provider.dart';
+import '../../movimientos/providers/movimiento_provider.dart';
 import '../data/turno_repository.dart';
 
 final turnoRepositoryProvider = Provider<TurnoRepository>((ref) {
@@ -55,6 +57,14 @@ class TurnoController extends Notifier<TurnoState> {
       horaInicio: _repo.horaInicio,
       permitirVentas: true,
     );
+    
+    // Registrar inicio de turno como movimiento
+    final usuario = ref.read(authControllerProvider).user;
+    if (usuario != null) {
+      ref.read(movimientoControllerProvider.notifier).registrarInicioTurno(
+        dependiente: usuario,
+      );
+    }
   }
 
   /// Marca el turno como finalizado.
