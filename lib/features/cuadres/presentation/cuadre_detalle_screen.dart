@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/theme/app_dimens.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../core/utils/haptics.dart';
@@ -21,6 +22,8 @@ class CuadreDetalleScreen extends ConsumerStatefulWidget {
 
 class _CuadreDetalleScreenState extends ConsumerState<CuadreDetalleScreen> {
   bool _mostrarProductos = false;
+  bool _isApproving = false;
+  bool _isRejecting = false;
 
   Map<String, _ProductoAgrupado> _agruparProductos(List<Venta> ventas) {
     final map = <String, _ProductoAgrupado>{};
@@ -78,66 +81,82 @@ class _CuadreDetalleScreenState extends ConsumerState<CuadreDetalleScreen> {
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 800),
             child: Column(
-          children: [
-            // ── Header ──
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
-              child: _DetalleHeader(cuadre: cuadre),
-            ),
-            const SizedBox(height: 16),
+              children: [
+                // ── Header con avatar ──
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+                  child: _DetalleHeader(cuadre: cuadre),
+                ),
 
-            // ── Toggle ──
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: _ToggleOption(
-                      label: 'Resumen',
-                      icon: Icons.receipt_long_rounded,
-                      selected: !_mostrarProductos,
-                      onTap: () => setState(() => _mostrarProductos = false),
-                    ),
+                // ── Hero KPIs ──
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+                  child: _HeroKPIs(
+                    total: total,
+                    ventasCount: ventas.length,
+                    unidades: totalUnidades,
+                    estado: cuadre.estado,
                   ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: _ToggleOption(
-                      label: 'Productos',
-                      icon: Icons.inventory_2_rounded,
-                      selected: _mostrarProductos,
-                      onTap: () => setState(() => _mostrarProductos = true),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
+                ),
+                const SizedBox(height: 16),
 
-            // ── Contenido scrolleable ──
-            Expanded(
-              child: ventas.isEmpty
-                  ? Card(
-                      margin: const EdgeInsets.symmetric(horizontal: 20),
-                      child: const Padding(
-                        padding: EdgeInsets.all(18),
-                        child: Text('Sin ventas en este cuadre.'),
+                // ── Toggle ──
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: _ToggleOption(
+                          label: 'Resumen',
+                          icon: Icons.receipt_long_rounded,
+                          selected: !_mostrarProductos,
+                          onTap: () =>
+                              setState(() => _mostrarProductos = false),
+                        ),
                       ),
-                    )
-                  : ListView(
-                      padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
-                      children: _mostrarProductos
-                          ? _buildProductosView(
-                              context, ventas, total, totalUnidades, comentario)
-                          : _buildResumenView(
-                              context, ventas, total, totalUnidades, comentario),
-                    ),
-            ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: _ToggleOption(
+                          label: 'Productos',
+                          icon: Icons.inventory_2_rounded,
+                          selected: _mostrarProductos,
+                          onTap: () =>
+                              setState(() => _mostrarProductos = true),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
 
-            // ── Acciones ──
-            if (isPendiente) _AccionesBar(cuadreId: cuadre.id),
-          ],
-        ),
-      ),
+                // ── Contenido scrolleable ──
+                Expanded(
+                  child: ventas.isEmpty
+                      ? const _EmptyDetalle()
+                      : ListView(
+                          padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+                          children: _mostrarProductos
+                              ? _buildProductosView(
+                                  context, ventas, total, totalUnidades,
+                                  comentario)
+                              : _buildResumenView(
+                                  context, ventas, total, totalUnidades,
+                                  comentario),
+                        ),
+                ),
+
+                // ── Acciones ──
+                if (isPendiente)
+                  _AccionesBar(
+                    cuadreId: cuadre.id,
+                    isApproving: _isApproving,
+                    isRejecting: _isRejecting,
+                    onApproving: (v) => setState(() => _isApproving = v),
+                    onRejecting: (v) => setState(() => _isRejecting = v),
+                  ),
+              ],
+            ),
+          ),
         ),
       ),
     );
@@ -241,7 +260,7 @@ class _CuadreDetalleScreenState extends ConsumerState<CuadreDetalleScreen> {
         Text(
           formatCurrency(total),
           style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-            color: AppColors.primary,
+            color: context.colors.primary,
           ),
         ),
       ],
@@ -272,22 +291,40 @@ class _DetalleHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final initials = cuadre.dependienteNombre
+        .split(' ')
+        .take(2)
+        .map((w) => w.isNotEmpty ? w[0] : '')
+        .join()
+        .toUpperCase();
+
     return Row(
       children: [
+        CircleAvatar(
+          radius: 22,
+          backgroundColor: context.colors.primary.withValues(alpha: AppAlphas.fillStrong),
+          child: Text(
+            initials,
+            style: TextStyle(
+              color: context.colors.primary,
+              fontWeight: FontWeight.w700,
+              fontSize: 15,
+            ),
+          ),
+        ),
+        const SizedBox(width: 12),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
                 cuadre.dependienteNombre,
-                style: Theme.of(context).textTheme.headlineMedium,
+                style: Theme.of(context).textTheme.titleMedium,
               ),
-              const SizedBox(height: 4),
+              const SizedBox(height: 2),
               Text(
                 compactDateFormatter.format(cuadre.fechaTurno),
-                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                  color: AppColors.muted,
-                ),
+                style: Theme.of(context).textTheme.bodyMedium,
               ),
             ],
           ),
@@ -306,24 +343,150 @@ class _EstadoBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = switch (estado) {
-      CuadreEstado.aprobado => AppColors.success,
-      CuadreEstado.rechazado => AppColors.danger,
-      CuadreEstado.pendiente => AppColors.warning,
+      CuadreEstado.aprobado => context.colors.success,
+      CuadreEstado.rechazado => context.colors.danger,
+      CuadreEstado.pendiente => context.colors.warning,
     };
-    return DecoratedBox(
+    final icon = switch (estado) {
+      CuadreEstado.aprobado => Icons.check_circle_outline_rounded,
+      CuadreEstado.rechazado => Icons.cancel_outlined,
+      CuadreEstado.pendiente => Icons.schedule_rounded,
+    };
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(6),
+        color: color.withValues(alpha: AppAlphas.fillStrong),
+        borderRadius: BorderRadius.circular(AppRadii.sm),
       ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-        child: Text(
-          estado.label,
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-            color: color,
-            fontWeight: FontWeight.w800,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: color),
+          const SizedBox(width: 4),
+          Text(
+            estado.label,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: color,
+              fontWeight: FontWeight.w800,
+            ),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+class _HeroKPIs extends StatelessWidget {
+  const _HeroKPIs({
+    required this.total,
+    required this.ventasCount,
+    required this.unidades,
+    required this.estado,
+  });
+
+  final double total;
+  final int ventasCount;
+  final int unidades;
+  final CuadreEstado estado;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        // Total hero
+        Text(
+          formatCurrency(total),
+          style: Theme.of(context).textTheme.headlineLarge?.copyWith(
+            color: context.colors.primary,
+            fontWeight: FontWeight.w800,
+            fontFeatures: const [FontFeature.tabularFigures()],
+          ),
+          textAlign: TextAlign.center,
         ),
+        const SizedBox(height: 2),
+        Text(
+          'Total del cuadre',
+          style: Theme.of(context).textTheme.bodyMedium,
+        ),
+        const SizedBox(height: 16),
+        // Métricas secundarias
+        Row(
+          children: [
+            Expanded(
+              child: _MetricCard(
+                icon: Icons.receipt_long_rounded,
+                value: '$ventasCount',
+                label: ventasCount == 1 ? 'venta' : 'ventas',
+                color: context.colors.primary,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _MetricCard(
+                icon: Icons.inventory_2_rounded,
+                value: '$unidades',
+                label: unidades == 1 ? 'unidad' : 'unidades',
+                color: context.colors.success,
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _MetricCard extends StatelessWidget {
+  const _MetricCard({
+    required this.icon,
+    required this.value,
+    required this.label,
+    required this.color,
+  });
+
+  final IconData icon;
+  final String value;
+  final String label;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      decoration: BoxDecoration(
+        color: context.colors.surface,
+        borderRadius: BorderRadius.circular(AppRadii.md),
+        border: Border.all(color: context.colors.line.withValues(alpha: 0.5)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: AppAlphas.fill),
+              borderRadius: BorderRadius.circular(AppRadii.sm),
+            ),
+            child: Icon(icon, color: color, size: 20),
+          ),
+          const SizedBox(width: 12),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                value,
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w700,
+                  fontFeatures: const [FontFeature.tabularFigures()],
+                ),
+              ),
+              Text(
+                label,
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -351,11 +514,11 @@ class _ToggleOption extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: 10),
         decoration: BoxDecoration(
           color: selected
-              ? AppColors.primary.withValues(alpha: 0.08)
-              : AppColors.surfaceSecondary,
-          borderRadius: BorderRadius.circular(10),
+              ? context.colors.primary.withValues(alpha: AppAlphas.fill)
+              : context.colors.surfaceSecondary,
+          borderRadius: BorderRadius.circular(AppRadii.md),
           border: Border.all(
-            color: selected ? AppColors.primary : AppColors.line,
+            color: selected ? context.colors.primary : context.colors.line,
             width: selected ? 1.5 : 1,
           ),
         ),
@@ -365,13 +528,13 @@ class _ToggleOption extends StatelessWidget {
             Icon(
               icon,
               size: 18,
-              color: selected ? AppColors.primary : AppColors.muted,
+              color: selected ? context.colors.primary : context.colors.muted,
             ),
             const SizedBox(width: 6),
             Text(
               label,
               style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                color: selected ? AppColors.primary : AppColors.ink,
+                color: selected ? context.colors.primary : context.colors.ink,
                 fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
               ),
             ),
@@ -399,14 +562,29 @@ class _VentaViewCard extends StatelessWidget {
             'Venta a las ${timeFormatter.format(venta.fecha)}',
             style: Theme.of(context).textTheme.titleMedium,
           ),
-          subtitle: Text(
-            '${venta.items.length} ${venta.items.length == 1 ? 'producto' : 'productos'}',
-            style: Theme.of(context).textTheme.bodyMedium,
+          subtitle: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: context.colors.surfaceSecondary,
+                  borderRadius: BorderRadius.circular(AppRadii.sm),
+                ),
+                child: Text(
+                  '${venta.items.length} ${venta.items.length == 1 ? 'art\u00edculo' : 'art\u00edculos'}',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+            ],
           ),
           trailing: Text(
             formatCurrency(venta.total),
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              color: AppColors.primary,
+              color: context.colors.primary,
+              fontWeight: FontWeight.w700,
+              fontFeatures: const [FontFeature.tabularFigures()],
             ),
           ),
           children: [
@@ -425,7 +603,9 @@ class _VentaViewCard extends StatelessWidget {
                     ),
                     Text(
                       formatCurrency(item.subtotal),
-                      style: Theme.of(context).textTheme.bodyMedium,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        fontFeatures: const [FontFeature.tabularFigures()],
+                      ),
                     ),
                   ],
                 ),
@@ -453,12 +633,12 @@ class _ProductoCard extends StatelessWidget {
               width: 40,
               height: 40,
               decoration: BoxDecoration(
-                color: AppColors.primary.withValues(alpha: 0.10),
-                borderRadius: BorderRadius.circular(10),
+                color: context.colors.primary.withValues(alpha: AppAlphas.fill),
+                borderRadius: BorderRadius.circular(AppRadii.sm),
               ),
-              child: const Icon(
+              child: Icon(
                 Icons.inventory_2_rounded,
-                color: AppColors.primary,
+                color: context.colors.primary,
                 size: 20,
               ),
             ),
@@ -482,7 +662,9 @@ class _ProductoCard extends StatelessWidget {
             Text(
               formatCurrency(producto.subtotal),
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                color: AppColors.primary,
+                color: context.colors.primary,
+                fontWeight: FontWeight.w700,
+                fontFeatures: const [FontFeature.tabularFigures()],
               ),
             ),
           ],
@@ -501,9 +683,11 @@ class _ComentarioJefe extends StatelessWidget {
   Widget build(BuildContext context) {
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: AppColors.danger.withValues(alpha: 0.06),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: AppColors.danger.withValues(alpha: 0.20)),
+        color: context.colors.danger.withValues(alpha: 0.06),
+        borderRadius: BorderRadius.circular(AppRadii.md),
+        border: Border.all(
+          color: context.colors.danger.withValues(alpha: AppAlphas.border),
+        ),
       ),
       child: Padding(
         padding: const EdgeInsets.all(14),
@@ -522,7 +706,7 @@ class _ComentarioJefe extends StatelessWidget {
                   'Comentario del jefe',
                   style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                     fontWeight: FontWeight.w700,
-                    color: AppColors.danger,
+                    color: context.colors.danger,
                   ),
                 ),
               ],
@@ -536,17 +720,71 @@ class _ComentarioJefe extends StatelessWidget {
   }
 }
 
+class _EmptyDetalle extends StatelessWidget {
+  const _EmptyDetalle();
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 72,
+              height: 72,
+              decoration: BoxDecoration(
+                color: context.colors.surfaceSecondary,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.receipt_long_rounded,
+                size: 36,
+                color: context.colors.muted,
+              ),
+            ),
+            const SizedBox(height: 20),
+            Text(
+              'Sin ventas',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'Este cuadre no tiene ventas registradas.',
+              style: Theme.of(context).textTheme.bodyMedium,
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _AccionesBar extends ConsumerWidget {
-  const _AccionesBar({required this.cuadreId});
+  const _AccionesBar({
+    required this.cuadreId,
+    required this.isApproving,
+    required this.isRejecting,
+    required this.onApproving,
+    required this.onRejecting,
+  });
 
   final String cuadreId;
+  final bool isApproving;
+  final bool isRejecting;
+  final ValueChanged<bool> onApproving;
+  final ValueChanged<bool> onRejecting;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return DecoratedBox(
-      decoration: const BoxDecoration(
-        color: AppColors.surface,
-        border: Border(top: BorderSide(color: AppColors.line)),
+      decoration: BoxDecoration(
+        color: context.colors.surface,
+        border: Border(
+          top: BorderSide(color: context.colors.line.withValues(alpha: 0.5)),
+        ),
       ),
       child: SafeArea(
         top: false,
@@ -554,31 +792,53 @@ class _AccionesBar extends ConsumerWidget {
           padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
           child: Row(
             children: [
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: () => _confirmarRechazo(context, ref),
-                  icon: const Icon(Icons.cancel_outlined),
-                  label: const Text('Rechazar'),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: AppColors.danger,
-                    side: const BorderSide(color: AppColors.danger),
-                    minimumSize: const Size(0, 50),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
+              // Rechazar — secondary
+              TextButton.icon(
+                onPressed: (isApproving || isRejecting)
+                    ? null
+                    : () => _confirmarRechazo(context, ref),
+                icon: isRejecting
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: AppColors.danger,
+                        ),
+                      )
+                    : const Icon(Icons.cancel_outlined, size: 20),
+                label: const Text('Rechazar'),
+                style: TextButton.styleFrom(
+                  foregroundColor: context.colors.danger,
+                  minimumSize: const Size(0, 50),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(AppRadii.md),
                   ),
                 ),
               ),
               const SizedBox(width: 12),
+              // Confirmar — primary, prominent
               Expanded(
                 child: ElevatedButton.icon(
-                  onPressed: () => _confirmarAprobacion(context, ref),
-                  icon: const Icon(Icons.check_circle_outline_rounded),
+                  onPressed: (isApproving || isRejecting)
+                      ? null
+                      : () => _confirmarAprobacion(context, ref),
+                  icon: isApproving
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Icon(Icons.check_circle_outline_rounded),
                   label: const Text('Confirmar'),
                   style: ElevatedButton.styleFrom(
                     minimumSize: const Size(0, 50),
+                    elevation: 2,
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
+                      borderRadius: BorderRadius.circular(AppRadii.md),
                     ),
                   ),
                 ),
@@ -616,6 +876,7 @@ class _AccionesBar extends ConsumerWidget {
     );
 
     if (ok == true && context.mounted) {
+      onApproving(true);
       Haptics.confirm(context);
       ref.read(cuadreControllerProvider.notifier).confirmarCuadre(cuadreId);
       context.go('/admin/cuadres');
@@ -671,7 +932,7 @@ class _AccionesBar extends ConsumerWidget {
                   Navigator.pop(ctx, v);
                 },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.danger,
+                  backgroundColor: context.colors.danger,
                 ),
                 child: const Text('Rechazar'),
               ),
@@ -683,6 +944,7 @@ class _AccionesBar extends ConsumerWidget {
     ctrl.dispose();
 
     if (comment != null && comment.isNotEmpty && context.mounted) {
+      onRejecting(true);
       Haptics.warning(context);
       ref
           .read(cuadreControllerProvider.notifier)
