@@ -65,6 +65,9 @@ class _ProductoFormScreenState extends ConsumerState<ProductoFormScreen> {
   String? _categoriaId;
   String? _fotoUrl;
   String? _nombreError;
+  String? _categoriaError;
+  String? _precioError;
+  String? _stockError;
   Producto? _producto;
   int _categoriaDropdownVersion = 0;
 
@@ -111,10 +114,18 @@ class _ProductoFormScreenState extends ConsumerState<ProductoFormScreen> {
   void _refreshCounters() {
     if (mounted) {
       setState(() {
-        // Limpia el error de nombre en cuanto el usuario retoca el campo
         _nombreError = null;
       });
     }
+  }
+
+  void _clearErrors() {
+    setState(() {
+      _nombreError = null;
+      _categoriaError = null;
+      _precioError = null;
+      _stockError = null;
+    });
   }
 
   @override
@@ -198,106 +209,124 @@ class _ProductoFormScreenState extends ConsumerState<ProductoFormScreen> {
                       const _CardSeparator(),
                       _FormItem(
                         label: 'Categoría',
-                        child: DropdownButtonFormField<String>(
-                          initialValue: effectiveCategoriaId,
-                          decoration: InputDecoration(
-                            filled: false,
-                            fillColor: Colors.transparent,
-                            border: dropdownBorder,
-                            enabledBorder: dropdownBorder,
-                            focusedBorder: OutlineInputBorder(
-                              borderRadius: AppRadii.smBorder,
-                              borderSide: BorderSide(
-                                color: context.colors.primary,
-                                width: 1.5,
-                              ),
-                            ),
-                            errorBorder: OutlineInputBorder(
-                              borderRadius: AppRadii.smBorder,
-                              borderSide: BorderSide(
-                                color: context.colors.danger,
-                              ),
-                            ),
-                            focusedErrorBorder: OutlineInputBorder(
-                              borderRadius: AppRadii.smBorder,
-                              borderSide: BorderSide(
-                                color: context.colors.danger,
-                                width: 1.5,
-                              ),
-                            ),
-                            isDense: true,
-                            contentPadding: EdgeInsets.symmetric(
-                              horizontal: AppSpacing.md,
-                              vertical: AppSpacing.md,
-                            ),
-                            hintText: 'Seleccionar categoría',
-                            hintStyle: Theme.of(context).textTheme.bodyLarge
-                                ?.copyWith(
-                                  color: context.colors.muted.withValues(
-                                    alpha: 0.72,
-                                  ),
-                                  fontWeight: FontWeight.w400,
-                                ),
-                          ),
-                          icon: Icon(
-                            Icons.keyboard_arrow_down_rounded,
-                            color: context.colors.muted,
-                            size: 22,
-                          ),
-                          style: Theme.of(context).textTheme.bodyLarge
-                              ?.copyWith(
-                                color: context.colors.ink,
-                                fontWeight: FontWeight.w500,
-                              ),
-                          dropdownColor: context.colors.surface,
-                          borderRadius: AppRadii.mdBorder,
-                          key: ValueKey(_categoriaDropdownVersion),
-                          items: [
-                            ...allCategorias.map(
-                              (cat) => DropdownMenuItem(
-                                value: cat.id,
-                                child: Text(cat.nombre),
-                              ),
-                            ),
-                            DropdownMenuItem(
-                              value: '__create_new__',
-                              child: Row(
-                                children: [
-                                  Icon(
-                                    Icons.add,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            DropdownButtonFormField<String>(
+                              initialValue: effectiveCategoriaId,
+                              decoration: InputDecoration(
+                                filled: false,
+                                fillColor: Colors.transparent,
+                                border: dropdownBorder,
+                                enabledBorder: dropdownBorder,
+                                focusedBorder: OutlineInputBorder(
+                                  borderRadius: AppRadii.smBorder,
+                                  borderSide: BorderSide(
                                     color: context.colors.primary,
-                                    size: 20,
+                                    width: 1.5,
                                   ),
-                                  SizedBox(width: AppSpacing.sm),
-                                  Text(
-                                    'Crear nueva categoría',
-                                    style: Theme.of(context).textTheme.bodyLarge
-                                        ?.copyWith(
-                                          color: context.colors.primary,
-                                          fontWeight: FontWeight.w600,
-                                        ),
+                                ),
+                                errorBorder: OutlineInputBorder(
+                                  borderRadius: AppRadii.smBorder,
+                                  borderSide: BorderSide(
+                                    color: context.colors.danger,
                                   ),
-                                ],
+                                ),
+                                focusedErrorBorder: OutlineInputBorder(
+                                  borderRadius: AppRadii.smBorder,
+                                  borderSide: BorderSide(
+                                    color: context.colors.danger,
+                                    width: 1.5,
+                                  ),
+                                ),
+                                isDense: true,
+                                contentPadding: EdgeInsets.symmetric(
+                                  horizontal: AppSpacing.md,
+                                  vertical: AppSpacing.md,
+                                ),
+                                hintText: 'Seleccionar categoría',
+                                hintStyle: Theme.of(context)
+                                    .textTheme
+                                    .bodyLarge
+                                    ?.copyWith(
+                                      color: context.colors.muted
+                                          .withValues(alpha: 0.72),
+                                      fontWeight: FontWeight.w400,
+                                    ),
                               ),
+                              icon: Icon(
+                                Icons.keyboard_arrow_down_rounded,
+                                color: context.colors.muted,
+                                size: 22,
+                              ),
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodyLarge
+                                  ?.copyWith(
+                                    color: context.colors.ink,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                              dropdownColor: context.colors.surface,
+                              borderRadius: AppRadii.mdBorder,
+                              key: ValueKey(_categoriaDropdownVersion),
+                              items: [
+                                ...allCategorias.map(
+                                  (cat) => DropdownMenuItem(
+                                    value: cat.id,
+                                    child: Text(cat.nombre),
+                                  ),
+                                ),
+                                DropdownMenuItem(
+                                  value: '__create_new__',
+                                  child: Row(
+                                    children: [
+                                      Icon(
+                                        Icons.add,
+                                        color: context.colors.primary,
+                                        size: 20,
+                                      ),
+                                      SizedBox(width: AppSpacing.sm),
+                                      Text(
+                                        'Crear nueva categoría',
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .bodyLarge
+                                            ?.copyWith(
+                                              color: context.colors.primary,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                              onChanged: (value) {
+                                setState(() => _categoriaError = null);
+                                if (value == '__create_new__') {
+                                  SchedulerBinding.instance
+                                      .addPostFrameCallback((_) {
+                                    if (!mounted) return;
+                                    setState(
+                                        () => _categoriaDropdownVersion++);
+                                    _showCreateCategoryDialog(context, ref);
+                                  });
+                                } else {
+                                  setState(() => _categoriaId = value);
+                                }
+                              },
                             ),
+                            if (_categoriaError != null) ...[
+                              const SizedBox(height: 4),
+                              Text(
+                                _categoriaError!,
+                                style: TextStyle(
+                                  color: context.colors.danger,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
                           ],
-                          onChanged: (value) {
-                            if (value == '__create_new__') {
-                              // Schedule dialog after the current frame completes.
-                              // This allows the dropdown menu to fully close and all
-                              // its overlay dependents to be cleaned up before the dialog
-                              // opens, preventing Flutter assertion errors.
-                              SchedulerBinding.instance.addPostFrameCallback((
-                                _,
-                              ) {
-                                if (!mounted) return;
-                                setState(() => _categoriaDropdownVersion++);
-                                _showCreateCategoryDialog(context, ref);
-                              });
-                            } else {
-                              setState(() => _categoriaId = value);
-                            }
-                          },
                         ),
                       ),
                     ],
@@ -308,24 +337,56 @@ class _ProductoFormScreenState extends ConsumerState<ProductoFormScreen> {
                     children: [
                       _FormItem(
                         label: 'Stock disponible',
-                        child: _PlainTextEditor(
-                          controller: _stockController,
-                          hintText: '100',
-                          keyboardType: TextInputType.number,
-                          inputFormatters: [
-                            FilteringTextInputFormatter.digitsOnly,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            _PlainTextEditor(
+                              controller: _stockController,
+                              hintText: '100',
+                              keyboardType: TextInputType.number,
+                              inputFormatters: [
+                                FilteringTextInputFormatter.digitsOnly,
+                              ],
+                            ),
+                            if (_stockError != null) ...[
+                              const SizedBox(height: 4),
+                              Text(
+                                _stockError!,
+                                style: TextStyle(
+                                  color: context.colors.danger,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
                           ],
                         ),
                       ),
                       const _CardSeparator(),
                       _FormItem(
                         label: 'Precio por unidad',
-                        child: _PlainTextEditor(
-                          controller: _precioController,
-                          hintText: '50',
-                          keyboardType: TextInputType.number,
-                          inputFormatters: [
-                            FilteringTextInputFormatter.digitsOnly,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            _PlainTextEditor(
+                              controller: _precioController,
+                              hintText: '50',
+                              keyboardType: TextInputType.number,
+                              inputFormatters: [
+                                FilteringTextInputFormatter.digitsOnly,
+                              ],
+                            ),
+                            if (_precioError != null) ...[
+                              const SizedBox(height: 4),
+                              Text(
+                                _precioError!,
+                                style: TextStyle(
+                                  color: context.colors.danger,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
                           ],
                         ),
                       ),
@@ -348,6 +409,7 @@ class _ProductoFormScreenState extends ConsumerState<ProductoFormScreen> {
   }
 
   void _save(BuildContext context) {
+    _clearErrors();
     final now = DateTime.now();
     final categoriaId = _categoriaId;
 
@@ -368,25 +430,19 @@ class _ProductoFormScreenState extends ConsumerState<ProductoFormScreen> {
     }
 
     if (categoriaId == null) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Selecciona una categoría')));
+      setState(() => _categoriaError = 'Selecciona una categoría');
       return;
     }
 
     final precio = double.tryParse(_precioController.text.replaceAll(',', '.'));
     if (precio == null || precio < 0) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Ingresa un precio válido')));
+      setState(() => _precioError = 'Ingresa un precio válido');
       return;
     }
 
     final stock = int.tryParse(_stockController.text.trim());
     if (stock == null || stock < 0) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Ingresa un stock válido')));
+      setState(() => _stockError = 'Ingresa un stock válido');
       return;
     }
 
@@ -599,18 +655,28 @@ class _PhotoPlaceholder extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return DecoratedBox(
-      decoration: BoxDecoration(color: context.colors.surfaceSecondary),
-      child: CustomPaint(
-        painter: _DashedRoundedRectPainter(
-          borderRadius: AppRadii.md,
-          color: context.colors.primary,
-        ),
-        child: Center(
-          child: Icon(
-            Icons.add_a_photo_outlined,
-            color: context.colors.primary.withValues(alpha: AppAlphas.overlay),
-            size: 38,
-          ),
+      decoration: BoxDecoration(
+        color: context.colors.surfaceSecondary,
+        borderRadius: AppRadii.mdBorder,
+      ),
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.add_a_photo_outlined,
+              color: context.colors.primary.withValues(alpha: AppAlphas.overlay),
+              size: 36,
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Agregar',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: context.colors.muted,
+                    fontWeight: FontWeight.w500,
+                  ),
+            ),
+          ],
         ),
       ),
     );
@@ -847,55 +913,4 @@ class _StickyActionBar extends StatelessWidget {
       ),
     );
   }
-}
-
-class _DashedRoundedRectPainter extends CustomPainter {
-  const _DashedRoundedRectPainter({
-    required this.borderRadius,
-    required this.color,
-  });
-
-  final double borderRadius;
-  final Color color;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    const strokeWidth = 1.5;
-    final paint = Paint()
-      ..color = color.withValues(alpha: AppAlphas.border)
-      ..strokeWidth = strokeWidth
-      ..style = PaintingStyle.stroke
-      ..strokeCap = StrokeCap.round;
-
-    final rect = Rect.fromLTWH(
-      strokeWidth / 2 + 1,
-      strokeWidth / 2 + 1,
-      size.width - strokeWidth - 2,
-      size.height - strokeWidth - 2,
-    );
-
-    final path = Path()
-      ..addRRect(
-        RRect.fromRectAndRadius(rect, Radius.circular(borderRadius - 1)),
-      );
-
-    for (final pathMetric in path.computeMetrics()) {
-      final length = pathMetric.length;
-      const dashLength = 6.0;
-      const gapLength = 5.0;
-      double distance = 0.0;
-
-      while (distance < length) {
-        final dashPath = pathMetric.extractPath(
-          distance,
-          distance + dashLength,
-        );
-        canvas.drawPath(dashPath, paint);
-        distance += dashLength + gapLength;
-      }
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

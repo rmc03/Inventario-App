@@ -71,21 +71,29 @@ class ProductoDetalleScreen extends ConsumerWidget {
             AppSpacing.xl, AppSpacing.sm, AppSpacing.xl, AppSpacing.xxl + 80,
           ),
           children: [
-            // ─── Foto ────────────────────────────────────────────────────
-            DecoratedBox(
-              decoration: ShapeDecoration(
-                color: context.colors.surface,
-                shape: RoundedRectangleBorder(
-                  borderRadius: const BorderRadius.all(Radius.circular(14)),
-                ),
-                shadows: AppShadows.subtle,
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(AppSpacing.lg),
-                child: ProductPhoto(
-                  url: producto.fotoUrl,
-                  size: 188,
-                  iconSize: 72,
+            // ─── Foto full-width con Hero ─────────────────────────────
+            GestureDetector(
+              onTap: producto.fotoUrl != null
+                  ? () => _showFullScreenPhoto(context, producto)
+                  : null,
+              child: Hero(
+                tag: 'product-photo-${producto.id}',
+                child: DecoratedBox(
+                  decoration: ShapeDecoration(
+                    color: context.colors.surface,
+                    shape: const RoundedRectangleBorder(
+                      borderRadius: BorderRadius.all(Radius.circular(14)),
+                    ),
+                    shadows: AppShadows.subtle,
+                  ),
+                  child: ClipRRect(
+                    borderRadius: const BorderRadius.all(Radius.circular(14)),
+                    child: ProductPhoto(
+                      url: producto.fotoUrl,
+                      size: double.infinity,
+                      iconSize: 72,
+                    ),
+                  ),
                 ),
               ),
             ),
@@ -161,6 +169,52 @@ class ProductoDetalleScreen extends ConsumerWidget {
           ],
         ),
       ),
+        ),
+      ),
+    );
+  }
+}
+
+void _showFullScreenPhoto(BuildContext context, Producto producto) {
+  if (producto.fotoUrl == null) return;
+  Navigator.of(context).push(
+    PageRouteBuilder(
+      opaque: false,
+      barrierColor: Colors.black87,
+      transitionDuration: const Duration(milliseconds: 300),
+      pageBuilder: (context, animation, secondaryAnimation) => _FullScreenPhoto(
+        url: producto.fotoUrl!,
+        heroTag: 'product-photo-${producto.id}',
+      ),
+      transitionsBuilder: (context, animation, secondaryAnimation, child) {
+        return FadeTransition(opacity: animation, child: child);
+      },
+    ),
+  );
+}
+
+class _FullScreenPhoto extends StatelessWidget {
+  const _FullScreenPhoto({required this.url, required this.heroTag});
+
+  final String url;
+  final String heroTag;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () => Navigator.of(context).pop(),
+      child: Center(
+        child: Hero(
+          tag: heroTag,
+          child: InteractiveViewer(
+            minScale: 0.5,
+            maxScale: 4.0,
+            child: ProductPhoto(
+              url: url,
+              size: double.infinity,
+              iconSize: 72,
+            ),
+          ),
         ),
       ),
     );
