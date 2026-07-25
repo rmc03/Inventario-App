@@ -83,40 +83,39 @@ class AppColorsExtension extends ThemeExtension<AppColorsExtension> {
     );
   }
 
+  // Light mode: Indigo navy + copper accent — premium, authoritative, memorable
+  // The copper (info) acts as a warm counterpoint to the cool indigo,
+  // echoing classic motorcycle-brand color tension (Triumph, Ducati).
   static const light = AppColorsExtension(
-    primary: Color(0xFF007AFF),
-    primaryDark: Color(0xFF004E8F),
+    primary: Color(0xFF1A237E),           // Deep indigo navy
+    primaryDark: Color(0xFF0D1453),       // Pressed state
     ink: Color(0xFF1C1C1E),
-    muted: Color(0xFF8E8E93),
-    line: Color(0xFFE5E5EA),
+    muted: Color(0xFF6B7280),             // Slate gray
+    line: Color(0xFFD1D5DB),              // Light border
     surface: Color(0xFFFFFFFF),
-    surfaceSecondary: Color(0xFFF2F2F7),
-    background: Color(0xFFF2F2F7),
-    success: Color(0xFF34C759),
-    warning: Color(0xFFFF9500),
-    danger: Color(0xFFFF3B30),
-    info: Color(0xFF007AFF), // Azul para entradas
+    surfaceSecondary: Color(0xFFEEF0F7),  // Hint of indigo
+    background: Color(0xFFF5F6FA),        // Cool off-white
+    success: Color(0xFF2E7D32),
+    warning: Color(0xFFE65100),
+    danger: Color(0xFFC62828),
+    info: Color(0xFFC75B39),              // Warm copper — the personality accent
   );
 
-  // Dark theme optimized for OLED screens and accessibility
-  // - Pure black background (#000) reduces OLED burn-in and saves battery
-  // - Elevated surfaces use subtle gray tones (#1C1C1E, #2C2C2E) for hierarchy
-  // - Higher luminance colors ensure WCAG AAA contrast (7:1+)
-  // - Desaturated semantic colors prevent eye strain in low light
-  // - line (#68686A) ensures dividers are visible (3.5:1 on black per WCAG)
+  // Dark mode: Navy-toned surfaces (never pure black) + brighter copper accent
+  // The navy undertone gives personality without compromising OLED friendliness.
   static const dark = AppColorsExtension(
-    primary: Color(0xFF0A84FF),           // Brighter blue for dark backgrounds
-    primaryDark: Color(0xFF0066CC),       // Slightly darker for pressed states
-    ink: Color(0xFFFFFFFF),               // Pure white for maximum contrast
-    muted: Color(0xFF98989D),             // Lighter gray for better readability
-    line: Color(0xFF68686A),              // Visible dividers (3.5:1 on #000)
-    surface: Color(0xFF1C1C1E),           // Elevated cards
-    surfaceSecondary: Color(0xFF2C2C2E),  // Secondary elevated elements
-    background: Color(0xFF000000),        // Pure black for OLED
-    success: Color(0xFF32D74B),           // Brighter green
-    warning: Color(0xFFFFD60A),           // More visible yellow
-    danger: Color(0xFFFF453A),            // Vibrant red
-    info: Color(0xFF0A84FF),              // Azul brillante para entradas
+    primary: Color(0xFF5C6BC0),           // Indigo 400 — legible on dark
+    primaryDark: Color(0xFF3949AB),       // Pressed state
+    ink: Color(0xFFF5F5F5),
+    muted: Color(0xFF9E9E9E),
+    line: Color(0xFF424242),
+    surface: Color(0xFF1A1C2E),           // Navy-undertone surface
+    surfaceSecondary: Color(0xFF252740),  // Slightly lighter navy
+    background: Color(0xFF0F1120),       // Deep navy scaffold
+    success: Color(0xFF66BB6A),
+    warning: Color(0xFFFFA726),
+    danger: Color(0xFFEF5350),
+    info: Color(0xFFE87A5A),              // Brighter copper for dark
   );
 }
 
@@ -144,7 +143,7 @@ class AppTheme {
       brightness: brightness,
       primary: ext.primary,
       onPrimary: Colors.white,
-      secondary: ext.success,
+      secondary: ext.info,
       surface: ext.surface,
       onSurface: ext.ink,
       error: ext.danger,

@@ -4,8 +4,6 @@ import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
 import '../../features/movimientos/data/movimiento_repository.dart';
 
-/// Sheet rediseñado para filtros de movimientos siguiendo las mejores prácticas
-/// de UI/UX Pro Max - Consistente con FilterSortSheet de inventario
 class MovimientoFilterSheet extends StatefulWidget {
   const MovimientoFilterSheet({
     super.key,
@@ -61,20 +59,25 @@ class _MovimientoFilterSheetState extends State<MovimientoFilterSheet> {
     return count;
   }
 
-  void _applyFilters() {
-    // Validar que si el rango es personalizado, ambas fechas estén seleccionadas
+  bool get _canApply {
     if (_rango == RangoFechaFiltro.personalizado &&
         (_customInicio == null || _customFin == null)) {
-      // No aplicar si el rango personalizado no está completo
-      return;
+      return false;
     }
+    return true;
+  }
 
+  void _apply() {
     widget.onApply(
       tipo: _tipo,
       rango: _rango,
       fechaInicio: _customInicio,
       fechaFin: _customFin,
     );
+    Navigator.of(context).pop();
+  }
+
+  void _cancel() {
     Navigator.of(context).pop();
   }
 
@@ -85,17 +88,15 @@ class _MovimientoFilterSheetState extends State<MovimientoFilterSheet> {
       _customInicio = null;
       _customFin = null;
     });
-    // Aplicar inmediatamente al limpiar
-    _applyFilters();
   }
 
-  Future<void> _pickCustomRange() async {
+  Future<void> _onCustomRangeTapped() async {
     final now = DateTime.now();
     final range = await showDateRangePicker(
       context: context,
       firstDate: DateTime(2020),
       lastDate: now,
-      initialDateRange: _customInicio != null && _customFin != null
+      initialDateRange: (_customInicio != null && _customFin != null)
           ? DateTimeRange(start: _customInicio!, end: _customFin!)
           : null,
       builder: (context, child) {
@@ -128,14 +129,12 @@ class _MovimientoFilterSheetState extends State<MovimientoFilterSheet> {
       fieldEndLabelText: 'Hasta',
     );
 
-    if (range != null) {
+    if (range != null && mounted) {
       setState(() {
         _rango = RangoFechaFiltro.personalizado;
         _customInicio = range.start;
         _customFin = range.end;
       });
-      // Aplicar automáticamente después de seleccionar el rango
-      _applyFilters();
     }
   }
 
@@ -314,7 +313,6 @@ class _MovimientoFilterSheetState extends State<MovimientoFilterSheet> {
                       isSelected: _tipo == TipoMovimientoFiltro.todos,
                       onTap: () {
                         setState(() => _tipo = TipoMovimientoFiltro.todos);
-                        _applyFilters();
                       },
                     ),
                     _FilterListTile(
@@ -323,7 +321,6 @@ class _MovimientoFilterSheetState extends State<MovimientoFilterSheet> {
                       isSelected: _tipo == TipoMovimientoFiltro.entradas,
                       onTap: () {
                         setState(() => _tipo = TipoMovimientoFiltro.entradas);
-                        _applyFilters();
                       },
                     ),
                     _FilterListTile(
@@ -332,7 +329,6 @@ class _MovimientoFilterSheetState extends State<MovimientoFilterSheet> {
                       isSelected: _tipo == TipoMovimientoFiltro.ventas,
                       onTap: () {
                         setState(() => _tipo = TipoMovimientoFiltro.ventas);
-                        _applyFilters();
                       },
                     ),
 
@@ -353,7 +349,6 @@ class _MovimientoFilterSheetState extends State<MovimientoFilterSheet> {
                       isSelected: _rango == RangoFechaFiltro.hoy,
                       onTap: () {
                         setState(() => _rango = RangoFechaFiltro.hoy);
-                        _applyFilters();
                       },
                     ),
                     _FilterListTile(
@@ -362,7 +357,6 @@ class _MovimientoFilterSheetState extends State<MovimientoFilterSheet> {
                       isSelected: _rango == RangoFechaFiltro.semana,
                       onTap: () {
                         setState(() => _rango = RangoFechaFiltro.semana);
-                        _applyFilters();
                       },
                     ),
                     _FilterListTile(
@@ -371,16 +365,59 @@ class _MovimientoFilterSheetState extends State<MovimientoFilterSheet> {
                       isSelected: _rango == RangoFechaFiltro.mes,
                       onTap: () {
                         setState(() => _rango = RangoFechaFiltro.mes);
-                        _applyFilters();
                       },
                     ),
                     _CustomRangeTile(
                       rango: _rango,
                       customInicio: _customInicio,
                       customFin: _customFin,
-                      onTap: _pickCustomRange,
+                      onTap: _onCustomRangeTapped,
                     ),
                   ],
+                ),
+              ),
+
+              // ── Footer ──
+              Container(
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.xl,
+                  AppSpacing.md,
+                  AppSpacing.xl,
+                  AppSpacing.xl,
+                ),
+                decoration: BoxDecoration(
+                  border: Border(
+                    top: BorderSide(
+                      color: context.colors.line.withValues(alpha: 0.5),
+                      width: 1,
+                    ),
+                  ),
+                ),
+                child: SafeArea(
+                  top: false,
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: _cancel,
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                          ),
+                          child: const Text('Cancelar'),
+                        ),
+                      ),
+                      const SizedBox(width: AppSpacing.md),
+                      Expanded(
+                        child: FilledButton(
+                          onPressed: _canApply ? _apply : null,
+                          style: FilledButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                          ),
+                          child: const Text('Aplicar'),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ],
@@ -469,7 +506,7 @@ class _CustomRangeTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isSelected = rango == RangoFechaFiltro.personalizado;
+    final isSelected = rango == RangoFechaFiltro.personalizado && _hasValidRange;
     
     return Material(
       color: Colors.transparent,
@@ -514,52 +551,26 @@ class _CustomRangeTile extends StatelessWidget {
               ),
               const SizedBox(width: AppSpacing.md),
               Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      _displayText,
-                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                            fontWeight:
-                                isSelected ? FontWeight.w600 : FontWeight.w500,
-                            color: isSelected
-                                ? context.colors.primary
-                                : context.colors.ink,
-                          ),
-                    ),
-                    if (isSelected && !_hasValidRange) ...[
-                      const SizedBox(height: 4),
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.info_outline_rounded,
-                            size: 14,
-                            color: context.colors.warning,
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            'Toca para seleccionar fechas',
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                  color: context.colors.warning,
-                                  fontSize: 12,
-                                ),
-                          ),
-                        ],
+                child: Text(
+                  _displayText,
+                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                        fontWeight:
+                            isSelected ? FontWeight.w600 : FontWeight.w500,
+                        color: isSelected
+                            ? context.colors.primary
+                            : context.colors.ink,
                       ),
-                    ],
-                  ],
                 ),
               ),
-              if (isSelected)
-                Icon(
-                  _hasValidRange
-                      ? Icons.check_circle_rounded
-                      : Icons.arrow_forward_ios_rounded,
-                  color: _hasValidRange
-                      ? context.colors.primary
-                      : context.colors.muted,
-                  size: _hasValidRange ? 24 : 18,
-                ),
+              Icon(
+                isSelected
+                    ? Icons.check_circle_rounded
+                    : Icons.arrow_forward_ios_rounded,
+                color: isSelected
+                    ? context.colors.primary
+                    : context.colors.muted,
+                size: isSelected ? 24 : 18,
+              ),
             ],
           ),
         ),

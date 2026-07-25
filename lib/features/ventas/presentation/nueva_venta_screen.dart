@@ -313,6 +313,7 @@ class _NuevaVentaScreenState extends ConsumerState<NuevaVentaScreen> {
                               }
                             },
                             onLongPress: () => _showQtySheet(context, p),
+                            onQtyTap: () => _showQtySheet(context, p),
                           ),
                         );
                       },
@@ -426,6 +427,7 @@ class _ProductoVentaTile extends StatelessWidget {
     this.onIncrement,
     this.onDecrement,
     this.onLongPress,
+    this.onQtyTap,
   });
 
   final Producto producto;
@@ -434,6 +436,7 @@ class _ProductoVentaTile extends StatelessWidget {
   final VoidCallback? onIncrement;
   final VoidCallback? onDecrement;
   final VoidCallback? onLongPress;
+  final VoidCallback? onQtyTap;
 
   @override
   Widget build(BuildContext context) {
@@ -516,6 +519,7 @@ class _ProductoVentaTile extends StatelessWidget {
                                       cantidad: qtyInCart,
                                       onDecrement: onDecrement,
                                       onIncrement: onIncrement,
+                                      onTap: onQtyTap,
                                     )
                                   : _AddProductButton(
                                       key: const ValueKey('add'),
@@ -572,11 +576,13 @@ class _InlineQtySelector extends StatelessWidget {
     required this.cantidad,
     this.onDecrement,
     this.onIncrement,
+    this.onTap,
   });
 
   final int cantidad;
   final VoidCallback? onDecrement;
   final VoidCallback? onIncrement;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -589,21 +595,29 @@ class _InlineQtySelector extends StatelessWidget {
           backgroundColor: context.colors.surfaceSecondary,
           foregroundColor: context.colors.ink,
         ),
-        Container(
-          height: 34,
-          constraints: const BoxConstraints(minWidth: 36),
-          alignment: Alignment.center,
-          margin: const EdgeInsets.symmetric(horizontal: 6),
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
-          decoration: BoxDecoration(
-            border: Border.all(color: context.colors.line),
-            borderRadius: AppRadii.smBorder,
-          ),
-          child: Text(
-            cantidad.toString(),
-            style: Theme.of(
-              context,
-            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+        GestureDetector(
+          onTap: onTap,
+          child: Container(
+            height: 34,
+            constraints: const BoxConstraints(minWidth: 36),
+            alignment: Alignment.center,
+            margin: const EdgeInsets.symmetric(horizontal: 6),
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
+            decoration: BoxDecoration(
+              border: Border.all(color: context.colors.line),
+              borderRadius: AppRadii.smBorder,
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  cantidad.toString(),
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
         _QtyRoundButton(

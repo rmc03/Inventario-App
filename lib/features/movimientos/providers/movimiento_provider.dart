@@ -53,19 +53,17 @@ final movimientosFiltradosProvider = Provider<List<Movimiento>>((ref) {
 });
 
 // NOTE: current cuadre sales are computed from `cuadres` state (see cuadre_provider)
-final currentCuadreSalesProvider = StreamProvider<Map<String, int>>((ref) {
-  final repo = ref.watch(movimientoRepositoryProvider);
-  return repo.movimientosStream.map((list) {
-    final counts = <String, int>{};
-    final now = DateTime.now();
-    final start = DateTime(now.year, now.month, now.day);
-    for (final m in list) {
-      if (m.tipo == MovimientoTipo.salida && m.fecha.isAfter(start.subtract(const Duration(seconds: 1)))) {
-        counts[m.productoId] = (counts[m.productoId] ?? 0) + m.cantidad;
-      }
+final currentCuadreSalesProvider = Provider<Map<String, int>>((ref) {
+  final movimientos = ref.watch(movimientoControllerProvider);
+  final counts = <String, int>{};
+  final now = DateTime.now();
+  final start = DateTime(now.year, now.month, now.day);
+  for (final m in movimientos) {
+    if (m.tipo == MovimientoTipo.salida && m.fecha.isAfter(start.subtract(const Duration(seconds: 1)))) {
+      counts[m.productoId] = (counts[m.productoId] ?? 0) + m.cantidad;
     }
-    return counts;
-  });
+  }
+  return counts;
 });
 
 final movimientoControllerProvider =

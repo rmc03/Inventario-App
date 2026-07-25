@@ -98,6 +98,13 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             builder: (context, state) => const MovimientosScreen(),
           ),
           GoRoute(
+            path: '/admin/movimientos/ventas/:id',
+            builder: (context, state) {
+              final venta = state.extra as Venta;
+              return VentaDetalleScreen(venta: venta);
+            },
+          ),
+          GoRoute(
             path: '/admin/cuadres',
             builder: (context, state) => const CuadresScreen(),
           ),

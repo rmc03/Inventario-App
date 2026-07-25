@@ -10,13 +10,10 @@ import 'package:uuid/uuid.dart';
 
 import '../../../core/local_db/local_database.dart';
 import '../../../core/providers/theme_provider.dart';
-import '../../../core/theme/app_dimens.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/haptics.dart';
 import '../../../shared/models/usuario.dart';
 import '../../auth/providers/auth_provider.dart';
-import '../../turno/providers/turno_provider.dart';
-import '../../ventas/providers/venta_provider.dart';
 
 
 class ConfiguracionScreen extends ConsumerWidget {
@@ -132,16 +129,6 @@ class ConfiguracionScreen extends ConsumerWidget {
                           context.push('/dependiente/cuadres/historial'),
                     ),
                   ),
-                  const SizedBox(height: 18),
-                ],
-
-                // ── TURNO (solo dependiente) ──
-                if (!isAdmin) ...[
-                  const _SectionHeader(
-                    icon: Icons.storefront_rounded,
-                    label: 'Turno',
-                  ),
-                  const _TurnoCard(),
                   const SizedBox(height: 18),
                 ],
 
@@ -481,127 +468,6 @@ class _ProfileAvatarState extends ConsumerState<_ProfileAvatar> {
           ),
         ],
       ),
-    );
-  }
-}
-
-// ─── Turno Card ─────────────────────────────────────────────────────────────
-
-class _TurnoCard extends ConsumerWidget {
-  const _TurnoCard();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final turno = ref.watch(turnoControllerProvider);
-    if (!turno.estaActivo) return const SizedBox.shrink();
-
-    final ventas = ref.watch(ventasDelTurnoProvider);
-    final totalTurno = ventas.fold(0.0, (sum, v) => sum + v.total);
-    final cantidadVentas = ventas.length;
-
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
-      decoration: BoxDecoration(
-        color: context.colors.surface,
-        borderRadius: AppRadii.mdBorder,
-        border: Border(
-          left: BorderSide(color: context.colors.success, width: 4),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: context.colors.success.withValues(alpha: 0.08),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                width: 10,
-                height: 10,
-                decoration: BoxDecoration(
-                  color: context.colors.success,
-                  shape: BoxShape.circle,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Text(
-                'Turno activo',
-                style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w700,
-                      color: context.colors.success,
-                    ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          Row(
-            children: [
-              _CompactValor(
-                valor: '\$${totalTurno.toStringAsFixed(0)}',
-                label: 'total',
-              ),
-              const SizedBox(width: 16),
-              _CompactValor(
-                valor: '$cantidadVentas',
-                label: 'ventas',
-              ),
-              const SizedBox(width: 16),
-              _CompactValor(
-                valor:
-                    '${ventas.fold(0, (sum, v) => sum + v.totalUnidades)}',
-                label: 'uds.',
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          SizedBox(
-            width: double.infinity,
-            child: OutlinedButton.icon(
-              onPressed: () {
-                Haptics.confirm(context);
-                context.push('/dependiente/turno/resumen');
-              },
-              icon: const Icon(Icons.logout_rounded, size: 18),
-              label: const Text('Cerrar turno'),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: context.colors.danger,
-                side: BorderSide(color: context.colors.danger),
-                minimumSize: const Size.fromHeight(40),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _CompactValor extends StatelessWidget {
-  const _CompactValor({required this.valor, required this.label});
-
-  final String valor;
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          valor,
-          style: Theme.of(context)
-              .textTheme
-              .titleMedium
-              ?.copyWith(fontWeight: FontWeight.w800),
-        ),
-        Text(label, style: Theme.of(context).textTheme.bodyMedium),
-      ],
     );
   }
 }

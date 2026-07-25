@@ -18,14 +18,18 @@ class ProductPhoto extends StatelessWidget {
   Widget build(BuildContext context) {
     final imageUrl = url;
 
-    return SizedBox(
-      width: size,
-      height: size,
-      child: ClipRRect(
-        borderRadius: const BorderRadius.all(Radius.circular(AppRadii.md)),
-        child: DecoratedBox(
-          decoration: BoxDecoration(color: context.colors.surfaceSecondary),
-          child: _buildImage(imageUrl),
+    return Semantics(
+      label: 'Foto del producto',
+      image: imageUrl != null && imageUrl.isNotEmpty,
+      child: SizedBox(
+        width: size,
+        height: size,
+        child: ClipRRect(
+          borderRadius: const BorderRadius.all(Radius.circular(AppRadii.md)),
+          child: DecoratedBox(
+            decoration: BoxDecoration(color: context.colors.surfaceSecondary),
+            child: _buildImage(imageUrl),
+          ),
         ),
       ),
     );

@@ -18,11 +18,14 @@ class StockBadge extends StatelessWidget {
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs, vertical: AppSpacing.xs),
-      child: Text(
-        '$stock unidades',
-        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-          color: color,
-          fontWeight: FontWeight.w600,
+      child: Semantics(
+        label: '$stock unidades, stock ${isLow ? 'bajo' : 'suficiente'}',
+        child: Text(
+          '$stock unidades',
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+            color: color,
+            fontWeight: FontWeight.w600,
+          ),
         ),
       ),
     );

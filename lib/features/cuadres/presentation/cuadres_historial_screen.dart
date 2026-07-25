@@ -2,21 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/theme/app_dimens.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../shared/models/cuadre.dart';
+import '../../../shared/widgets/estado_badge.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../providers/cuadre_provider.dart';
 
-/// Pantalla de historial de cuadres del dependiente
-/// 
-/// Diseñada con principios UI/UX Pro Max:
-/// - Jerarquía visual clara con cards individuales
-/// - Estados badge con contraste óptimo
-/// - Tabular figures para precios
-/// - Touch targets ≥44pt
-/// - Spacing scale sistemático (8, 12, 16, 24)
-/// - Empty state informativo
 class CuadresHistorialScreen extends ConsumerWidget {
   const CuadresHistorialScreen({super.key});
 
@@ -24,8 +17,7 @@ class CuadresHistorialScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final user = ref.watch(authControllerProvider.select((s) => s.user));
     final todosCuadres = ref.watch(cuadreControllerProvider);
-    
-    // Filtrar solo los cuadres del dependiente actual
+
     final misCuadres = todosCuadres
         .where((c) => c.dependienteId == user?.id)
         .toList()
@@ -34,21 +26,9 @@ class CuadresHistorialScreen extends ConsumerWidget {
     return Scaffold(
       backgroundColor: context.colors.background,
       appBar: AppBar(
-        backgroundColor: context.colors.surface,
-        elevation: 0,
-        title: Text(
-          'Mis Cuadres',
-          style: TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.w600,
-            letterSpacing: -0.5,
-            color: context.colors.ink,
-          ),
-        ),
+        title: const Text('Mis Cuadres'),
         leading: IconButton(
           icon: Icon(Icons.arrow_back_rounded, color: context.colors.ink),
-          iconSize: 24,
-          padding: const EdgeInsets.all(12),
           onPressed: () => context.pop(),
         ),
       ),
@@ -56,13 +36,16 @@ class CuadresHistorialScreen extends ConsumerWidget {
         top: false,
         child: misCuadres.isEmpty
             ? const _EmptyState()
-            : ListView.separated(
-                padding: const EdgeInsets.all(16),
-                itemCount: misCuadres.length,
-                separatorBuilder: (_, _) => const SizedBox(height: 12),
+            : ListView.builder(
+                padding: const EdgeInsets.all(AppSpacing.lg),
+                itemCount: misCuadres.length + 1,
                 itemBuilder: (context, index) {
+                  if (index == misCuadres.length) {
+                    return const SizedBox(height: AppSpacing.lg);
+                  }
                   final cuadre = misCuadres[index];
                   return _CuadreCard(
+                    key: ValueKey(cuadre.id),
                     cuadre: cuadre,
                     onTap: () => _showCuadreDetail(context, cuadre),
                   );
@@ -82,11 +65,12 @@ class CuadresHistorialScreen extends ConsumerWidget {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// Cuadre Card (UI/UX Pro Max)
+// Cuadre Card — identidad visual por estado
 // ═══════════════════════════════════════════════════════════════════════════
 
-class _CuadreCard extends StatelessWidget {
+class _CuadreCard extends StatefulWidget {
   const _CuadreCard({
+    super.key,
     required this.cuadre,
     required this.onTap,
   });
@@ -95,222 +79,277 @@ class _CuadreCard extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
+  State<_CuadreCard> createState() => _CuadreCardState();
+}
+
+class _CuadreCardState extends State<_CuadreCard>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _animCtrl;
+  late final Animation<double> _fadeSlide;
+
+  @override
+  void initState() {
+    super.initState();
+    _animCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 450),
+    );
+    _fadeSlide = CurvedAnimation(
+      parent: _animCtrl,
+      curve: Curves.easeOutCubic,
+    );
+    _animCtrl.forward();
+  }
+
+  @override
+  void dispose() {
+    _animCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return Material(
-      color: context.colors.surface,
-      borderRadius: BorderRadius.circular(16),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
-        child: Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: [
-              BoxShadow(
-                color: context.colors.ink.withValues(alpha: 0.04),
-                blurRadius: 8,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Header: Fecha y Estado
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          compactDateFormatter.format(cuadre.fechaTurno),
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w700,
-                            color: context.colors.ink,
-                            letterSpacing: -0.4,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Turno del día',
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w400,
-                            color: context.colors.muted,
-                            letterSpacing: -0.2,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  _EstadoBadge(estado: cuadre.estado),
-                ],
-              ),
-              
-              const SizedBox(height: 16),
-              
-              // Divider
-              Container(
-                height: 1,
-                color: context.colors.background,
-              ),
-              
-              const SizedBox(height: 16),
-              
-              // Métricas del cuadre
-              Row(
-                children: [
-                  Expanded(
-                    child: _MetricaItem(
-                      icon: Icons.receipt_long_outlined,
-                      label: 'Ventas',
-                      valor: '${cuadre.ventas.length}',
-                    ),
-                  ),
-                  Container(
-                    width: 1,
-                    height: 40,
-                    color: context.colors.background,
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: _MetricaItem(
-                      icon: Icons.inventory_2_outlined,
-                      label: 'Unidades',
-                      valor: '${cuadre.totalSalidas}',
-                    ),
-                  ),
-                ],
-              ),
-              
-              const SizedBox(height: 16),
-              
-              // Total destacado
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: context.colors.background,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  crossAxisAlignment: CrossAxisAlignment.baseline,
-                  textBaseline: TextBaseline.alphabetic,
-                  children: [
-                    Text(
-                      'Total',
-                      style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
-                        color: context.colors.ink,
-                        letterSpacing: -0.3,
-                      ),
-                    ),
-                    Text(
-                      formatCurrency(cuadre.valorTotal),
-                      style: TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.w800,
-                        color: context.colors.primary,
-                        letterSpacing: -0.6,
-                        fontFeatures: const [FontFeature.tabularFigures()],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              
-              // Comentario del jefe si existe y fue rechazado
-              if (cuadre.estado == CuadreEstado.rechazado && 
-                  cuadre.comentarioJefe != null) ...[
-                const SizedBox(height: 12),
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: context.colors.danger.withValues(alpha: 0.08),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: context.colors.danger.withValues(alpha: 0.2),
-                      width: 1,
-                    ),
-                  ),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Icon(
-                        Icons.error_outline_rounded,
-                        size: 18,
-                        color: context.colors.danger,
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          cuadre.comentarioJefe!,
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w500,
-                            color: context.colors.danger,
-                            letterSpacing: -0.1,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ],
-          ),
+    return FadeTransition(
+      opacity: _fadeSlide,
+      child: SlideTransition(
+        position: Tween<Offset>(
+          begin: const Offset(0, 0.08),
+          end: Offset.zero,
+        ).animate(_fadeSlide),
+        child: _CardContent(
+          cuadre: widget.cuadre,
+          onTap: widget.onTap,
         ),
       ),
     );
   }
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
-// Estado Badge
-// ═══════════════════════════════════════════════════════════════════════════
+class _CardContent extends StatelessWidget {
+  const _CardContent({
+    required this.cuadre,
+    required this.onTap,
+  });
 
-class _EstadoBadge extends StatelessWidget {
-  const _EstadoBadge({required this.estado});
+  final Cuadre cuadre;
+  final VoidCallback onTap;
 
-  final CuadreEstado estado;
+  Color _accentColor(BuildContext context) => switch (cuadre.estado) {
+        CuadreEstado.aprobado => context.colors.success,
+        CuadreEstado.rechazado => context.colors.danger,
+        CuadreEstado.pendiente => context.colors.warning,
+      };
 
   @override
   Widget build(BuildContext context) {
-    final (color, icon) = switch (estado) {
-      CuadreEstado.aprobado => (context.colors.success, Icons.check_circle_rounded),
-      CuadreEstado.rechazado => (context.colors.danger, Icons.cancel_rounded),
-      CuadreEstado.pendiente => (context.colors.warning, Icons.schedule_rounded),
-    };
+    final accent = _accentColor(context);
+    final ext = context.colors;
+    final textTheme = Theme.of(context).textTheme;
 
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: color.withValues(alpha: 0.3),
-          width: 1.5,
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppSpacing.md),
+      child: Material(
+        color: ext.surface,
+        borderRadius: AppRadii.lgBorder,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: AppRadii.lgBorder,
+          splashColor: accent.withValues(alpha: 0.06),
+          highlightColor: accent.withValues(alpha: 0.04),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            padding: const EdgeInsets.all(AppSpacing.lg),
+            decoration: BoxDecoration(
+              borderRadius: AppRadii.lgBorder,
+              border: Border(
+                left: BorderSide(color: accent, width: 4),
+              ),
+              color: accent.withValues(alpha: 0.03),
+              boxShadow: AppShadows.subtle,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // ── Header: Fecha + Estado ──
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            _formatDate(cuadre.fechaTurno),
+                            style: textTheme.titleMedium?.copyWith(
+                              color: ext.ink,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          const SizedBox(height: AppSpacing.xs),
+                          Text(
+                            'Cuadre de cierre',
+                            style: textTheme.bodyMedium?.copyWith(
+                              color: ext.muted,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    EstadoBadge(
+                      estado: cuadre.estado,
+                      showBorder: true,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: AppSpacing.lg),
+
+                // ── Divisor ──
+                Container(height: 1, color: ext.line),
+                const SizedBox(height: AppSpacing.lg),
+
+                // ── Métricas ──
+                Row(
+                  children: [
+                    Expanded(
+                      child: _MetricaChip(
+                        icon: Icons.receipt_long_outlined,
+                        valor: '${cuadre.ventas.length}',
+                        label: 'ventas',
+                        accent: accent,
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.md),
+                    Expanded(
+                      child: _MetricaChip(
+                        icon: Icons.inventory_2_outlined,
+                        valor: '${cuadre.totalSalidas}',
+                        label: 'unidades',
+                        accent: accent,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: AppSpacing.lg),
+
+                // ── Total hero ──
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.lg,
+                    vertical: AppSpacing.md,
+                  ),
+                  decoration: BoxDecoration(
+                    color: accent.withValues(alpha: 0.06),
+                    borderRadius: AppRadii.mdBorder,
+                    border: Border.all(
+                      color: accent.withValues(alpha: AppAlphas.border),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    crossAxisAlignment: CrossAxisAlignment.baseline,
+                    textBaseline: TextBaseline.alphabetic,
+                    children: [
+                      Text(
+                        'Total',
+                        style: textTheme.titleMedium?.copyWith(
+                          color: ext.ink,
+                        ),
+                      ),
+                      Text(
+                        formatCurrency(cuadre.valorTotal),
+                        style: textTheme.headlineMedium?.copyWith(
+                          color: accent,
+                          fontWeight: FontWeight.w800,
+                          fontFeatures: const [FontFeature.tabularFigures()],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                // ── Comentario del jefe ──
+                if (cuadre.estado == CuadreEstado.rechazado &&
+                    cuadre.comentarioJefe != null) ...[
+                  const SizedBox(height: AppSpacing.md),
+                  _RechazoBanner(
+                    comentario: cuadre.comentarioJefe!,
+                    accent: accent,
+                  ),
+                ],
+              ],
+            ),
+          ),
         ),
       ),
+    );
+  }
+
+  String _formatDate(DateTime date) {
+    final days = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'];
+    final months = [
+      'ene', 'feb', 'mar', 'abr', 'may', 'jun',
+      'jul', 'ago', 'sep', 'oct', 'nov', 'dic',
+    ];
+    return '${days[date.weekday % 7]}, ${date.day} ${months[date.month - 1]}';
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Métrica Chip — icono + valor + label en fondo tintado
+// ═══════════════════════════════════════════════════════════════════════════
+
+class _MetricaChip extends StatelessWidget {
+  const _MetricaChip({
+    required this.icon,
+    required this.valor,
+    required this.label,
+    required this.accent,
+  });
+
+  final IconData icon;
+  final String valor;
+  final String label;
+  final Color accent;
+
+  @override
+  Widget build(BuildContext context) {
+    final ext = context.colors;
+    final textTheme = Theme.of(context).textTheme;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.md,
+        vertical: AppSpacing.sm,
+      ),
+      decoration: BoxDecoration(
+        color: ext.surfaceSecondary,
+        borderRadius: AppRadii.smBorder,
+      ),
       child: Row(
-        mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 16, color: color),
-          const SizedBox(width: 4),
-          Text(
-            estado.label,
-            style: TextStyle(
-              fontSize: 13,
-              color: color,
-              fontWeight: FontWeight.w700,
-              letterSpacing: -0.1,
-            ),
+          Icon(icon, size: 18, color: accent),
+          const SizedBox(width: AppSpacing.sm),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                valor,
+                style: textTheme.titleMedium?.copyWith(
+                  color: ext.ink,
+                  fontWeight: FontWeight.w700,
+                  fontFeatures: const [FontFeature.tabularFigures()],
+                  height: 1.1,
+                ),
+              ),
+              Text(
+                label,
+                style: textTheme.bodyMedium?.copyWith(
+                  color: ext.muted,
+                  height: 1.1,
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -319,57 +358,67 @@ class _EstadoBadge extends StatelessWidget {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// Métrica Item
+// Rechazo Banner — comentario del supervisor cuando el cuadre fue rechazado
 // ═══════════════════════════════════════════════════════════════════════════
 
-class _MetricaItem extends StatelessWidget {
-  const _MetricaItem({
-    required this.icon,
-    required this.label,
-    required this.valor,
+class _RechazoBanner extends StatelessWidget {
+  const _RechazoBanner({
+    required this.comentario,
+    required this.accent,
   });
 
-  final IconData icon;
-  final String label;
-  final String valor;
+  final String comentario;
+  final Color accent;
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Icon(
-          icon,
-          size: 20,
-          color: context.colors.muted,
+    final ext = context.colors;
+    final textTheme = Theme.of(context).textTheme;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: accent.withValues(alpha: AppAlphas.fill),
+        borderRadius: AppRadii.mdBorder,
+        border: Border.all(
+          color: accent.withValues(alpha: AppAlphas.border),
         ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                valor,
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w700,
-                  color: context.colors.ink,
-                  letterSpacing: -0.4,
-                  fontFeatures: [FontFeature.tabularFigures()],
-                ),
-              ),
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w400,
-                  color: context.colors.muted,
-                  letterSpacing: -0.1,
-                ),
-              ),
-            ],
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(
+            Icons.error_outline_rounded,
+            size: 18,
+            color: accent,
           ),
-        ),
-      ],
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Comentario del supervisor',
+                  style: textTheme.bodyMedium?.copyWith(
+                    color: accent,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.xs),
+                Text(
+                  comentario,
+                  style: textTheme.bodyMedium?.copyWith(
+                    color: ext.ink,
+                    fontWeight: FontWeight.w400,
+                    height: 1.4,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -383,6 +432,9 @@ class _EmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final ext = context.colors;
+    final textTheme = Theme.of(context).textTheme;
+
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
@@ -390,36 +442,30 @@ class _EmptyState extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              padding: const EdgeInsets.all(24),
+              padding: const EdgeInsets.all(AppSpacing.xl),
               decoration: BoxDecoration(
-                color: context.colors.background,
+                color: ext.surfaceSecondary,
                 shape: BoxShape.circle,
               ),
               child: Icon(
                 Icons.fact_check_outlined,
-                size: 64,
-                color: context.colors.muted,
+                size: 56,
+                color: ext.muted,
               ),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: AppSpacing.xxl),
             Text(
               'Sin cuadres aún',
-              style: TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.w700,
-                color: context.colors.ink,
-                letterSpacing: -0.6,
+              style: textTheme.headlineMedium?.copyWith(
+                color: ext.ink,
               ),
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: AppSpacing.sm),
             Text(
-              'Aquí verás el historial de todos tus cuadres de caja una vez cierres tu primer turno.',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w400,
-                color: context.colors.muted,
-                letterSpacing: -0.3,
+              'Aquí verás el historial de todos tus cuadres\nde caja una vez cierres tu primer turno.',
+              style: textTheme.bodyLarge?.copyWith(
+                color: ext.muted,
                 height: 1.4,
               ),
               textAlign: TextAlign.center,
@@ -432,7 +478,7 @@ class _EmptyState extends StatelessWidget {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// Cuadre Detail Sheet
+// Cuadre Detail Sheet — bottom sheet expandible con detalle completo
 // ═══════════════════════════════════════════════════════════════════════════
 
 class _CuadreDetailSheet extends StatelessWidget {
@@ -440,8 +486,18 @@ class _CuadreDetailSheet extends StatelessWidget {
 
   final Cuadre cuadre;
 
+  Color _accentColor(BuildContext context) => switch (cuadre.estado) {
+        CuadreEstado.aprobado => context.colors.success,
+        CuadreEstado.rechazado => context.colors.danger,
+        CuadreEstado.pendiente => context.colors.warning,
+      };
+
   @override
   Widget build(BuildContext context) {
+    final accent = _accentColor(context);
+    final ext = context.colors;
+    final textTheme = Theme.of(context).textTheme;
+
     return DraggableScrollableSheet(
       initialChildSize: 0.75,
       minChildSize: 0.5,
@@ -450,28 +506,30 @@ class _CuadreDetailSheet extends StatelessWidget {
       builder: (context, scrollController) {
         return Container(
           decoration: BoxDecoration(
-            color: context.colors.background,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+            color: ext.background,
+            borderRadius: const BorderRadius.vertical(
+              top: Radius.circular(AppRadii.xl),
+            ),
           ),
           child: Column(
             children: [
-              // Drag handle
-              const SizedBox(height: 12),
+              // ── Drag handle ──
+              const SizedBox(height: AppSpacing.md),
               Center(
                 child: Container(
                   width: 40,
                   height: 5,
                   decoration: BoxDecoration(
-                    color: context.colors.line,
-                    borderRadius: BorderRadius.circular(100),
+                    color: ext.line,
+                    borderRadius: AppRadii.pillBorder,
                   ),
                 ),
               ),
-              const SizedBox(height: 20),
-              
-              // Header
+              const SizedBox(height: AppSpacing.xl),
+
+              // ── Header ──
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
                 child: Row(
                   children: [
                     Expanded(
@@ -480,160 +538,143 @@ class _CuadreDetailSheet extends StatelessWidget {
                         children: [
                           Text(
                             'Detalle del Cuadre',
-                            style: TextStyle(
-                              fontSize: 24,
-                              fontWeight: FontWeight.w700,
-                              color: context.colors.ink,
-                              letterSpacing: -0.8,
+                            style: textTheme.headlineMedium?.copyWith(
+                              color: ext.ink,
                             ),
                           ),
-                          const SizedBox(height: 4),
+                          const SizedBox(height: AppSpacing.xs),
                           Text(
                             compactDateFormatter.format(cuadre.fechaTurno),
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w400,
-                              color: context.colors.muted,
-                              letterSpacing: -0.3,
+                            style: textTheme.bodyLarge?.copyWith(
+                              color: ext.muted,
                             ),
                           ),
                         ],
                       ),
                     ),
-                    _EstadoBadge(estado: cuadre.estado),
+                    EstadoBadge(
+                      estado: cuadre.estado,
+                      showBorder: true,
+                    ),
                   ],
                 ),
               ),
-              
-              const SizedBox(height: 20),
-              
-              // Content
+              const SizedBox(height: AppSpacing.xxl),
+
+              // ── Content ──
               Expanded(
                 child: ListView(
                   controller: scrollController,
-                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.xl,
+                    0,
+                    AppSpacing.xl,
+                    AppSpacing.xl,
+                  ),
                   children: [
-                    // Resumen Card
+                    // ── Resumen Card ──
                     Container(
-                      padding: const EdgeInsets.all(20),
+                      padding: const EdgeInsets.all(AppSpacing.xl),
                       decoration: BoxDecoration(
-                        color: context.colors.surface,
-                        borderRadius: BorderRadius.circular(16),
-                        boxShadow: [
-                          BoxShadow(
-                            color: context.colors.ink.withValues(alpha: 0.04),
-                            blurRadius: 8,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
+                        color: ext.surface,
+                        borderRadius: AppRadii.lgBorder,
+                        boxShadow: AppShadows.subtle,
+                        border: Border(
+                          left: BorderSide(color: accent, width: 3),
+                        ),
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
                             'Resumen',
-                            style: TextStyle(
-                              fontSize: 17,
-                              fontWeight: FontWeight.w600,
-                              color: context.colors.ink,
-                              letterSpacing: -0.4,
+                            style: textTheme.titleMedium?.copyWith(
+                              color: ext.ink,
                             ),
                           ),
-                          const SizedBox(height: 16),
+                          const SizedBox(height: AppSpacing.lg),
                           _DetailRow(
                             label: 'Número de ventas',
                             valor: '${cuadre.ventas.length}',
                           ),
-                          const SizedBox(height: 12),
+                          const SizedBox(height: AppSpacing.md),
+                          const Divider(height: 1),
+                          const SizedBox(height: AppSpacing.md),
                           _DetailRow(
                             label: 'Unidades vendidas',
                             valor: '${cuadre.totalSalidas}',
                           ),
-                          const SizedBox(height: 12),
+                          const SizedBox(height: AppSpacing.md),
+                          const Divider(height: 1),
+                          const SizedBox(height: AppSpacing.md),
                           _DetailRow(
                             label: 'Total',
                             valor: formatCurrency(cuadre.valorTotal),
                             isHighlighted: true,
+                            accent: accent,
                           ),
                         ],
                       ),
                     ),
-                    
-                    // Comentario si existe
+
+                    // ── Comentario del supervisor ──
                     if (cuadre.comentarioJefe != null) ...[
-                      const SizedBox(height: 16),
+                      const SizedBox(height: AppSpacing.lg),
                       Container(
-                        padding: const EdgeInsets.all(16),
+                        padding: const EdgeInsets.all(AppSpacing.lg),
                         decoration: BoxDecoration(
-                          color: cuadre.estado == CuadreEstado.rechazado
-                              ? context.colors.danger.withValues(alpha: 0.08)
-                              : context.colors.primary.withValues(alpha: 0.08),
-                          borderRadius: BorderRadius.circular(16),
+                          color: accent.withValues(alpha: AppAlphas.fill),
+                          borderRadius: AppRadii.lgBorder,
                           border: Border.all(
-                            color: cuadre.estado == CuadreEstado.rechazado
-                                ? context.colors.danger.withValues(alpha: 0.2)
-                                : context.colors.primary.withValues(alpha: 0.2),
-                            width: 1.5,
+                            color: accent.withValues(alpha: AppAlphas.border),
                           ),
                         ),
-                        child: Column(
+                        child: Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Row(
-                              children: [
-                                Icon(
-                                  cuadre.estado == CuadreEstado.rechazado
-                                      ? Icons.error_outline_rounded
-                                      : Icons.info_outline_rounded,
-                                  size: 20,
-                                  color: cuadre.estado == CuadreEstado.rechazado
-                                      ? context.colors.danger
-                                      : context.colors.primary,
-                                ),
-                                const SizedBox(width: 8),
-                                Text(
-                                  'Comentario del supervisor',
-                                  style: TextStyle(
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.w600,
-                                    color: cuadre.estado == CuadreEstado.rechazado
-                                        ? context.colors.danger
-                                        : context.colors.primary,
-                                    letterSpacing: -0.3,
-                                  ),
-                                ),
-                              ],
+                            Icon(
+                              cuadre.estado == CuadreEstado.rechazado
+                                  ? Icons.error_outline_rounded
+                                  : Icons.info_outline_rounded,
+                              size: 20,
+                              color: accent,
                             ),
-                            const SizedBox(height: 8),
-                            Text(
-                              cuadre.comentarioJefe!,
-                              style: TextStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.w400,
-                                color: context.colors.ink,
-                                letterSpacing: -0.2,
-                                height: 1.4,
+                            const SizedBox(width: AppSpacing.sm),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Comentario del supervisor',
+                                    style: textTheme.bodyMedium?.copyWith(
+                                      color: accent,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  const SizedBox(height: AppSpacing.xs),
+                                  Text(
+                                    cuadre.comentarioJefe!,
+                                    style: textTheme.bodyLarge?.copyWith(
+                                      color: ext.ink,
+                                      height: 1.4,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                           ],
                         ),
                       ),
                     ],
-                    
-                    // Lista de ventas
-                    const SizedBox(height: 16),
+
+                    // ── Ventas del Cuadre ──
+                    const SizedBox(height: AppSpacing.lg),
                     Container(
-                      padding: const EdgeInsets.all(20),
+                      padding: const EdgeInsets.all(AppSpacing.xl),
                       decoration: BoxDecoration(
-                        color: context.colors.surface,
-                        borderRadius: BorderRadius.circular(16),
-                        boxShadow: [
-                          BoxShadow(
-                            color: context.colors.ink.withValues(alpha: 0.04),
-                            blurRadius: 8,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
+                        color: ext.surface,
+                        borderRadius: AppRadii.lgBorder,
+                        boxShadow: AppShadows.subtle,
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -641,68 +682,61 @@ class _CuadreDetailSheet extends StatelessWidget {
                           Row(
                             children: [
                               Container(
-                                padding: const EdgeInsets.all(6),
+                                padding: const EdgeInsets.all(AppSpacing.xs),
                                 decoration: BoxDecoration(
-                                  color: context.colors.background,
-                                  borderRadius: BorderRadius.circular(8),
+                                  color: ext.surfaceSecondary,
+                                  borderRadius: AppRadii.smBorder,
                                 ),
                                 child: Icon(
                                   Icons.shopping_bag_outlined,
                                   size: 18,
-                                  color: context.colors.primary,
+                                  color: accent,
                                 ),
                               ),
-                              const SizedBox(width: 10),
+                              const SizedBox(width: AppSpacing.sm),
                               Text(
                                 'Ventas del Cuadre',
-                                style: TextStyle(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w500,
-                                  color: context.colors.ink,
-                                  letterSpacing: -0.2,
+                                style: textTheme.titleMedium?.copyWith(
+                                  color: ext.ink,
                                 ),
                               ),
                             ],
                           ),
-                          const SizedBox(height: 16),
+                          const SizedBox(height: AppSpacing.lg),
                           ...cuadre.ventas.asMap().entries.map((entry) {
                             final index = entry.key;
                             final venta = entry.value;
+                            final isLast = index == cuadre.ventas.length - 1;
                             return Column(
                               children: [
-                                if (index > 0) const SizedBox(height: 12),
                                 Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
                                   children: [
                                     Expanded(
                                       child: Text(
                                         'Venta #${venta.id.substring(0, 6).toUpperCase()}',
-                                        style: TextStyle(
-                                          fontSize: 15,
-                                          fontWeight: FontWeight.w500,
-                                          color: context.colors.ink,
-                                          letterSpacing: -0.2,
+                                        style: textTheme.bodyLarge?.copyWith(
+                                          color: ext.ink,
                                         ),
                                       ),
                                     ),
                                     Text(
                                       formatCurrency(venta.total),
-                                      style: TextStyle(
-                                        fontSize: 16,
+                                      style: textTheme.titleMedium?.copyWith(
+                                        color: accent,
                                         fontWeight: FontWeight.w700,
-                                        color: context.colors.primary,
-                                        letterSpacing: -0.3,
-                                        fontFeatures: const [FontFeature.tabularFigures()],
+                                        fontFeatures: const [
+                                          FontFeature.tabularFigures()
+                                        ],
                                       ),
                                     ),
                                   ],
                                 ),
-                                if (index < cuadre.ventas.length - 1) ...[
-                                  const SizedBox(height: 12),
-                                  Container(
-                                    height: 1,
-                                    color: context.colors.background,
-                                  ),
+                                if (!isLast) ...[
+                                  const SizedBox(height: AppSpacing.md),
+                                  Container(height: 1, color: ext.line),
+                                  const SizedBox(height: AppSpacing.md),
                                 ],
                               ],
                             );
@@ -726,14 +760,19 @@ class _DetailRow extends StatelessWidget {
     required this.label,
     required this.valor,
     this.isHighlighted = false,
+    this.accent,
   });
 
   final String label;
   final String valor;
   final bool isHighlighted;
+  final Color? accent;
 
   @override
   Widget build(BuildContext context) {
+    final ext = context.colors;
+    final textTheme = Theme.of(context).textTheme;
+
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       crossAxisAlignment: CrossAxisAlignment.baseline,
@@ -741,20 +780,18 @@ class _DetailRow extends StatelessWidget {
       children: [
         Text(
           label,
-          style: TextStyle(
+          style: textTheme.bodyLarge?.copyWith(
             fontSize: isHighlighted ? 16 : 15,
             fontWeight: isHighlighted ? FontWeight.w600 : FontWeight.w400,
-            color: context.colors.muted,
-            letterSpacing: -0.2,
+            color: ext.muted,
           ),
         ),
         Text(
           valor,
-          style: TextStyle(
+          style: textTheme.titleMedium?.copyWith(
             fontSize: isHighlighted ? 20 : 17,
             fontWeight: isHighlighted ? FontWeight.w800 : FontWeight.w600,
-            color: isHighlighted ? context.colors.primary : context.colors.ink,
-            letterSpacing: isHighlighted ? -0.5 : -0.3,
+            color: isHighlighted && accent != null ? accent : ext.ink,
             fontFeatures: const [FontFeature.tabularFigures()],
           ),
         ),

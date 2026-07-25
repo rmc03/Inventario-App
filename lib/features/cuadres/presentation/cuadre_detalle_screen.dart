@@ -8,6 +8,7 @@ import '../../../core/utils/formatters.dart';
 import '../../../core/utils/haptics.dart';
 import '../../../shared/models/cuadre.dart';
 import '../../../shared/models/venta.dart';
+import '../../../shared/widgets/estado_badge.dart';
 import '../providers/cuadre_provider.dart';
 
 class CuadreDetalleScreen extends ConsumerStatefulWidget {
@@ -329,49 +330,8 @@ class _DetalleHeader extends StatelessWidget {
             ],
           ),
         ),
-        _EstadoBadge(estado: cuadre.estado),
+        EstadoBadge(estado: cuadre.estado),
       ],
-    );
-  }
-}
-
-class _EstadoBadge extends StatelessWidget {
-  const _EstadoBadge({required this.estado});
-
-  final CuadreEstado estado;
-
-  @override
-  Widget build(BuildContext context) {
-    final color = switch (estado) {
-      CuadreEstado.aprobado => context.colors.success,
-      CuadreEstado.rechazado => context.colors.danger,
-      CuadreEstado.pendiente => context.colors.warning,
-    };
-    final icon = switch (estado) {
-      CuadreEstado.aprobado => Icons.check_circle_outline_rounded,
-      CuadreEstado.rechazado => Icons.cancel_outlined,
-      CuadreEstado.pendiente => Icons.schedule_rounded,
-    };
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: AppAlphas.fillStrong),
-        borderRadius: BorderRadius.circular(AppRadii.sm),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 14, color: color),
-          const SizedBox(width: 4),
-          Text(
-            estado.label,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: color,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-        ],
-      ),
     );
   }
 }

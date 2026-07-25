@@ -9,6 +9,7 @@ import '../../../core/utils/haptics.dart';
 import '../../../shared/models/pago.dart';
 import '../../../shared/models/venta.dart';
 import '../../../shared/widgets/screen_popup_menu.dart';
+import '../../../shared/widgets/shift_summary_card.dart';
 import '../../ventas/providers/venta_provider.dart';
 import '../providers/turno_provider.dart';
 
@@ -139,13 +140,23 @@ class _TurnoActivoView extends ConsumerWidget {
       appBar: AppBar(
         title: const Text('Mi turno'),
         actions: [
-          PopupMenuButton<String>(
-            icon: const Icon(Icons.more_vert_rounded),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-            offset: const Offset(0, 8),
-            elevation: 8,
+          ScreenPopupMenu(
+            items: [
+              ScreenMenuItem(
+                value: 'cerrar',
+                icon: Icons.logout_rounded,
+                iconColor: context.colors.danger,
+                title: 'Cerrar turno',
+                subtitle: 'Finaliza tu jornada',
+              ),
+              ScreenMenuItem(
+                value: 'ajustes',
+                icon: Icons.settings_rounded,
+                iconColor: context.colors.muted,
+                title: 'Ajustes',
+                subtitle: 'Preferencias de la app',
+              ),
+            ],
             onSelected: (value) {
               switch (value) {
                 case 'cerrar':
@@ -157,100 +168,6 @@ class _TurnoActivoView extends ConsumerWidget {
                   break;
               }
             },
-            itemBuilder: (context) => [
-              PopupMenuItem(
-                value: 'cerrar',
-                padding: EdgeInsets.symmetric(
-                  horizontal: AppSpacing.lg,
-                  vertical: AppSpacing.sm,
-                ),
-                child: Row(
-                  children: [
-                    Container(
-                      padding: EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: context.colors.danger.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Icon(
-                        Icons.logout_rounded,
-                        color: context.colors.danger,
-                        size: 20,
-                      ),
-                    ),
-                    const SizedBox(width: AppSpacing.md),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'Cerrar turno',
-                            style: TextStyle(
-                              fontWeight: FontWeight.w600,
-                              fontSize: 15,
-                            ),
-                          ),
-                          SizedBox(height: 2),
-                          Text(
-                            'Finaliza tu jornada',
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                  color: context.colors.muted,
-                                  fontSize: 12,
-                                ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              PopupMenuItem(
-                value: 'ajustes',
-                padding: EdgeInsets.symmetric(
-                  horizontal: AppSpacing.lg,
-                  vertical: AppSpacing.sm,
-                ),
-                child: Row(
-                  children: [
-                    Container(
-                      padding: EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: context.colors.muted.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Icon(
-                        Icons.settings_rounded,
-                        color: context.colors.muted,
-                        size: 20,
-                      ),
-                    ),
-                    const SizedBox(width: AppSpacing.md),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'Ajustes',
-                            style: TextStyle(
-                              fontWeight: FontWeight.w600,
-                              fontSize: 15,
-                            ),
-                          ),
-                          SizedBox(height: 2),
-                          Text(
-                            'Preferencias de la app',
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                  color: context.colors.muted,
-                                  fontSize: 12,
-                                ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
           ),
           const SizedBox(width: 4),
         ],
@@ -263,7 +180,7 @@ class _TurnoActivoView extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Card resumen mejorada (fija)
+                // Card resumen con badge, stats y cerrar turno
                 Padding(
                   padding: const EdgeInsets.fromLTRB(
                     AppSpacing.xl,
@@ -271,26 +188,14 @@ class _TurnoActivoView extends ConsumerWidget {
                     AppSpacing.xl,
                     8,
                   ),
-                  child: _ResumenDelDiaCard(
+                  child: ShiftSummaryCard(
                     totalVentas: totalTurno,
                     cantidadVentas: ventas.length,
-                    cantidadArticulos: totalArticulos,
+                    cantidadUnidades: totalArticulos,
+                    activo: true,
+                    horaInicio: turno.horaInicio,
                   ),
                 ),
-
-                // Badge de turno activo
-                if (turno.horaInicio != null)
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(
-                      AppSpacing.xl,
-                      0,
-                      AppSpacing.xl,
-                      16,
-                    ),
-                    child: _BadgeChip(
-                      horaInicio: turno.horaInicio!,
-                    ),
-                  ),
 
                 Expanded(
                   child: ListView(
@@ -490,211 +395,6 @@ class _TurnoActivoView extends ConsumerWidget {
             ),
           ),
         ),
-      ),
-    );
-  }
-}
-
-class _ResumenDelDiaCard extends StatelessWidget {
-  const _ResumenDelDiaCard({
-    required this.totalVentas,
-    required this.cantidadVentas,
-    required this.cantidadArticulos,
-  });
-
-  final double totalVentas;
-  final int cantidadVentas;
-  final int cantidadArticulos;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: EdgeInsets.all(AppSpacing.lg),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            context.colors.primary.withValues(alpha: 0.08),
-            context.colors.primary.withValues(alpha: 0.03),
-          ],
-        ),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: context.colors.primary.withValues(alpha: 0.15),
-          width: 1.5,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: context.colors.primary.withValues(alpha: 0.08),
-            blurRadius: 16,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: EdgeInsets.all(6),
-                      decoration: BoxDecoration(
-                        color: context.colors.primary.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Icon(
-                        Icons.monetization_on_rounded,
-                        color: context.colors.primary,
-                        size: 16,
-                      ),
-                    ),
-                    SizedBox(width: 8),
-                    Text(
-                      'Ventas de hoy',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            fontWeight: FontWeight.w600,
-                            color: context.colors.primary,
-                          ),
-                    ),
-                  ],
-                ),
-                SizedBox(height: 8),
-                Text(
-                  formatCurrency(totalVentas),
-                  style: Theme.of(context).textTheme.headlineLarge?.copyWith(
-                        color: context.colors.primary,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: -0.5,
-                      ),
-                ),
-              ],
-            ),
-          ),
-          SizedBox(width: AppSpacing.md),
-          // Divisor vertical
-          Container(
-            width: 1,
-            height: 60,
-            color: context.colors.line.withValues(alpha: 0.5),
-          ),
-          const SizedBox(width: AppSpacing.md),
-          // Métricas compactas
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              _MetricaBadge(
-                icon: Icons.receipt_rounded,
-                valor: '$cantidadVentas',
-                label: cantidadVentas == 1 ? 'venta' : 'ventas',
-              ),
-              const SizedBox(height: 8),
-              _MetricaBadge(
-                icon: Icons.inventory_2_rounded,
-                valor: '$cantidadArticulos',
-                label: 'uds.',
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// Badge de métrica compacto para la card de resumen
-class _MetricaBadge extends StatelessWidget {
-  const _MetricaBadge({
-    required this.icon,
-    required this.valor,
-    required this.label,
-  });
-
-  final IconData icon;
-  final String valor;
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: EdgeInsets.symmetric(
-        horizontal: 10,
-        vertical: 6,
-      ),
-      decoration: BoxDecoration(
-        color: context.colors.surface,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(
-          color: context.colors.line.withValues(alpha: 0.5),
-        ),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            icon,
-            size: 14,
-            color: context.colors.primary,
-          ),
-          SizedBox(width: 6),
-          Text(
-            valor,
-            style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.w800,
-                  color: context.colors.primary,
-                ),
-          ),
-          SizedBox(width: 4),
-          Text(
-            label,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: context.colors.muted,
-                ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _BadgeChip extends StatelessWidget {
-  const _BadgeChip({required this.horaInicio});
-
-  final DateTime horaInicio;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(
-        color: context.colors.surfaceSecondary,
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 6,
-            height: 6,
-            decoration: BoxDecoration(
-              color: context.colors.success,
-              shape: BoxShape.circle,
-            ),
-          ),
-          const SizedBox(width: 6),
-          Text(
-            'Turno activo \u00b7 Desde ${timeFormatter.format(horaInicio)}',
-            style: TextStyle(
-              fontSize: 12,
-              color: context.colors.success,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ],
       ),
     );
   }

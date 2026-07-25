@@ -1,59 +1,57 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../core/theme/app_dimens.dart';
-import '../../core/theme/app_theme.dart';
 import '../../core/utils/connectivity_service.dart';
 
-/// Indicador de conexión compacto estilo iOS.
-///
-/// Antes era un banner ancho con fondo de color al 10%. Ahora es una fila
-/// discreta con un punto de estado + texto, mucho menos invasiva.
-class IndicadorConexion extends ConsumerWidget {
+class IndicadorConexion extends ConsumerStatefulWidget {
   const IndicadorConexion({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final isConnected = ref
-        .watch(connectivityStatusProvider)
-        .when(
-          data: (value) => value,
-          error: (_, _) => true,
-          loading: () => true,
-        );
+  ConsumerState<IndicadorConexion> createState() => _IndicadorConexionState();
+}
 
-    // Solo mostramos el banner cuando hay algo que avisar (offline).
-    // Con conexión no ocupamos espacio vertical en cada pantalla.
-    if (isConnected) {
-      return const SizedBox.shrink();
-    }
+class _IndicadorConexionState extends ConsumerState<IndicadorConexion> {
+  @override
+  Widget build(BuildContext context) {
+    ref.listen<AsyncValue<bool>>(connectivityStatusProvider, (previous, next) {
+      final prevConnected = previous?.value;
+      final nextConnected = next.value;
+      if (prevConnected != null && nextConnected != null && prevConnected != nextConnected) {
+        _showToast(context, nextConnected);
+      }
+    });
 
-    final color = context.colors.warning;
+    return const SizedBox.shrink();
+  }
 
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.lg,
-        vertical: AppSpacing.xs,
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 8,
-            height: 8,
-            decoration: BoxDecoration(
-              color: color,
-              shape: BoxShape.circle,
+  void _showToast(BuildContext context, bool isConnected) {
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            Icon(
+              isConnected ? Icons.wifi_rounded : Icons.wifi_off_rounded,
+              color: Colors.white,
+              size: 20,
             ),
-          ),
-          SizedBox(width: AppSpacing.sm),
-          Text(
-            'Offline',
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: context.colors.muted,
-              fontWeight: FontWeight.w500,
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                isConnected
+                    ? 'Conexión restablecida'
+                    : 'Sin conexión — los datos se guardan localmente',
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
+        backgroundColor: isConnected ? Colors.green.shade700 : Colors.red.shade700,
+        behavior: SnackBarBehavior.floating,
+        margin: const EdgeInsets.only(bottom: 72, left: 16, right: 16),
+        duration: const Duration(seconds: 3),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
       ),
     );
   }

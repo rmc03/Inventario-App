@@ -12,6 +12,7 @@ import '../../../shared/models/usuario.dart';
 import '../../../shared/widgets/product_photo.dart';
 import '../../../shared/widgets/stock_badge.dart';
 import '../../movimientos/providers/movimiento_provider.dart';
+import '../../auth/providers/auth_provider.dart';
 import '../providers/inventario_provider.dart';
 
 class ProductoDetalleScreen extends ConsumerWidget {
@@ -504,9 +505,8 @@ class _AjustarStockSheetState extends ConsumerState<_AjustarStockSheet> {
       return;
     }
 
-    // TODO: Obtener el usuario actual del sistema de autenticación
-    // Por ahora usamos un usuario de ejemplo
-    final usuario = Usuario(
+    final authUser = ref.read(authControllerProvider).user;
+    final usuario = authUser ?? Usuario(
       id: '00000000-0000-4000-9000-000000000001',
       email: 'admin@mypime.com',
       nombre: 'Ruslan Jefe',

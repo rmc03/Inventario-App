@@ -12,6 +12,7 @@ import '../../../shared/models/producto.dart';
 import '../../../shared/models/categoria.dart';
 import '../../../shared/widgets/product_photo.dart';
 import '../../../shared/widgets/screen_popup_menu.dart';
+import '../../../shared/widgets/skeleton_loader.dart';
 import '../../../shared/widgets/stat_card.dart';
 import '../../../shared/widgets/filter_sort_sheet.dart';
 import '../providers/inventario_provider.dart';
@@ -34,8 +35,7 @@ class InventarioScreen extends ConsumerStatefulWidget {
 
 class _InventarioScreenState extends ConsumerState<InventarioScreen> {
   Future<void> _onRefresh() async {
-    // Simula recarga — en producción aquí iría el sync con Supabase
-    await Future.delayed(const Duration(milliseconds: 800));
+    await ref.read(inventarioControllerProvider.notifier).refresh();
   }
 
   @override
@@ -247,7 +247,14 @@ class _InventarioScreenState extends ConsumerState<InventarioScreen> {
                 ),
               const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.xl)),
               // ─── Lista de productos ────────────────────────────────
-              if (productos.isEmpty)
+              if (state.isLoading)
+                SliverToBoxAdapter(
+                  child: SkeletonList(
+                    itemCount: 5,
+                    showTrailing: true,
+                  ),
+                )
+              else if (productos.isEmpty)
                 SliverToBoxAdapter(
                   child: _EmptyInventory(
                     onCrearProducto: widget.isAdmin
@@ -390,15 +397,18 @@ class _ProductTile extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final tile = RepaintBoundary(
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: () {
-            final path = isAdmin
-                ? '/admin/inventario/productos/${producto.id}'
-                : '/dependiente/inventario/productos/${producto.id}';
-            context.push(path);
-          },
+      child: Semantics(
+        label: '${producto.nombre}, ${formatCurrency(producto.precio)}, ${producto.stockActual} unidades${producto.tieneStockBajo ? ', stock bajo' : ''}',
+        button: true,
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: () {
+              final path = isAdmin
+                  ? '/admin/inventario/productos/${producto.id}'
+                  : '/dependiente/inventario/productos/${producto.id}';
+              context.push(path);
+            },
           child: Padding(
             padding: const EdgeInsets.symmetric(
               horizontal: AppSpacing.sm,
@@ -422,7 +432,9 @@ class _ProductTile extends ConsumerWidget {
                         style: Theme.of(context).textTheme.titleMedium,
                       ),
                       const SizedBox(height: 2),
-                      Row(
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Row(
                         children: [
                           Text(
                             '${producto.stockActual} uds.',
@@ -433,7 +445,7 @@ class _ProductTile extends ConsumerWidget {
                             builder: (context) {
                               final sold = ref.watch(
                                 currentCuadreSalesProvider.select(
-                                  (sales) => sales.value?[producto.id] ?? 0,
+                                  (sales) => sales[producto.id] ?? 0,
                                 ),
                               );
                               if (sold > 0) {
@@ -501,6 +513,7 @@ class _ProductTile extends ConsumerWidget {
                           ],
                         ],
                       ),
+                        ),
                     ],
                   ),
                 ),
@@ -529,6 +542,7 @@ class _ProductTile extends ConsumerWidget {
           ),
         ),
       ),
+    ),
     );
 
     if (!isAdmin) return tile;

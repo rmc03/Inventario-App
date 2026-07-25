@@ -21,29 +21,32 @@ class StatCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Expanded(
-      child: DecoratedBox(
-        decoration: ShapeDecoration(
-          color: context.colors.surface,
-          shape: const RoundedRectangleBorder(
-            borderRadius: AppRadii.mdBorder,
+      child: Semantics(
+        label: '$label: $value',
+        child: DecoratedBox(
+          decoration: ShapeDecoration(
+            color: context.colors.surface,
+            shape: const RoundedRectangleBorder(
+              borderRadius: AppRadii.mdBorder,
+            ),
+            shadows: AppShadows.subtle,
           ),
-          shadows: AppShadows.subtle,
-        ),
-        child: Padding(
-          padding: EdgeInsets.all(AppSpacing.lg),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(label, style: Theme.of(context).textTheme.bodyMedium),
-              SizedBox(height: AppSpacing.sm),
-              Text(
-                value,
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  color: tint ?? context.colors.primary,
-                  fontSize: 22,
+          child: Padding(
+            padding: EdgeInsets.all(AppSpacing.lg),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(label, style: Theme.of(context).textTheme.bodyMedium),
+                SizedBox(height: AppSpacing.sm),
+                Text(
+                  value,
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    color: tint ?? context.colors.primary,
+                    fontSize: 22,
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

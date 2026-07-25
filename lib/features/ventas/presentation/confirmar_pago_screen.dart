@@ -296,7 +296,11 @@ class _MetodoCardState extends State<_MetodoCard> {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
+    return Semantics(
+      button: true,
+      selected: widget.seleccionado,
+      label: 'Método de pago: ${widget.metodo.label}',
+      child: GestureDetector(
       onTapDown: (_) => setState(() => _pressed = true),
       onTapUp: (_) {
         setState(() => _pressed = false);
@@ -366,6 +370,7 @@ class _MetodoCardState extends State<_MetodoCard> {
             ],
           ),
         ),
+      ),
       ),
     );
   }

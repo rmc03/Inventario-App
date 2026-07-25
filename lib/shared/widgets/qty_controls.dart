@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/utils/haptics.dart';
 
 class QtyControls extends StatelessWidget {
   const QtyControls({
@@ -46,7 +47,12 @@ class QtyBtn extends StatelessWidget {
     final colors = context.colors;
     final enabled = onTap != null;
     return InkWell(
-      onTap: onTap,
+      onTap: onTap == null
+          ? null
+          : () {
+              Haptics.tap(context);
+              onTap!();
+            },
       borderRadius: const BorderRadius.all(Radius.circular(AppRadii.sm)),
       child: DecoratedBox(
         decoration: BoxDecoration(

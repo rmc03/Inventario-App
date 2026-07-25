@@ -9,6 +9,7 @@ import '../../../core/theme/app_dimens.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../shared/models/movimiento.dart';
+import '../../../shared/models/venta.dart';
 import '../../../shared/widgets/movimiento_filter_sheet.dart';
 import '../../../shared/widgets/screen_popup_menu.dart';
 import '../../ventas/providers/venta_provider.dart';
@@ -31,10 +32,11 @@ class _MovimientoCardItem extends _MovimientoItem {
 }
 
 class _VentaCardItem extends _MovimientoItem {
-  const _VentaCardItem(this.ventaId, this.movimientos, {this.matchedProduct});
+  const _VentaCardItem(this.ventaId, this.movimientos, {this.matchedProduct, this.venta});
   final String ventaId;
   final List<Movimiento> movimientos;
   final String? matchedProduct;
+  final Venta? venta;
 }
 
 /// Construye la lista plana de items (headers de día + cards individuales/agrupadas).
@@ -43,6 +45,7 @@ class _VentaCardItem extends _MovimientoItem {
 List<_MovimientoItem> _buildFeedItems(
   List<Movimiento> movimientos,
   String searchQuery,
+  List<Venta> ventas,
 ) {
   final q = searchQuery.trim().toLowerCase();
   final Map<DateTime, List<Movimiento>> grouped = {};
@@ -90,7 +93,8 @@ List<_MovimientoItem> _buildFeedItems(
             }
           }
           
-          items.add(_VentaCardItem(m.ventaId!, saleItems, matchedProduct: matchedProduct));
+          final venta = ventas.where((v) => v.id == m.ventaId).firstOrNull;
+          items.add(_VentaCardItem(m.ventaId!, saleItems, matchedProduct: matchedProduct, venta: venta));
         }
       } else if (m.tipo != MovimientoTipo.salida && m.tipo != MovimientoTipo.venta) {
         // Movimientos individuales (Entradas, Altas, Inicio Turno, Producto Eliminado)
@@ -163,12 +167,8 @@ class _MovimientosScreenState extends ConsumerState<MovimientosScreen> {
           fechaInicio,
           fechaFin,
         }) {
-          // Aplicar filtro de tipo
           ref.read(movimientosFilterProvider.notifier).setTipo(tipo);
-          
-          // Aplicar filtro de rango de fecha
           if (rango == RangoFechaFiltro.personalizado) {
-            // Solo aplicar si las fechas son válidas
             if (fechaInicio != null && fechaFin != null) {
               ref.read(movimientosFilterProvider.notifier).setRangoPersonalizado(
                     fechaInicio,
@@ -224,7 +224,8 @@ class _MovimientosScreenState extends ConsumerState<MovimientosScreen> {
   Widget build(BuildContext context) {
     final filtro = ref.watch(movimientosFilterProvider);
     final source = ref.watch(movimientosFiltradosProvider);
-    final items = _buildFeedItems(source, filtro.query);
+    final ventas = ref.watch(ventasDelTurnoProvider);
+    final items = _buildFeedItems(source, filtro.query, ventas);
 
     final hayFiltrosActivos = filtro.tipo != TipoMovimientoFiltro.todos;
 
@@ -427,6 +428,7 @@ class _MovimientosScreenState extends ConsumerState<MovimientosScreen> {
                                 :final ventaId,
                                 :final movimientos,
                                 :final matchedProduct,
+                                :final venta,
                               ) =>
                                 Padding(
                                   padding: const EdgeInsets.symmetric(
@@ -439,6 +441,7 @@ class _MovimientosScreenState extends ConsumerState<MovimientosScreen> {
                                         ventaId: ventaId,
                                         movimientos: movimientos,
                                         matchedProduct: matchedProduct,
+                                        venta: venta,
                                       ),
                                       const SizedBox(height: AppSpacing.sm),
                                     ],
@@ -603,13 +606,16 @@ class _MovimientoCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return switch (movimiento.tipo) {
-      MovimientoTipo.entrada => _buildEntradaCard(context),
-      MovimientoTipo.salida => const SizedBox.shrink(), // Las salidas individuales ya no se usan (solo ventas con ventaId)
-      MovimientoTipo.inicioTurno => _buildInicioTurnoCard(context),
-      MovimientoTipo.productoEliminado => _buildProductoEliminadoCard(context),
-      MovimientoTipo.venta => const SizedBox.shrink(), // Las ventas se manejan en _VentaCard
-    };
+    return Semantics(
+      label: '${movimiento.tipo.label}: ${movimiento.productoNombre}, ${movimiento.cantidad.abs()} unidades',
+      child: switch (movimiento.tipo) {
+        MovimientoTipo.entrada => _buildEntradaCard(context),
+        MovimientoTipo.salida => const SizedBox.shrink(), // Las salidas individuales ya no se usan (solo ventas con ventaId)
+        MovimientoTipo.inicioTurno => _buildInicioTurnoCard(context),
+        MovimientoTipo.productoEliminado => _buildProductoEliminadoCard(context),
+        MovimientoTipo.venta => const SizedBox.shrink(), // Las ventas se manejan en _VentaCard
+      },
+    );
   }
 
   /// 🔵 Entrada de producto (flecha azul →) | 🟠 Ajuste manual negativo
@@ -1015,11 +1021,13 @@ class _VentaCard extends ConsumerStatefulWidget {
     required this.ventaId,
     required this.movimientos,
     this.matchedProduct,
+    this.venta,
   });
 
   final String ventaId;
   final List<Movimiento> movimientos;
   final String? matchedProduct;
+  final Venta? venta;
 
   @override
   ConsumerState<_VentaCard> createState() => _VentaCardState();
@@ -1086,32 +1094,33 @@ class _VentaCardState extends ConsumerState<_VentaCard> with SingleTickerProvide
     // 🔵 Azul primario = Venta (la acción principal del negocio)
     final color = context.colors.primary;
 
-    // Buscar la venta en el turno actual
-    final ventas = ref.read(ventasDelTurnoProvider);
-    final venta = ventas.where((v) => v.id == widget.ventaId).firstOrNull;
+    final venta = widget.venta;
 
-    return Container(
-      decoration: BoxDecoration(
-        color: context.colors.surface,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: context.colors.ink.withValues(alpha: 0.04),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: Column(
-        children: [
+    return Semantics(
+      label: 'Venta: $totalUnits unidades, ${formatCurrency(totalAmount)}',
+      button: venta != null,
+      child: Container(
+        decoration: BoxDecoration(
+          color: context.colors.surface,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: context.colors.ink.withValues(alpha: 0.04),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Column(
+          children: [
           // ── Card principal (toca para ver detalles de la venta) ──
           Material(
             color: Colors.transparent,
             child: InkWell(
               borderRadius: BorderRadius.circular(12),
               onTap: venta != null
-                  ? () => context.push('/dependiente/turno/venta/${venta.id}', extra: venta)
+                  ? () => context.push('/admin/movimientos/ventas/${venta.id}', extra: venta)
                   : null,
               child: Padding(
                 padding: const EdgeInsets.all(12),
@@ -1470,6 +1479,7 @@ class _VentaCardState extends ConsumerState<_VentaCard> with SingleTickerProvide
             ),
           ],
         ],
+      ),
       ),
     );
   }

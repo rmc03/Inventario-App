@@ -23,6 +23,7 @@ class InventarioState {
     this.categoriaId,
     this.sortBy = ProductoSortBy.nombreAsc,
     this.soloStockBajo = false,
+    this.isLoading = false,
   })  : productosFiltrados = _computeFiltrados(
           productos,
           search,
@@ -45,6 +46,7 @@ class InventarioState {
   final List<Producto> productosFiltrados;
   final int totalProductos;
   final double valorTotal;
+  final bool isLoading;
 
   static List<Producto> _computeFiltrados(
     List<Producto> productos,
@@ -94,6 +96,7 @@ class InventarioState {
     String? categoriaId,
     ProductoSortBy? sortBy,
     bool? soloStockBajo,
+    bool? isLoading,
     bool clearCategoria = false,
   }) {
     return InventarioState(
@@ -103,6 +106,7 @@ class InventarioState {
       categoriaId: clearCategoria ? null : categoriaId ?? this.categoriaId,
       sortBy: sortBy ?? this.sortBy,
       soloStockBajo: soloStockBajo ?? this.soloStockBajo,
+      isLoading: isLoading ?? this.isLoading,
     );
   }
 }
@@ -135,6 +139,16 @@ class InventarioController extends Notifier<InventarioState> {
 
   void setSoloStockBajo(bool value) {
     state = state.copyWith(soloStockBajo: value);
+  }
+
+  Future<void> refresh() async {
+    state = state.copyWith(isLoading: true);
+    _refresh();
+    state = state.copyWith(isLoading: false);
+  }
+
+  void setLoading(bool value) {
+    state = state.copyWith(isLoading: value);
   }
 
   Producto? findProducto(String id) {
