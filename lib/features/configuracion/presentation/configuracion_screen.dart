@@ -356,11 +356,15 @@ class _AparienciaExpandableState extends State<_AparienciaExpandable> {
                 children: [
                   const Divider(),
                   const SizedBox(height: 8),
-                  ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    leading: const Icon(Icons.palette_rounded),
-                    title: const Text('Tema de apariencia'),
-                    trailing: const _ThemeModeSelector(),
+                  Row(
+                    children: [
+                      const Icon(Icons.palette_rounded),
+                      const SizedBox(width: 16),
+                      const Expanded(
+                        child: Text('Tema de apariencia'),
+                      ),
+                      const _ThemeModeSelector(),
+                    ],
                   ),
                   const Divider(height: 1),
                   Consumer(

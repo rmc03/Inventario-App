@@ -55,86 +55,48 @@ class _MovimientoFilterSheetState extends State<MovimientoFilterSheet> {
   int get _activeFiltersCount {
     int count = 0;
     if (_tipo != TipoMovimientoFiltro.todos) count++;
-    if (_rango != RangoFechaFiltro.hoy) count++;
+    if (_rango != RangoFechaFiltro.todos) count++;
     return count;
   }
 
-  bool get _canApply {
-    if (_rango == RangoFechaFiltro.personalizado &&
-        (_customInicio == null || _customFin == null)) {
-      return false;
-    }
-    return true;
-  }
-
-  void _apply() {
+  void _applyFilters() {
     widget.onApply(
       tipo: _tipo,
       rango: _rango,
       fechaInicio: _customInicio,
       fechaFin: _customFin,
     );
-    Navigator.of(context).pop();
-  }
-
-  void _cancel() {
-    Navigator.of(context).pop();
   }
 
   void _clearAllFilters() {
     setState(() {
       _tipo = TipoMovimientoFiltro.todos;
-      _rango = RangoFechaFiltro.hoy;
+      _rango = RangoFechaFiltro.todos;
       _customInicio = null;
       _customFin = null;
     });
+    _applyFilters();
   }
 
   Future<void> _onCustomRangeTapped() async {
-    final now = DateTime.now();
-    final range = await showDateRangePicker(
+    final result = await showModalBottomSheet<DateTimeRange?>(
       context: context,
-      firstDate: DateTime(2020),
-      lastDate: now,
-      initialDateRange: (_customInicio != null && _customFin != null)
-          ? DateTimeRange(start: _customInicio!, end: _customFin!)
-          : null,
-      builder: (context, child) {
-        return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: ColorScheme.light(
-              primary: context.colors.primary,
-              onPrimary: Colors.white,
-              surface: context.colors.surface,
-            ),
-            textButtonTheme: TextButtonThemeData(
-              style: TextButton.styleFrom(
-                foregroundColor: context.colors.primary,
-              ),
-            ),
-          ),
-          child: child!,
-        );
-      },
-      helpText: 'Seleccionar rango de fechas',
-      cancelText: 'Cancelar',
-      confirmText: 'Aceptar',
-      saveText: 'Guardar',
-      errorFormatText: 'Formato inválido',
-      errorInvalidText: 'Fecha fuera de rango',
-      errorInvalidRangeText: 'Rango inválido',
-      fieldStartHintText: 'Fecha inicio',
-      fieldEndHintText: 'Fecha fin',
-      fieldStartLabelText: 'Desde',
-      fieldEndLabelText: 'Hasta',
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => _CustomDateRangePicker(
+        initialRange: (_customInicio != null && _customFin != null)
+            ? DateTimeRange(start: _customInicio!, end: _customFin!)
+            : null,
+      ),
     );
 
-    if (range != null && mounted) {
+    if (result != null && mounted) {
       setState(() {
         _rango = RangoFechaFiltro.personalizado;
-        _customInicio = range.start;
-        _customFin = range.end;
+        _customInicio = result.start;
+        _customFin = result.end;
       });
+      _applyFilters();
     }
   }
 
@@ -293,10 +255,7 @@ class _MovimientoFilterSheetState extends State<MovimientoFilterSheet> {
               Expanded(
                 child: ListView(
                   controller: scrollController,
-                  padding: EdgeInsets.only(
-                    bottom: MediaQuery.of(context).viewInsets.bottom +
-                        AppSpacing.xl,
-                  ),
+                  padding: EdgeInsets.zero,
                   children: [
                     const SizedBox(height: AppSpacing.md),
 
@@ -313,6 +272,7 @@ class _MovimientoFilterSheetState extends State<MovimientoFilterSheet> {
                       isSelected: _tipo == TipoMovimientoFiltro.todos,
                       onTap: () {
                         setState(() => _tipo = TipoMovimientoFiltro.todos);
+                        _applyFilters();
                       },
                     ),
                     _FilterListTile(
@@ -321,6 +281,7 @@ class _MovimientoFilterSheetState extends State<MovimientoFilterSheet> {
                       isSelected: _tipo == TipoMovimientoFiltro.entradas,
                       onTap: () {
                         setState(() => _tipo = TipoMovimientoFiltro.entradas);
+                        _applyFilters();
                       },
                     ),
                     _FilterListTile(
@@ -329,6 +290,7 @@ class _MovimientoFilterSheetState extends State<MovimientoFilterSheet> {
                       isSelected: _tipo == TipoMovimientoFiltro.ventas,
                       onTap: () {
                         setState(() => _tipo = TipoMovimientoFiltro.ventas);
+                        _applyFilters();
                       },
                     ),
 
@@ -344,11 +306,21 @@ class _MovimientoFilterSheetState extends State<MovimientoFilterSheet> {
 
                     // Lista de rangos
                     _FilterListTile(
+                      title: 'Todos',
+                      icon: Icons.all_inclusive_rounded,
+                      isSelected: _rango == RangoFechaFiltro.todos,
+                      onTap: () {
+                        setState(() => _rango = RangoFechaFiltro.todos);
+                        _applyFilters();
+                      },
+                    ),
+                    _FilterListTile(
                       title: 'Hoy',
                       icon: Icons.today_rounded,
                       isSelected: _rango == RangoFechaFiltro.hoy,
                       onTap: () {
                         setState(() => _rango = RangoFechaFiltro.hoy);
+                        _applyFilters();
                       },
                     ),
                     _FilterListTile(
@@ -357,6 +329,7 @@ class _MovimientoFilterSheetState extends State<MovimientoFilterSheet> {
                       isSelected: _rango == RangoFechaFiltro.semana,
                       onTap: () {
                         setState(() => _rango = RangoFechaFiltro.semana);
+                        _applyFilters();
                       },
                     ),
                     _FilterListTile(
@@ -365,6 +338,7 @@ class _MovimientoFilterSheetState extends State<MovimientoFilterSheet> {
                       isSelected: _rango == RangoFechaFiltro.mes,
                       onTap: () {
                         setState(() => _rango = RangoFechaFiltro.mes);
+                        _applyFilters();
                       },
                     ),
                     _CustomRangeTile(
@@ -373,51 +347,8 @@ class _MovimientoFilterSheetState extends State<MovimientoFilterSheet> {
                       customFin: _customFin,
                       onTap: _onCustomRangeTapped,
                     ),
+                    const SizedBox(height: AppSpacing.xl),
                   ],
-                ),
-              ),
-
-              // ── Footer ──
-              Container(
-                padding: const EdgeInsets.fromLTRB(
-                  AppSpacing.xl,
-                  AppSpacing.md,
-                  AppSpacing.xl,
-                  AppSpacing.xl,
-                ),
-                decoration: BoxDecoration(
-                  border: Border(
-                    top: BorderSide(
-                      color: context.colors.line.withValues(alpha: 0.5),
-                      width: 1,
-                    ),
-                  ),
-                ),
-                child: SafeArea(
-                  top: false,
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton(
-                          onPressed: _cancel,
-                          style: OutlinedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                          ),
-                          child: const Text('Cancelar'),
-                        ),
-                      ),
-                      const SizedBox(width: AppSpacing.md),
-                      Expanded(
-                        child: FilledButton(
-                          onPressed: _canApply ? _apply : null,
-                          style: FilledButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                          ),
-                          child: const Text('Aplicar'),
-                        ),
-                      ),
-                    ],
-                  ),
                 ),
               ),
             ],
@@ -658,6 +589,442 @@ class _FilterListTile extends StatelessWidget {
                 ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Widget: Selector de rango personalizado mejorado ──
+
+class _CustomDateRangePicker extends StatefulWidget {
+  const _CustomDateRangePicker({
+    this.initialRange,
+  });
+
+  final DateTimeRange? initialRange;
+
+  @override
+  State<_CustomDateRangePicker> createState() => _CustomDateRangePickerState();
+}
+
+class _CustomDateRangePickerState extends State<_CustomDateRangePicker> {
+  late DateTime _currentMonth;
+  DateTime? _startDate;
+  DateTime? _endDate;
+  bool _selectingEnd = false;
+
+  @override
+  void initState() {
+    super.initState();
+    final now = DateTime.now();
+    _currentMonth = DateTime(now.year, now.month);
+    _startDate = widget.initialRange?.start;
+    _endDate = widget.initialRange?.end;
+    _selectingEnd = _startDate != null;
+  }
+
+  void _previousMonth() {
+    setState(() {
+      _currentMonth = DateTime(_currentMonth.year, _currentMonth.month - 1);
+    });
+  }
+
+  void _nextMonth() {
+    final now = DateTime.now();
+    final nextMonth = DateTime(_currentMonth.year, _currentMonth.month + 1);
+    if (nextMonth.isBefore(now) || nextMonth.month == now.month) {
+      setState(() {
+        _currentMonth = nextMonth;
+      });
+    }
+  }
+
+  void _onDateTapped(DateTime date) {
+    setState(() {
+      if (!_selectingEnd) {
+        // Seleccionando fecha de inicio
+        _startDate = date;
+        _endDate = null;
+        _selectingEnd = true;
+      } else {
+        // Seleccionando fecha de fin
+        if (date.isBefore(_startDate!)) {
+          // Si la fecha es anterior al inicio, reiniciar
+          _startDate = date;
+          _endDate = null;
+        } else {
+          _endDate = date;
+        }
+      }
+    });
+  }
+
+  void _confirm() {
+    if (_startDate != null && _endDate != null) {
+      Navigator.of(context).pop(
+        DateTimeRange(start: _startDate!, end: _endDate!),
+      );
+    }
+  }
+
+  void _clear() {
+    setState(() {
+      _startDate = null;
+      _endDate = null;
+      _selectingEnd = false;
+    });
+  }
+
+  String _getMonthName(int month) {
+    const months = [
+      'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+      'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+    ];
+    return months[month - 1];
+  }
+
+  String _formatDate(DateTime date) {
+    return '${date.day} ${_getMonthName(date.month).substring(0, 3)}';
+  }
+
+  bool _isDateInRange(DateTime date) {
+    if (_startDate == null) return false;
+    if (_endDate == null) return date.isAtSameMomentAs(_startDate!);
+    return (date.isAtSameMomentAs(_startDate!) ||
+            date.isAfter(_startDate!)) &&
+        (date.isAtSameMomentAs(_endDate!) || date.isBefore(_endDate!));
+  }
+
+  bool _isStartOrEnd(DateTime date) {
+    return (_startDate != null && date.isAtSameMomentAs(_startDate!)) ||
+        (_endDate != null && date.isAtSameMomentAs(_endDate!));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final daysInMonth = DateTime(_currentMonth.year, _currentMonth.month + 1, 0).day;
+    final firstDayOfMonth = DateTime(_currentMonth.year, _currentMonth.month, 1);
+    final weekdayOfFirstDay = firstDayOfMonth.weekday % 7; // 0 = Sunday
+    final now = DateTime.now();
+    final canGoNext = _currentMonth.year < now.year ||
+        (_currentMonth.year == now.year && _currentMonth.month < now.month);
+
+    return Container(
+      decoration: BoxDecoration(
+        color: context.colors.surface,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      child: SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // ── Handle ──
+            Container(
+              margin: const EdgeInsets.only(top: AppSpacing.md),
+              width: 40,
+              height: 5,
+              decoration: BoxDecoration(
+                color: context.colors.muted.withValues(alpha: 0.4),
+                borderRadius: BorderRadius.circular(AppRadii.pill),
+              ),
+            ),
+
+            // ── Header con navegación de mes/año ──
+            Padding(
+              padding: const EdgeInsets.all(AppSpacing.xl),
+              child: Column(
+                children: [
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.calendar_month_rounded,
+                        color: context.colors.primary,
+                        size: 24,
+                      ),
+                      const SizedBox(width: AppSpacing.sm),
+                      Text(
+                        'Seleccionar rango',
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                              fontWeight: FontWeight.w700,
+                            ),
+                      ),
+                      const Spacer(),
+                      if (_startDate != null || _endDate != null)
+                        IconButton(
+                          onPressed: _clear,
+                          icon: const Icon(Icons.clear_rounded),
+                          iconSize: 20,
+                          style: IconButton.styleFrom(
+                            backgroundColor: context.colors.surfaceSecondary,
+                          ),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  
+                  // Indicadores de fecha seleccionada
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: AppSpacing.md,
+                            vertical: AppSpacing.sm,
+                          ),
+                          decoration: BoxDecoration(
+                            color: _startDate != null
+                                ? context.colors.primary.withValues(alpha: 0.1)
+                                : context.colors.surfaceSecondary,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: _startDate != null && !_selectingEnd
+                                  ? context.colors.primary
+                                  : Colors.transparent,
+                              width: 2,
+                            ),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Desde',
+                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                      color: context.colors.muted,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                _startDate != null
+                                    ? _formatDate(_startDate!)
+                                    : 'Seleccionar',
+                                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                                      fontWeight: FontWeight.w600,
+                                      color: _startDate != null
+                                          ? context.colors.primary
+                                          : context.colors.muted,
+                                    ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
+                        child: Icon(
+                          Icons.arrow_forward_rounded,
+                          color: context.colors.muted,
+                          size: 20,
+                        ),
+                      ),
+                      Expanded(
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: AppSpacing.md,
+                            vertical: AppSpacing.sm,
+                          ),
+                          decoration: BoxDecoration(
+                            color: _endDate != null
+                                ? context.colors.primary.withValues(alpha: 0.1)
+                                : context.colors.surfaceSecondary,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: _selectingEnd && _endDate == null
+                                  ? context.colors.primary
+                                  : Colors.transparent,
+                              width: 2,
+                            ),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Hasta',
+                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                      color: context.colors.muted,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                _endDate != null
+                                    ? _formatDate(_endDate!)
+                                    : 'Seleccionar',
+                                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                                      fontWeight: FontWeight.w600,
+                                      color: _endDate != null
+                                          ? context.colors.primary
+                                          : context.colors.muted,
+                                    ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: AppSpacing.lg),
+                  
+                  // Navegación de mes
+                  Row(
+                    children: [
+                      IconButton(
+                        onPressed: _previousMonth,
+                        icon: const Icon(Icons.chevron_left_rounded),
+                        style: IconButton.styleFrom(
+                          backgroundColor: context.colors.surfaceSecondary,
+                        ),
+                      ),
+                      Expanded(
+                        child: Center(
+                          child: Text(
+                            '${_getMonthName(_currentMonth.month)} ${_currentMonth.year}',
+                            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                ),
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: canGoNext ? _nextMonth : null,
+                        icon: const Icon(Icons.chevron_right_rounded),
+                        style: IconButton.styleFrom(
+                          backgroundColor: canGoNext
+                              ? context.colors.surfaceSecondary
+                              : context.colors.surfaceSecondary.withValues(alpha: 0.5),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+
+            // ── Calendario ──
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
+              child: Column(
+                children: [
+                  // Días de la semana
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: ['D', 'L', 'M', 'M', 'J', 'V', 'S']
+                        .map((day) => SizedBox(
+                              width: 40,
+                              child: Center(
+                                child: Text(
+                                  day,
+                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                        color: context.colors.muted,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                ),
+                              ),
+                            ))
+                        .toList(),
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  
+                  // Grid de días
+                  ...List.generate(6, (weekIndex) {
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: AppSpacing.xs),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceAround,
+                        children: List.generate(7, (dayIndex) {
+                          final dayNumber =
+                              weekIndex * 7 + dayIndex - weekdayOfFirstDay + 1;
+                          
+                          if (dayNumber < 1 || dayNumber > daysInMonth) {
+                            return const SizedBox(width: 40, height: 40);
+                          }
+
+                          final date = DateTime(
+                            _currentMonth.year,
+                            _currentMonth.month,
+                            dayNumber,
+                          );
+                          final isToday = date.year == now.year &&
+                              date.month == now.month &&
+                              date.day == now.day;
+                          final isFuture = date.isAfter(now);
+                          final isInRange = _isDateInRange(date);
+                          final isStartOrEnd = _isStartOrEnd(date);
+
+                          return InkWell(
+                            onTap: isFuture ? null : () => _onDateTapped(date),
+                            borderRadius: BorderRadius.circular(20),
+                            child: Container(
+                              width: 40,
+                              height: 40,
+                              decoration: BoxDecoration(
+                                color: isStartOrEnd
+                                    ? context.colors.primary
+                                    : isInRange
+                                        ? context.colors.primary.withValues(alpha: 0.2)
+                                        : isToday
+                                            ? context.colors.surfaceSecondary
+                                            : Colors.transparent,
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: Center(
+                                child: Text(
+                                  '$dayNumber',
+                                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                        color: isFuture
+                                            ? context.colors.muted.withValues(alpha: 0.3)
+                                            : isStartOrEnd
+                                                ? Colors.white
+                                                : isInRange
+                                                    ? context.colors.primary
+                                                    : context.colors.ink,
+                                        fontWeight: isStartOrEnd || isToday
+                                            ? FontWeight.w700
+                                            : FontWeight.w500,
+                                      ),
+                                ),
+                              ),
+                            ),
+                          );
+                        }),
+                      ),
+                    );
+                  }),
+                ],
+              ),
+            ),
+
+            // ── Footer con botón de confirmar ──
+            Padding(
+              padding: const EdgeInsets.all(AppSpacing.xl),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                      ),
+                      child: const Text('Cancelar'),
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.md),
+                  Expanded(
+                    child: FilledButton(
+                      onPressed: _startDate != null && _endDate != null
+                          ? _confirm
+                          : null,
+                      style: FilledButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                      ),
+                      child: const Text('Confirmar'),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );

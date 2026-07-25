@@ -2,12 +2,12 @@ import '../../../shared/models/movimiento.dart';
 
 enum TipoMovimientoFiltro { todos, entradas, salidas, ventas, inicioTurno, eliminados }
 
-enum RangoFechaFiltro { hoy, semana, mes, personalizado }
+enum RangoFechaFiltro { todos, hoy, semana, mes, personalizado }
 
 class MovimientosFilterState {
   const MovimientosFilterState({
     this.tipo = TipoMovimientoFiltro.todos,
-    this.rango = RangoFechaFiltro.hoy,
+    this.rango = RangoFechaFiltro.todos,
     this.fechaInicioCustom,
     this.fechaFinCustom,
     this.query = '',
@@ -42,10 +42,13 @@ class MovimientosFilterState {
   }
 
   /// Inicio del rango (inclusive), en hora local del dispositivo.
-  DateTime get fechaInicio {
+  /// Retorna null cuando no hay filtro de fecha (todos).
+  DateTime? get fechaInicio {
     final now = DateTime.now();
     final startOfToday = DateTime(now.year, now.month, now.day);
     switch (rango) {
+      case RangoFechaFiltro.todos:
+        return null;
       case RangoFechaFiltro.hoy:
         return startOfToday;
       case RangoFechaFiltro.semana:
@@ -65,11 +68,14 @@ class MovimientosFilterState {
   /// Fin del rango (exclusive). Para "hoy" es medianoche de mañana; para
   /// "personalizado" se suma un día a la fecha fin elegida para incluirla
   /// completa (inclusive en ambos extremos a nivel de día).
-  DateTime get fechaFin {
+  /// Retorna null cuando no hay filtro de fecha (todos).
+  DateTime? get fechaFin {
     final now = DateTime.now();
     final startOfToday = DateTime(now.year, now.month, now.day);
     final startOfTomorrow = startOfToday.add(const Duration(days: 1));
     switch (rango) {
+      case RangoFechaFiltro.todos:
+        return null;
       case RangoFechaFiltro.hoy:
       case RangoFechaFiltro.semana:
       case RangoFechaFiltro.mes:
@@ -109,9 +115,9 @@ List<Movimiento> filtrarMovimientos(
             m.tipo == MovimientoTipo.productoEliminado);
     if (!tipoOk) return false;
 
-    // Fecha: [inicio, fin)
-    if (m.fecha.isBefore(inicio)) return false;
-    if (!m.fecha.isBefore(fin)) return false;
+    // Fecha: [inicio, fin) - si inicio/fin son null, no se filtra por fecha
+    if (inicio != null && m.fecha.isBefore(inicio)) return false;
+    if (fin != null && !m.fecha.isBefore(fin)) return false;
 
     if (q.isNotEmpty) {
       final producto = m.productoNombre.toLowerCase();

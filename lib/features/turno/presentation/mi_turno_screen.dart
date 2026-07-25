@@ -6,10 +6,13 @@ import '../../../core/theme/app_dimens.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../core/utils/haptics.dart';
+import '../../../shared/models/cuadre.dart';
 import '../../../shared/models/pago.dart';
 import '../../../shared/models/venta.dart';
 import '../../../shared/widgets/screen_popup_menu.dart';
 import '../../../shared/widgets/shift_summary_card.dart';
+import '../../auth/providers/auth_provider.dart';
+import '../../cuadres/providers/cuadre_provider.dart';
 import '../../ventas/providers/venta_provider.dart';
 import '../providers/turno_provider.dart';
 
@@ -19,14 +22,33 @@ class MiTurnoScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final turno = ref.watch(turnoControllerProvider);
+    final usuario = ref.watch(authControllerProvider).user;
 
     if (turno.estaActivo) {
       return const _TurnoActivoView();
     } else if (turno.cuadreEnviadoHoy) {
       return const _CuadreEnviadoView();
     } else {
-      return const _SinTurnoView();
+      // Verificar si hay un cuadre aprobado hoy
+      final cuadres = ref.watch(cuadreControllerProvider);
+      final hoy = DateTime.now();
+      final cuadreAprobadoHoy = usuario != null
+          ? cuadres.where((c) =>
+              c.dependienteId == usuario.id &&
+              c.estado == CuadreEstado.aprobado &&
+              _isSameDay(c.fechaTurno, hoy)).firstOrNull
+          : null;
+
+      if (cuadreAprobadoHoy != null) {
+        return _CuadreAprobadoView(cuadre: cuadreAprobadoHoy);
+      } else {
+        return const _SinTurnoView();
+      }
     }
+  }
+
+  bool _isSameDay(DateTime a, DateTime b) {
+    return a.year == b.year && a.month == b.month && a.day == b.day;
   }
 }
 
@@ -632,11 +654,15 @@ class _VentaCard extends StatelessWidget {
 
 // ─── Estado 3: Cuadre enviado ─────────────────────────────────────────────────
 
-class _CuadreEnviadoView extends StatelessWidget {
+class _CuadreEnviadoView extends ConsumerWidget {
   const _CuadreEnviadoView();
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final ventas = ref.watch(ventasDelTurnoProvider);
+    final total = ventas.fold(0.0, (sum, v) => sum + v.total);
+    final totalUnidades = ventas.fold(0, (sum, v) => sum + v.totalUnidades);
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Mi turno'),
@@ -661,50 +687,321 @@ class _CuadreEnviadoView extends StatelessWidget {
         ],
       ),
       body: SafeArea(
+        top: false,
         child: Center(
           child: ConstrainedBox(
             constraints: BoxConstraints(maxWidth: 800),
-            child: Center(
-              child: Padding(
-                padding: EdgeInsets.all(32),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    DecoratedBox(
-                      decoration: BoxDecoration(
-                        color: context.colors.success.withValues(alpha: 0.10),
-                        shape: BoxShape.circle,
+            child: Column(
+              children: [
+                // ── Status Banner ──
+                Container(
+                  margin: EdgeInsets.fromLTRB(20, 12, 20, 0),
+                  padding: EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        context.colors.success.withValues(alpha: 0.12),
+                        context.colors.success.withValues(alpha: 0.06),
+                      ],
+                    ),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: context.colors.success.withValues(alpha: 0.3),
+                      width: 1.5,
+                    ),
+                  ),
+                  child: Column(
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            padding: EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: context.colors.success.withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Icon(
+                              Icons.check_circle_rounded,
+                              size: 28,
+                              color: context.colors.success,
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Cuadre enviado',
+                                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                    color: context.colors.success,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  'Pendiente de revisión',
+                                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                    color: context.colors.ink.withValues(alpha: 0.7),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
                       ),
-                      child: Padding(
-                        padding: EdgeInsets.all(28),
-                        child: Icon(
-                          Icons.check_circle_outline_rounded,
-                          size: 56,
-                          color: context.colors.success,
+                      const SizedBox(height: 12),
+                      Container(
+                        padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: context.colors.surface.withValues(alpha: 0.6),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.info_outline_rounded,
+                              size: 16,
+                              color: context.colors.muted,
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                'Puedes seguir vendiendo. El cuadre se actualizará automáticamente.',
+                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                  color: context.colors.muted,
+                                  height: 1.4,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                    ),
-                    const SizedBox(height: 24),
-                    Text(
-                      'Cuadre enviado',
-                      style: Theme.of(context).textTheme.headlineMedium,
-                    ),
-                    SizedBox(height: 8),
-                    Text(
-                      'Pendiente de revisión por el jefe.',
-                      style: Theme.of(
-                        context,
-                      ).textTheme.bodyLarge?.copyWith(color: context.colors.muted),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      'Hoy, ${compactDateFormatter.format(DateTime.now())}',
-                      style: Theme.of(context).textTheme.bodyMedium,
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
+
+                const SizedBox(height: 16),
+
+                // ── Resumen actual ──
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: ShiftSummaryCard(
+                    totalVentas: total,
+                    cantidadVentas: ventas.length,
+                    cantidadUnidades: totalUnidades,
+                    activo: false,
+                    horaInicio: ref.watch(turnoControllerProvider).horaInicio,
+                    showEditBadge: true,
+                  ),
+                ),
+
+                const SizedBox(height: 20),
+
+                // ── Historial de ventas ──
+                Expanded(
+                  child: ventas.isEmpty
+                      ? Center(
+                          child: Padding(
+                            padding: const EdgeInsets.all(32),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.receipt_long_outlined,
+                                  size: 48,
+                                  color: context.colors.muted.withValues(alpha: 0.4),
+                                ),
+                                const SizedBox(height: 16),
+                                Text(
+                                  'Cuadre enviado sin ventas',
+                                  style: Theme.of(context).textTheme.titleMedium,
+                                ),
+                                const SizedBox(height: 6),
+                                Text(
+                                  'Toca "Continuar vendiendo" para\natender más clientes.',
+                                  style: Theme.of(context).textTheme.bodyMedium,
+                                  textAlign: TextAlign.center,
+                                ),
+                              ],
+                            ),
+                          ),
+                        )
+                      : ListView(
+                          padding: const EdgeInsets.fromLTRB(20, 0, 20, 100),
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  'Ventas del turno',
+                                  style: Theme.of(context).textTheme.titleMedium,
+                                ),
+                                if (ventas.length > 3)
+                                  TextButton(
+                                    onPressed: () => _showAllVentasSheet(context, ventas),
+                                    child: const Text('Ver todas'),
+                                  ),
+                              ],
+                            ),
+                            const SizedBox(height: AppSpacing.sm),
+                            ...List.generate(
+                              ventas.length > 3 ? 3 : ventas.length,
+                              (i) => Padding(
+                                padding: const EdgeInsets.only(bottom: AppSpacing.md),
+                                child: _VentaCard(venta: ventas[i]),
+                              ),
+                            ),
+                            if (ventas.length > 3)
+                              Center(
+                                child: Padding(
+                                  padding: const EdgeInsets.only(top: 4),
+                                  child: TextButton.icon(
+                                    onPressed: () => _showAllVentasSheet(context, ventas),
+                                    icon: const Icon(Icons.expand_more_rounded, size: 20),
+                                    label: Text(
+                                      'Ver ${ventas.length - 3} ventas más',
+                                      style: const TextStyle(fontWeight: FontWeight.w600),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                ),
+
+                // ── Botón continuar vendiendo ──
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+                  child: Column(
+                    children: [
+                      SizedBox(
+                        height: 54,
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
+                          onPressed: () {
+                            Haptics.confirm(context);
+                            ref.read(turnoControllerProvider.notifier).reabrirTurno();
+                          },
+                          icon: const Icon(Icons.add_rounded, size: 22),
+                          label: const Text(
+                            'Continuar vendiendo',
+                            style: TextStyle(
+                              fontSize: 17,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      Text(
+                        'El cuadre se actualizará con las nuevas ventas',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: context.colors.muted,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showAllVentasSheet(BuildContext context, List<Venta> ventas) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => DraggableScrollableSheet(
+        initialChildSize: 0.85,
+        minChildSize: 0.5,
+        maxChildSize: 0.95,
+        builder: (context, scrollController) => Container(
+          decoration: BoxDecoration(
+            color: context.colors.surface,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          child: SafeArea(
+            child: Column(
+              children: [
+                Padding(
+                  padding: EdgeInsets.symmetric(vertical: AppSpacing.md),
+                  child: Center(
+                    child: Container(
+                      width: 40,
+                      height: 5,
+                      decoration: BoxDecoration(
+                        color: context.colors.muted.withValues(alpha: 0.5),
+                        borderRadius: BorderRadius.circular(AppRadii.pill),
+                      ),
+                    ),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: context.colors.primary.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Icon(
+                          Icons.receipt_long_rounded,
+                          size: 24,
+                          color: context.colors.primary,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Todas las ventas',
+                              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            Text(
+                              '${ventas.length} ${ventas.length == 1 ? 'venta' : 'ventas'}',
+                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                color: context.colors.muted,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: () => Navigator.pop(ctx),
+                        icon: const Icon(Icons.close_rounded),
+                        tooltip: 'Cerrar',
+                      ),
+                    ],
+                  ),
+                ),
+                const Divider(height: 1),
+                Expanded(
+                  child: ListView.separated(
+                    controller: scrollController,
+                    padding: const EdgeInsets.all(20),
+                    itemCount: ventas.length,
+                    separatorBuilder: (context, index) => const SizedBox(height: 12),
+                    itemBuilder: (context, index) {
+                       return _VentaCard(venta: ventas[index]);
+                    },
+                  ),
+                ),
+              ],
             ),
           ),
         ),
@@ -712,3 +1009,222 @@ class _CuadreEnviadoView extends StatelessWidget {
     );
   }
 }
+
+// ─── Estado 4: Cuadre aprobado hoy ─────────────────────────────────────────────
+
+class _CuadreAprobadoView extends ConsumerWidget {
+  const _CuadreAprobadoView({required this.cuadre});
+
+  final Cuadre cuadre;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Mi turno'),
+        actions: [
+          ScreenPopupMenu(
+            items: [
+              ScreenMenuItem(
+                value: 'ajustes',
+                icon: Icons.settings_rounded,
+                iconColor: context.colors.muted,
+                title: 'Ajustes',
+                subtitle: 'Preferencias de la app',
+              ),
+            ],
+            onSelected: (value) {
+              if (value == 'ajustes') {
+                context.push('/dependiente/configuracion');
+              }
+            },
+          ),
+          const SizedBox(width: 4),
+        ],
+      ),
+      body: SafeArea(
+        top: false,
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 800),
+            child: Column(
+              children: [
+                const Spacer(flex: 2),
+
+                DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        context.colors.success.withValues(alpha: 0.2),
+                        context.colors.success.withValues(alpha: 0.05),
+                      ],
+                    ),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(32),
+                    child: Icon(
+                      Icons.verified_rounded,
+                      size: 72,
+                      color: context.colors.success,
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 24),
+
+                Text(
+                  '¡Buen trabajo, ${cuadre.dependienteNombre.split(' ').first}!',
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Tu cuadre fue aprobado',
+                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                    color: context.colors.success,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+
+                const SizedBox(height: 4),
+                Text(
+                  compactDateFormatter.format(cuadre.fechaTurno),
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: context.colors.muted,
+                  ),
+                ),
+
+                const SizedBox(height: 32),
+
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: context.colors.surface,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: context.colors.line),
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: _StatItem(
+                            label: 'Ventas',
+                            value: '${cuadre.ventas.length}',
+                            icon: Icons.receipt_long_rounded,
+                            color: context.colors.primary,
+                          ),
+                        ),
+                        Container(
+                          width: 1,
+                          height: 40,
+                          color: context.colors.line,
+                        ),
+                        Expanded(
+                          child: _StatItem(
+                            label: 'Unidades',
+                            value: '${cuadre.totalSalidas}',
+                            icon: Icons.inventory_2_rounded,
+                            color: context.colors.warning,
+                          ),
+                        ),
+                        Container(
+                          width: 1,
+                          height: 40,
+                          color: context.colors.line,
+                        ),
+                        Expanded(
+                          child: _StatItem(
+                            label: 'Total',
+                            value: formatCurrency(cuadre.valorTotal),
+                            icon: Icons.payments_rounded,
+                            color: context.colors.success,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
+                const Spacer(flex: 2),
+
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 0, 24, 32),
+                  child: SizedBox(
+                    height: 58,
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        Haptics.confirm(context);
+                        ref.read(turnoControllerProvider.notifier).iniciarTurno();
+                      },
+                      icon: const Icon(Icons.play_arrow_rounded),
+                      label: const Text(
+                        'Iniciar nuevo turno',
+                        style: TextStyle(
+                          fontSize: 17,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _StatItem extends StatelessWidget {
+  const _StatItem({
+    required this.label,
+    required this.value,
+    required this.icon,
+    required this.color,
+  });
+
+  final String label;
+  final String value;
+  final IconData icon;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 20, color: color),
+        const SizedBox(height: 6),
+        Text(
+          value,
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          label,
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+            color: context.colors.muted,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+

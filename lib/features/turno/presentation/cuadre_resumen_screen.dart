@@ -281,7 +281,8 @@ class _CuadreResumenScreenState extends ConsumerState<CuadreResumenScreen> {
       return;
     }
 
-    ref.read(ventasDelTurnoProvider.notifier).clearVentas();
+    // NO limpiar las ventas aquí porque el dependiente puede seguir editando el cuadre
+    // Las ventas solo se limpian cuando el admin aprueba/rechaza o al iniciar nuevo turno
     ref.read(turnoControllerProvider.notifier).enviarCuadre();
     if (context.mounted) context.go('/dependiente/turno');
   }

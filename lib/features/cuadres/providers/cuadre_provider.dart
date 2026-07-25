@@ -30,17 +30,34 @@ class CuadreController extends Notifier<List<Cuadre>> {
   // ─── Creación ──────────────────────────────────────────────────────────────
 
   /// Crea un cuadre pendiente con las ventas del turno del dependiente.
+  /// Si ya existe un cuadre pendiente hoy, lo actualiza con las nuevas ventas.
   /// Retorna `null` si tuvo éxito o un mensaje de error.
   String? crearCuadrePendiente({
     required Usuario dependiente,
     required List<Venta> ventas,
   }) {
-    if (_repo.existsCuadreHoy(dependiente.id)) {
-      return 'Ya existe un cuadre para hoy. '
-          'No puedes cerrar el turno dos veces.';
-    }
+    // Verificar si ya existe un cuadre pendiente hoy
+    final cuadreExistente = _repo.fetchCuadres().where((c) =>
+      c.dependienteId == dependiente.id &&
+      c.estado == CuadreEstado.pendiente &&
+      _isSameDay(c.fechaTurno, DateTime.now())
+    ).firstOrNull;
 
     final now = DateTime.now();
+
+    if (cuadreExistente != null) {
+      // Actualizar el cuadre existente con las nuevas ventas
+      _repo.updateCuadre(
+        cuadreExistente.copyWith(
+          ventas: List.unmodifiable(ventas),
+          updatedAt: now,
+        ),
+      );
+      state = _repo.fetchCuadres();
+      return null;
+    }
+
+    // Crear nuevo cuadre si no existe uno pendiente
     _repo.addCuadre(
       Cuadre(
         id: const Uuid().v4(),
@@ -55,6 +72,10 @@ class CuadreController extends Notifier<List<Cuadre>> {
     );
     state = _repo.fetchCuadres();
     return null;
+  }
+
+  bool _isSameDay(DateTime a, DateTime b) {
+    return a.year == b.year && a.month == b.month && a.day == b.day;
   }
 
   // ─── Consulta ──────────────────────────────────────────────────────────────

@@ -194,20 +194,22 @@ class _MovimientosScreenState extends ConsumerState<MovimientosScreen> {
     }
     
     switch (f.rango) {
+      case RangoFechaFiltro.todos:
+        return 'Todos';
       case RangoFechaFiltro.hoy:
         return 'Hoy';
       case RangoFechaFiltro.semana:
-        final inicio = formatCompact(f.fechaInicio);
-        final fin = formatCompact(f.fechaFin.subtract(const Duration(days: 1)));
+        final inicio = formatCompact(f.fechaInicio!);
+        final fin = formatCompact(f.fechaFin!.subtract(const Duration(days: 1)));
         return 'Esta semana ($inicio - $fin)';
       case RangoFechaFiltro.mes:
-        final inicio = formatCompact(f.fechaInicio);
-        final fin = formatCompact(f.fechaFin.subtract(const Duration(days: 1)));
+        final inicio = formatCompact(f.fechaInicio!);
+        final fin = formatCompact(f.fechaFin!.subtract(const Duration(days: 1)));
         return 'Últimos 30 días ($inicio - $fin)';
       case RangoFechaFiltro.personalizado:
-        final inicio = formatCompact(f.fechaInicio);
-        final fin = formatCompact(f.fechaFin.subtract(const Duration(days: 1)));
-        return 'Del $inicio al $fin';
+        final inicio = formatCompact(f.fechaInicio!);
+        final fin = formatCompact(f.fechaFin!.subtract(const Duration(days: 1)));
+        return 'Del $inicio al $fin)';
     }
   }
 
@@ -322,8 +324,8 @@ class _MovimientosScreenState extends ConsumerState<MovimientosScreen> {
                   ),
                 ),
                 
-                // ── Chip del rango activo (solo mostrar si NO es "Hoy") ──
-                if (filtro.rango != RangoFechaFiltro.hoy)
+                // ── Chip del rango activo (solo mostrar si NO es "Todos") ──
+                if (filtro.rango != RangoFechaFiltro.todos)
                   Padding(
                     padding: const EdgeInsets.fromLTRB(
                       AppSpacing.xl,
@@ -618,30 +620,33 @@ class _MovimientoCard extends StatelessWidget {
     );
   }
 
-  /// 🔵 Entrada de producto (flecha azul →) | 🟠 Ajuste manual negativo
+  /// 🔵 Entrada de producto | 🟠 Ajuste manual negativo (reducción de stock)
   Widget _buildEntradaCard(BuildContext context) {
-    // Determinar si es un ajuste manual de disminución (entrada negativa)
+    // Determinar el tipo específico de movimiento
     final esAjusteNegativo = movimiento.cantidad < 0;
     final esAlta = !esAjusteNegativo && 
         (movimiento.nota?.toLowerCase().contains('alta') ?? false);
     
-    // 🔵 Azul = Entrada positiva | 🟠 Naranja = Ajuste negativo | ⚪ Gris = Alta
+    // Configuración según tipo de acción
     final Color color;
     final IconData icon;
-    final String label;
+    final String accionTexto;
     
     if (esAjusteNegativo) {
+      // 🟠 Naranja: Reducción de stock por ajuste manual
       color = context.colors.warning;
-      icon = Icons.trending_down_rounded;
-      label = 'Ajuste manual';
+      icon = Icons.remove_circle_outline_rounded;
+      accionTexto = 'Reducidas ${movimiento.cantidad.abs()} ${movimiento.cantidad.abs() == 1 ? 'unidad' : 'unidades'} de ${movimiento.productoNombre}';
     } else if (esAlta) {
-      color = context.colors.muted;
-      icon = Icons.add_circle_outline_rounded;
-      label = 'Alta de producto';
-    } else {
+      // 🔵 Azul: Nueva adición al inventario
       color = context.colors.info;
-      icon = Icons.trending_up_rounded;
-      label = 'Entrada de producto';
+      icon = Icons.add_box_outlined;
+      accionTexto = 'Añadidas ${movimiento.cantidad} ${movimiento.cantidad == 1 ? 'unidad' : 'unidades'} de ${movimiento.productoNombre}';
+    } else {
+      // 🔵 Azul: Entrada/reposición de stock
+      color = context.colors.info;
+      icon = Icons.add_box_outlined;
+      accionTexto = 'Añadidas ${movimiento.cantidad} ${movimiento.cantidad == 1 ? 'unidad' : 'unidades'} de ${movimiento.productoNombre}';
     }
 
     return Container(
@@ -678,12 +683,13 @@ class _MovimientoCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    movimiento.productoNombre,
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    accionTexto,
+                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                           fontWeight: FontWeight.w600,
+                          height: 1.3,
                         ),
                   ),
-                  const SizedBox(height: 2),
+                  const SizedBox(height: 6),
                   Row(
                     children: [
                       Icon(
@@ -708,59 +714,23 @@ class _MovimientoCard extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(width: 8),
-                      Text(
-                        label,
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: context.colors.muted,
-                            ),
+                      Icon(
+                        Icons.person_outline_rounded,
+                        size: 13,
+                        color: context.colors.muted,
+                      ),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: Text(
+                          movimiento.usuarioNombre,
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                color: context.colors.muted,
+                              ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: color.withValues(alpha: 0.10),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      '${esAjusteNegativo ? '' : '+'}${movimiento.cantidad} ${movimiento.cantidad.abs() == 1 ? 'unidad' : 'unidades'}',
-                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                            color: color,
-                            fontWeight: FontWeight.w700,
-                          ),
-                    ),
-                  ),
-                  if (movimiento.nota != null && !esAlta) ...[
-                    const SizedBox(height: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 6,
-                      ),
-                      decoration: BoxDecoration(
-                        color: context.colors.muted.withValues(alpha: 0.08),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.note_outlined,
-                            size: 14,
-                            color: context.colors.muted,
-                          ),
-                          const SizedBox(width: 6),
-                          Flexible(
-                            child: Text(
-                              movimiento.nota!,
-                              style: Theme.of(context).textTheme.bodySmall,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
                 ],
               ),
             ),
@@ -771,9 +741,17 @@ class _MovimientoCard extends StatelessWidget {
   }
 
 
-  /// 🟢 Inicio de turno (verde)
+  /// Inicio/Cierre de turno (color neutral)
   Widget _buildInicioTurnoCard(BuildContext context) {
-    final color = context.colors.success;
+    // Color neutral para acciones administrativas
+    final color = context.colors.ink.withValues(alpha: 0.7);
+    final esInicio = movimiento.nota?.toLowerCase().contains('inicio') ?? true;
+    
+    final accionTexto = esInicio 
+        ? '${movimiento.usuarioNombre} inició turno'
+        : '${movimiento.usuarioNombre} cerró turno';
+    
+    final icon = esInicio ? Icons.login_rounded : Icons.logout_rounded;
 
     return Container(
       decoration: BoxDecoration(
@@ -795,11 +773,11 @@ class _MovimientoCard extends StatelessWidget {
             // Ícono
             Container(
               decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.12),
+                color: context.colors.muted.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(10),
               ),
               padding: const EdgeInsets.all(10),
-              child: Icon(Icons.login_rounded, color: color, size: 22),
+              child: Icon(icon, color: color, size: 22),
             ),
             const SizedBox(width: 12),
             
@@ -809,12 +787,13 @@ class _MovimientoCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Inicio de turno',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    accionTexto,
+                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                           fontWeight: FontWeight.w600,
+                          height: 1.3,
                         ),
                   ),
-                  const SizedBox(height: 2),
+                  const SizedBox(height: 6),
                   Row(
                     children: [
                       Icon(
@@ -831,32 +810,6 @@ class _MovimientoCard extends StatelessWidget {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: color.withValues(alpha: 0.10),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.person_rounded,
-                          size: 16,
-                          color: color,
-                        ),
-                        const SizedBox(width: 6),
-                        Text(
-                          movimiento.usuarioNombre,
-                          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                                color: color,
-                                fontWeight: FontWeight.w700,
-                              ),
-                        ),
-                      ],
-                    ),
-                  ),
                 ],
               ),
             ),
@@ -866,9 +819,14 @@ class _MovimientoCard extends StatelessWidget {
     );
   }
 
-  /// 🔴 Producto eliminado (rojo con basura)
+  /// 🔴 Producto eliminado
   Widget _buildProductoEliminadoCard(BuildContext context) {
     final color = context.colors.danger;
+    final cantidadTexto = movimiento.cantidad > 0 
+        ? ' (${movimiento.cantidad} ${movimiento.cantidad == 1 ? 'unidad' : 'unidades'} en stock)'
+        : '';
+    
+    final accionTexto = 'Eliminado: ${movimiento.productoNombre}$cantidadTexto';
 
     return Container(
       decoration: BoxDecoration(
@@ -904,13 +862,14 @@ class _MovimientoCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    movimiento.productoNombre,
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    accionTexto,
+                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                           fontWeight: FontWeight.w600,
                           color: color,
+                          height: 1.3,
                         ),
                   ),
-                  const SizedBox(height: 2),
+                  const SizedBox(height: 6),
                   Row(
                     children: [
                       Icon(
@@ -925,84 +884,29 @@ class _MovimientoCard extends StatelessWidget {
                               color: context.colors.muted,
                             ),
                       ),
-                      const SizedBox(width: 8),
-                      Container(
-                        width: 3,
-                        height: 3,
-                        decoration: BoxDecoration(
-                          color: context.colors.muted.withValues(alpha: 0.4),
-                          shape: BoxShape.circle,
+                      if (movimiento.nota != null) ...[
+                        const SizedBox(width: 8),
+                        Container(
+                          width: 3,
+                          height: 3,
+                          decoration: BoxDecoration(
+                            color: context.colors.muted.withValues(alpha: 0.4),
+                            shape: BoxShape.circle,
+                          ),
                         ),
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        'Producto eliminado',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: context.colors.muted,
-                            ),
-                      ),
+                        const SizedBox(width: 8),
+                        Flexible(
+                          child: Text(
+                            movimiento.nota!,
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                  color: context.colors.muted,
+                                ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
                     ],
                   ),
-                  if (movimiento.cantidad > 0) ...[
-                    const SizedBox(height: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: color.withValues(alpha: 0.10),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.inventory_2_outlined,
-                            size: 16,
-                            color: color,
-                          ),
-                          const SizedBox(width: 6),
-                          Text(
-                            'Stock: ${movimiento.cantidad} ${movimiento.cantidad == 1 ? 'unidad' : 'unidades'}',
-                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                  color: color,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                  if (movimiento.nota != null) ...[
-                    const SizedBox(height: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 6,
-                      ),
-                      decoration: BoxDecoration(
-                        color: color.withValues(alpha: 0.08),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.info_outline_rounded,
-                            size: 14,
-                            color: color,
-                          ),
-                          const SizedBox(width: 6),
-                          Flexible(
-                            child: Text(
-                              'Motivo: ${movimiento.nota!}',
-                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                    color: color,
-                                  ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
                 ],
               ),
             ),
@@ -1091,8 +995,8 @@ class _VentaCardState extends ConsumerState<_VentaCard> with SingleTickerProvide
       (sum, m) => sum + ((m.precioUnitario ?? 0) * m.cantidad.abs()),
     );
 
-    // 🔵 Azul primario = Venta (la acción principal del negocio)
-    final color = context.colors.primary;
+    // 🟢 Verde = Venta (acción comercial exitosa)
+    final color = context.colors.success;
 
     final venta = widget.venta;
 
@@ -1153,9 +1057,10 @@ class _VentaCardState extends ConsumerState<_VentaCard> with SingleTickerProvide
                             children: [
                               Expanded(
                                 child: Text(
-                                  'Venta',
-                                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                  'Venta de ${formatCurrency(totalAmount)}',
+                                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                                         fontWeight: FontWeight.w600,
+                                        height: 1.3,
                                       ),
                                 ),
                               ),

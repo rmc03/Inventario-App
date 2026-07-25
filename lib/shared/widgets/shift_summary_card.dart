@@ -13,6 +13,7 @@ import '../../core/utils/formatters.dart';
 /// - Turno activo (MiTurnoScreen)
 /// - Historial de cuadres cerrados
 /// - Resumen en Ajustes
+/// - Cuadre pendiente de revisión (con badge de edición)
 class ShiftSummaryCard extends StatelessWidget {
   const ShiftSummaryCard({
     super.key,
@@ -21,6 +22,7 @@ class ShiftSummaryCard extends StatelessWidget {
     required this.cantidadUnidades,
     required this.activo,
     this.horaInicio,
+    this.showEditBadge = false,
   });
 
   final double totalVentas;
@@ -28,6 +30,7 @@ class ShiftSummaryCard extends StatelessWidget {
   final int cantidadUnidades;
   final bool activo;
   final DateTime? horaInicio;
+  final bool showEditBadge;
 
   @override
   Widget build(BuildContext context) {
@@ -100,7 +103,9 @@ class ShiftSummaryCard extends StatelessWidget {
           const SizedBox(height: AppSpacing.md),
 
           // ── Badge de estado ──
-          if (activo && horaInicio != null)
+          if (showEditBadge)
+            _ShiftBadge.editable()
+          else if (activo && horaInicio != null)
             _ShiftBadge(horaInicio: horaInicio!)
           else if (!activo)
             _ShiftBadge.closed(),
@@ -152,24 +157,46 @@ class _StatColumn extends StatelessWidget {
 // ─── Badge chip ──────────────────────────────────────────────────────────────
 
 class _ShiftBadge extends StatelessWidget {
-  const _ShiftBadge({required this.horaInicio}) : closed = false;
+  const _ShiftBadge({required this.horaInicio})
+      : closed = false,
+        editable = false;
 
   const _ShiftBadge.closed()
       : horaInicio = null,
-        closed = true;
+        closed = true,
+        editable = false;
+
+  const _ShiftBadge.editable()
+      : horaInicio = null,
+        closed = false,
+        editable = true;
 
   final DateTime? horaInicio;
   final bool closed;
+  final bool editable;
 
   @override
   Widget build(BuildContext context) {
     final ext = context.colors;
     final textTheme = Theme.of(context).textTheme;
 
-    final color = closed ? ext.muted : ext.success;
-    final text = closed
-        ? 'Turno cerrado'
-        : 'Turno activo \u00b7 Desde ${timeFormatter.format(horaInicio!)}';
+    final Color color;
+    final String text;
+    final IconData icon;
+
+    if (editable) {
+      color = ext.warning;
+      text = 'Editable \u00b7 Se actualiza automáticamente';
+      icon = Icons.edit_rounded;
+    } else if (closed) {
+      color = ext.muted;
+      text = 'Turno cerrado';
+      icon = Icons.stop_circle_rounded;
+    } else {
+      color = ext.success;
+      text = 'Turno activo \u00b7 Desde ${timeFormatter.format(horaInicio!)}';
+      icon = Icons.access_time_rounded;
+    }
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -181,16 +208,19 @@ class _ShiftBadge extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(
-            closed ? Icons.stop_circle_rounded : Icons.access_time_rounded,
+            icon,
             size: 14,
             color: color,
           ),
           const SizedBox(width: AppSpacing.sm),
-          Text(
-            text,
-            style: textTheme.bodySmall?.copyWith(
-              color: color,
-              fontWeight: FontWeight.w600,
+          Flexible(
+            child: Text(
+              text,
+              style: textTheme.bodySmall?.copyWith(
+                color: color,
+                fontWeight: FontWeight.w600,
+              ),
+              overflow: TextOverflow.ellipsis,
             ),
           ),
         ],
