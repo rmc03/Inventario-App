@@ -83,44 +83,58 @@ class AppColorsExtension extends ThemeExtension<AppColorsExtension> {
     );
   }
 
-  // Light mode: Indigo navy + copper accent — premium, authoritative, memorable
-  // The copper (info) acts as a warm counterpoint to the cool indigo,
-  // echoing classic motorcycle-brand color tension (Triumph, Ducati).
+  // Light mode: Azure blue + copper accent — fresh, professional, memorable
+  // Azure blue is vibrant yet trustworthy, perfect for retail operations.
+  // Copper (info) creates warm moments against the cool blue foundation.
+  // Delight thesis: "Warmth in reliability" — copper signals success, completion, and human moments.
   static const light = AppColorsExtension(
-    primary: Color(0xFF1A237E),           // Deep indigo navy
-    primaryDark: Color(0xFF0D1453),       // Pressed state
-    ink: Color(0xFF1C1C1E),
-    muted: Color(0xFF6B7280),             // Slate gray
-    line: Color(0xFFD1D5DB),              // Light border
-    surface: Color(0xFFFFFFFF),
-    surfaceSecondary: Color(0xFFEEF0F7),  // Hint of indigo
-    background: Color(0xFFF5F6FA),        // Cool off-white
-    success: Color(0xFF2E7D32),
-    warning: Color(0xFFE65100),
-    danger: Color(0xFFC62828),
-    info: Color(0xFFC75B39),              // Warm copper — the personality accent
+    primary: Color(0xFF0F62FE),           // Azure blue — vibrant, modern, trustworthy
+    primaryDark: Color(0xFF0043CE),       // Pressed state (deeper blue)
+    ink: Color(0xFF161616),               // Near-black text (softer than pure black)
+    muted: Color(0xFF6F6F6F),             // Warm gray (secondary content)
+    line: Color(0xFFE0E0E0),              // Light border
+    surface: Color(0xFFFFFFFF),           // Card surface (white)
+    surfaceSecondary: Color(0xFFF0F2F5),  // Neutral gray-blue (subtle)
+    background: Color(0xFFF5F5F5),        // Neutral gray scaffold (más gris)
+    success: Color(0xFF24A148),           // Fresh green (operational success)
+    warning: Color(0xFFB95000),           // Deep amber (caution, legible on white)
+    danger: Color(0xFFDA1E28),            // Vibrant red (errors, stock alerts)
+    info: Color(0xFFE8743B),              // 🔥 Warm copper — PERSONALITY ACCENT
+                                          // Use for: sale completions, sync success, daily close,
+                                          // inventory additions, positive milestones, unit counts
   );
 
-  // Dark mode: Navy-toned surfaces (never pure black) + brighter copper accent
-  // The navy undertone gives personality without compromising OLED friendliness.
+  // Dark mode: Clean minimal — WhatsApp-inspired gray + blue accent
+  // Clean neutral dark gray matching WhatsApp's aesthetic
+  // Blue hero accent appears strategically (AppBar, key moments)
+  // Delight thesis: "Clean focus" — minimal, clear, functional
   static const dark = AppColorsExtension(
-    primary: Color(0xFF5C6BC0),           // Indigo 400 — legible on dark
-    primaryDark: Color(0xFF3949AB),       // Pressed state
-    ink: Color(0xFFF5F5F5),
-    muted: Color(0xFF9E9E9E),
-    line: Color(0xFF424242),
-    surface: Color(0xFF1A1C2E),           // Navy-undertone surface
-    surfaceSecondary: Color(0xFF252740),  // Slightly lighter navy
-    background: Color(0xFF0F1120),       // Deep navy scaffold
-    success: Color(0xFF66BB6A),
-    warning: Color(0xFFFFA726),
-    danger: Color(0xFFEF5350),
-    info: Color(0xFFE87A5A),              // Brighter copper for dark
+    primary: Color(0xFF5B9FFF),           // Electric azure — vibrant hero accent
+    primaryDark: Color(0xFF85B8FF),       // Pressed state (brighter for feedback)
+    ink: Color(0xFFE5E5E5),               // Soft white text (easy on eyes)
+    muted: Color(0xFF999999),             // Medium gray for secondary content
+    line: Color(0xFF2A2A2A),              // Subtle dark border
+    surface: Color(0xFF1F1F1F),           // Card surface (slightly lighter than background)
+    surfaceSecondary: Color(0xFF2A2A2A),  // Slightly lighter gray
+    background: Color(0xFF111111),        // 🔥 WhatsApp-style background (very similar to #0E0E0E)
+    success: Color(0xFF3FD372),           // Neon green — vibrant success moments
+    warning: Color(0xFFFFD23F),           // Bright amber — high visibility warnings
+    danger: Color(0xFFFF6B7A),            // Hot pink-red — urgent alerts
+    info: Color(0xFFFF8B5A),              // Vibrant copper — warm personality accent
   );
 }
 
 extension ColorContext on BuildContext {
-  AppColorsExtension get colors => Theme.of(this).extension<AppColorsExtension>()!;
+  AppColorsExtension get colors {
+    final extension = Theme.of(this).extension<AppColorsExtension>();
+    if (extension != null) return extension;
+    
+    // Fallback: retornar colores por defecto basados en brightness
+    final brightness = Theme.of(this).brightness;
+    return brightness == Brightness.dark 
+        ? AppColorsExtension.dark 
+        : AppColorsExtension.light;
+  }
 }
 
 
@@ -147,6 +161,7 @@ class AppTheme {
       surface: ext.surface,
       onSurface: ext.ink,
       error: ext.danger,
+      surfaceTint: Colors.transparent,  // 🔥 Evita el tint azul claro en transiciones
     );
 
     return ThemeData(
@@ -156,16 +171,27 @@ class AppTheme {
       extensions: [ext],
       textTheme: _buildTextTheme(ext, textScaleFactor, boldText),
       appBarTheme: AppBarTheme(
-        backgroundColor: ext.background,
-        foregroundColor: ext.ink,
+        // 🔥 En light mode: fondo azul vibrante con texto blanco
+        // En dark mode: fondo oscuro limpio como WhatsApp
+        backgroundColor: brightness == Brightness.light ? ext.primary : ext.background,
+        foregroundColor: brightness == Brightness.light ? Colors.white : ext.ink,
+        surfaceTintColor: Colors.transparent,  // 🔥 Evita el tint azul claro en transiciones
         elevation: 0,
         scrolledUnderElevation: 0,
         centerTitle: false,
-        titleTextStyle: TextStyle(color: ext.ink, fontSize: 20 * textScaleFactor, fontWeight: FontWeight.w600, letterSpacing: -0.1),
+        titleTextStyle: TextStyle(
+          color: brightness == Brightness.light ? Colors.white : ext.ink,
+          fontSize: 20 * textScaleFactor,
+          fontWeight: FontWeight.w600,
+          letterSpacing: -0.1,
+        ),
+        iconTheme: IconThemeData(
+          color: brightness == Brightness.light ? Colors.white : ext.ink,
+        ),
       ),
       cardTheme: CardThemeData(
         color: ext.surface,
-        elevation: 0,
+        elevation: 0,  // Sin elevación en dark mode tampoco
         margin: EdgeInsets.zero,
         shadowColor: ext.ink.withValues(alpha: 0.06),
         shape: const RoundedRectangleBorder(borderRadius: AppRadii.mdBorder),
@@ -210,7 +236,7 @@ class AppTheme {
       floatingActionButtonTheme: FloatingActionButtonThemeData(
         backgroundColor: ext.primary,
         foregroundColor: Colors.white,
-        elevation: 4,
+        elevation: 4,  // Elevación estándar en ambos modos
         shape: const CircleBorder(),
       ),
       bottomNavigationBarTheme: BottomNavigationBarThemeData(

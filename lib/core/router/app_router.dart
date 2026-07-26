@@ -15,6 +15,7 @@ import '../../features/inventario/presentation/inventario_screen.dart';
 import '../../features/inventario/presentation/producto_detalle_screen.dart';
 import '../../features/inventario/presentation/producto_form_screen.dart';
 import '../../features/movimientos/presentation/movimientos_screen.dart';
+import '../../features/resumen/presentation/resumen_screen.dart';
 import '../../features/turno/presentation/cuadre_resumen_screen.dart';
 import '../../features/turno/presentation/mi_turno_screen.dart';
 import '../../features/ventas/presentation/nueva_venta_screen.dart';
@@ -24,6 +25,35 @@ import '../../shared/models/venta.dart';
 import '../../shared/widgets/error_page.dart';
 import '../../shared/models/usuario.dart';
 import '../../shared/widgets/role_shell.dart';
+
+/// Transición personalizada que solo anima el contenido, no el AppBar
+Page<void> _buildPageWithFadeTransition(
+  BuildContext context,
+  GoRouterState state,
+  Widget child,
+) {
+  return CustomTransitionPage<void>(
+    key: state.pageKey,
+    child: child,
+    transitionsBuilder: (context, animation, secondaryAnimation, child) {
+      // Transición casi instantánea para evitar bugs visuales
+      // Solo un fade muy rápido
+      const begin = 0.0;
+      const end = 1.0;
+      const curve = Curves.easeOut;
+
+      var tween = Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
+      var opacityAnimation = animation.drive(tween);
+
+      return FadeTransition(
+        opacity: opacityAnimation,
+        child: child,
+      );
+    },
+    transitionDuration: const Duration(milliseconds: 150),  // Más rápido
+    reverseTransitionDuration: const Duration(milliseconds: 150),
+  );
+}
 
 /// Notifica a GoRouter cuando el estado de autenticación cambia,
 /// sin necesidad de recrear la instancia del router.
@@ -70,14 +100,33 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       return null;
     },
     routes: [
-      GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
+      GoRoute(
+        path: '/login',
+        pageBuilder: (context, state) => _buildPageWithFadeTransition(
+          context,
+          state,
+          const LoginScreen(),
+        ),
+      ),
       ShellRoute(
         builder: (context, state, child) =>
             RoleShell(role: UserRole.admin, path: state.uri.path, child: child),
         routes: [
           GoRoute(
+            path: '/admin/resumen',
+            pageBuilder: (context, state) => _buildPageWithFadeTransition(
+              context,
+              state,
+              const ResumenScreen(),
+            ),
+          ),
+          GoRoute(
             path: '/admin/inventario',
-            builder: (context, state) => const InventarioScreen(isAdmin: true),
+            pageBuilder: (context, state) => _buildPageWithFadeTransition(
+              context,
+              state,
+              const InventarioScreen(isAdmin: true),
+            ),
           ),
           GoRoute(
             path: '/admin/inventario/productos/nuevo',
@@ -95,7 +144,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: '/admin/movimientos',
-            builder: (context, state) => const MovimientosScreen(),
+            pageBuilder: (context, state) => _buildPageWithFadeTransition(
+              context,
+              state,
+              const MovimientosScreen(),
+            ),
           ),
           GoRoute(
             path: '/admin/movimientos/ventas/:id',
@@ -106,7 +159,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: '/admin/cuadres',
-            builder: (context, state) => const CuadresScreen(),
+            pageBuilder: (context, state) => _buildPageWithFadeTransition(
+              context,
+              state,
+              const CuadresScreen(),
+            ),
           ),
           GoRoute(
             path: '/admin/cuadres/:id',
@@ -140,7 +197,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         routes: [
           GoRoute(
             path: '/dependiente/inventario',
-            builder: (context, state) => const InventarioScreen(isAdmin: false),
+            pageBuilder: (context, state) => _buildPageWithFadeTransition(
+              context,
+              state,
+              const InventarioScreen(isAdmin: false),
+            ),
           ),
           GoRoute(
             path: '/dependiente/inventario/productos/:id',
@@ -151,7 +212,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: '/dependiente/turno',
-            builder: (context, state) => const MiTurnoScreen(),
+            pageBuilder: (context, state) => _buildPageWithFadeTransition(
+              context,
+              state,
+              const MiTurnoScreen(),
+            ),
           ),
           GoRoute(
             path: '/dependiente/turno/resumen',

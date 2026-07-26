@@ -111,47 +111,100 @@ class _NuevaVentaScreenState extends ConsumerState<NuevaVentaScreen> {
             constraints: const BoxConstraints(maxWidth: 800),
             child: Column(
           children: [
-            Padding(
+            // ── Barra de búsqueda + botón filtrar (sticky) ──
+            Container(
+              color: Theme.of(context).scaffoldBackgroundColor,
               padding: const EdgeInsets.fromLTRB(
                 AppSpacing.xl,
                 AppSpacing.sm,
                 AppSpacing.xl,
-                AppSpacing.md,
+                0,
               ),
               child: Column(
                 children: [
-                  TextField(
-                    controller: _searchCtrl,
-                    autofocus: false,
-                    onChanged: (val) => setState(() => _searchQuery = val),
-                    decoration: InputDecoration(
-                      hintText: 'Buscar producto...',
-                      prefixIcon: const Icon(Icons.search_rounded),
-                      suffixIcon: _searchQuery.isNotEmpty
-                          ? IconButton(
-                              icon: const Icon(Icons.clear_rounded),
-                              onPressed: () {
-                                _searchCtrl.clear();
-                                setState(() => _searchQuery = '');
-                              },
-                            )
-                          : null,
-                      border: OutlineInputBorder(
-                        borderRadius: AppRadii.pillBorder,
-                        borderSide: BorderSide(color: context.colors.line),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: AppRadii.pillBorder,
-                        borderSide: BorderSide(color: context.colors.line),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: AppRadii.pillBorder,
-                        borderSide: BorderSide(
-                          color: context.colors.primary,
-                          width: 1.5,
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Container(
+                          decoration: BoxDecoration(
+                            borderRadius: AppRadii.pillBorder,
+                            boxShadow: [
+                              BoxShadow(
+                                color: context.colors.primary.withValues(
+                                  alpha: _searchQuery.isNotEmpty ? 0.08 : 0.03,
+                                ),
+                                blurRadius: 12,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: TextField(
+                            controller: _searchCtrl,
+                            autofocus: false,
+                            onChanged: (val) => setState(() => _searchQuery = val),
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w500,
+                            ),
+                            decoration: InputDecoration(
+                              hintText: 'Buscar producto...',
+                              hintStyle: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w400,
+                                color: context.colors.muted,
+                              ),
+                              prefixIcon: Icon(
+                                Icons.search_rounded,
+                                size: 24,
+                                color: _searchQuery.isNotEmpty
+                                    ? context.colors.primary
+                                    : context.colors.muted,
+                              ),
+                              suffixIcon: _searchQuery.isNotEmpty
+                                  ? _AnimatedClearButton(
+                                      onPressed: () {
+                                        _searchCtrl.clear();
+                                        setState(() => _searchQuery = '');
+                                      },
+                                    )
+                                  : null,
+                              border: OutlineInputBorder(
+                                borderRadius: AppRadii.pillBorder,
+                                borderSide: BorderSide(
+                                  color: context.colors.line,
+                                  width: 1.5,
+                                ),
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: AppRadii.pillBorder,
+                                borderSide: BorderSide(
+                                  color: context.colors.line,
+                                  width: 1.5,
+                                ),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: AppRadii.pillBorder,
+                                borderSide: BorderSide(
+                                  color: context.colors.primary,
+                                  width: 2,
+                                ),
+                              ),
+                              filled: true,
+                              fillColor: context.colors.surface,
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 20,
+                                vertical: 16,
+                              ),
+                            ),
+                          ),
                         ),
                       ),
-                    ),
+                      const SizedBox(width: AppSpacing.md),
+                      _AnimatedFilterButton(
+                        isActive: _selectedSortBy != ProductoSortBy.nombreAsc || _soloStockBajo,
+                        onPressed: () => _showFilterSheet(context),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: AppSpacing.md),
                   Row(
@@ -182,14 +235,9 @@ class _NuevaVentaScreenState extends ConsumerState<NuevaVentaScreen> {
                           ),
                         ),
                       ),
-                      const SizedBox(width: AppSpacing.sm),
-                      IconButton.filledTonal(
-                        onPressed: () => _showFilterSheet(context),
-                        icon: const Icon(Icons.tune_rounded),
-                        tooltip: 'Ordenar y filtrar',
-                      ),
                     ],
                   ),
+                  const SizedBox(height: AppSpacing.md),
                 ],
               ),
             ),
@@ -212,7 +260,9 @@ class _NuevaVentaScreenState extends ConsumerState<NuevaVentaScreen> {
                                 .fold(0, (sum, i) => sum + i.cantidad) ??
                             0;
 
-                        return Padding(
+                        return _StaggeredFadeSlide(
+                          index: index,
+                          child: Padding(
                           padding: const EdgeInsets.only(bottom: AppSpacing.md),
                           child: _ProductoVentaTile(
                             key: ValueKey(p.id),
@@ -315,6 +365,7 @@ class _NuevaVentaScreenState extends ConsumerState<NuevaVentaScreen> {
                             onLongPress: () => _showQtySheet(context, p),
                             onQtyTap: () => _showQtySheet(context, p),
                           ),
+                        ),
                         );
                       },
                     ),
@@ -372,6 +423,59 @@ class _NuevaVentaScreenState extends ConsumerState<NuevaVentaScreen> {
             _soloStockBajo = soloStockBajo;
           });
         },
+      ),
+    );
+  }
+}
+
+class _StaggeredFadeSlide extends StatefulWidget {
+  const _StaggeredFadeSlide({required this.index, required this.child});
+
+  final int index;
+  final Widget child;
+
+  @override
+  State<_StaggeredFadeSlide> createState() => _StaggeredFadeSlideState();
+}
+
+class _StaggeredFadeSlideState extends State<_StaggeredFadeSlide>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<double> _fade;
+  late final Animation<Offset> _slide;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 260),
+    );
+    _fade = CurvedAnimation(parent: _controller, curve: Curves.easeOut);
+    _slide = Tween<Offset>(
+      begin: const Offset(0, 0.06),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic));
+
+    final delay = Duration(milliseconds: (widget.index * 30).clamp(0, 300));
+    Future.delayed(delay, () {
+      if (mounted) _controller.forward();
+    });
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FadeTransition(
+      opacity: _fade,
+      child: SlideTransition(
+        position: _slide,
+        child: widget.child,
       ),
     );
   }
@@ -664,43 +768,80 @@ class _QtyRoundButton extends StatelessWidget {
   }
 }
 
-class _EmptyProductList extends StatelessWidget {
+class _EmptyProductList extends StatefulWidget {
   const _EmptyProductList();
 
   @override
+  State<_EmptyProductList> createState() => _EmptyProductListState();
+}
+
+class _EmptyProductListState extends State<_EmptyProductList>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl;
+  late final Animation<double> _fade;
+  late final Animation<Offset> _slide;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 400),
+    );
+    _fade = CurvedAnimation(parent: _ctrl, curve: Curves.easeOut);
+    _slide = Tween<Offset>(
+      begin: const Offset(0, 0.06),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeOutCubic));
+    _ctrl.forward();
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.xl),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 68,
-              height: 68,
-              decoration: BoxDecoration(
-                color: context.colors.surfaceSecondary,
-                borderRadius: AppRadii.xlBorder,
-              ),
-              child: Icon(
-                Icons.search_off_rounded,
-                color: context.colors.muted,
-                size: 34,
-              ),
+    return FadeTransition(
+      opacity: _fade,
+      child: SlideTransition(
+        position: _slide,
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(AppSpacing.xl),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 68,
+                  height: 68,
+                  decoration: BoxDecoration(
+                    color: context.colors.surfaceSecondary,
+                    borderRadius: AppRadii.xlBorder,
+                  ),
+                  child: Icon(
+                    Icons.search_off_rounded,
+                    color: context.colors.muted,
+                    size: 34,
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.md),
+                Text(
+                  'No hay productos disponibles',
+                  style: Theme.of(context).textTheme.titleMedium,
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: AppSpacing.xs),
+                Text(
+                  'Prueba con otra búsqueda o categoría.',
+                  style: Theme.of(context).textTheme.bodyMedium,
+                  textAlign: TextAlign.center,
+                ),
+              ],
             ),
-            const SizedBox(height: AppSpacing.md),
-            Text(
-              'No hay productos disponibles',
-              style: Theme.of(context).textTheme.titleMedium,
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: AppSpacing.xs),
-            Text(
-              'Prueba con otra búsqueda o categoría.',
-              style: Theme.of(context).textTheme.bodyMedium,
-              textAlign: TextAlign.center,
-            ),
-          ],
+          ),
         ),
       ),
     );
@@ -806,125 +947,188 @@ class _AddQtySheetState extends ConsumerState<_AddQtySheet> {
   }
 }
 
-class _CartBottomBar extends StatelessWidget {
+class _CartBottomBar extends ConsumerStatefulWidget {
   const _CartBottomBar({required this.onShowCart, required this.onComplete});
 
   final VoidCallback onShowCart;
   final VoidCallback onComplete;
 
   @override
-  Widget build(BuildContext context) {
-    return Consumer(
-      builder: (context, ref, _) {
-        final venta = ref.watch(ventaEnCursoProvider);
-        final totalArticulos = venta?.totalUnidades ?? 0;
-        final total = venta?.total ?? 0;
-        final hasItems = totalArticulos > 0;
+  ConsumerState<_CartBottomBar> createState() => _CartBottomBarState();
+}
 
-        return DecoratedBox(
-          decoration: BoxDecoration(
-            color: context.colors.surface,
-            boxShadow: [
-              BoxShadow(
-                color: context.colors.ink.withValues(alpha: 0.10),
-                blurRadius: 18,
-                offset: Offset(0, -6),
-              ),
-            ],
+class _CartBottomBarState extends ConsumerState<_CartBottomBar>
+    with TickerProviderStateMixin {
+  late final AnimationController _totalCtrl;
+  late final AnimationController _pulseCtrl;
+  late final Animation<double> _pulse;
+  double _prevTotal = 0;
+  double _animFrom = 0;
+  double _animTo = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _totalCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 400),
+    );
+    _pulseCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 500),
+    );
+    _pulse = Tween<double>(begin: 1.0, end: 1.12).animate(
+      CurvedAnimation(parent: _pulseCtrl, curve: Curves.easeOutBack),
+    );
+    _pulseCtrl.addStatusListener((status) {
+      if (status == AnimationStatus.completed) {
+        _pulseCtrl.reverse();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _totalCtrl.dispose();
+    _pulseCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final venta = ref.watch(ventaEnCursoProvider);
+    final totalArticulos = venta?.totalUnidades ?? 0;
+    final total = venta?.total ?? 0;
+    final hasItems = totalArticulos > 0;
+
+    if (total != _prevTotal) {
+      _animFrom = _prevTotal;
+      _animTo = total;
+      _prevTotal = total;
+      _totalCtrl.forward(from: 0);
+      if (total > _animFrom && hasItems) {
+        _pulseCtrl.forward(from: 0);
+      }
+    }
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: context.colors.surface,
+        boxShadow: [
+          BoxShadow(
+            color: context.colors.ink.withValues(alpha: 0.10),
+            blurRadius: 18,
+            offset: Offset(0, -6),
           ),
-          child: SafeArea(
-            top: false,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-              child: Row(
-                children: [
-                  GestureDetector(
-                    onTap: hasItems ? onShowCart : null,
-                    behavior: HitTestBehavior.opaque,
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 46,
-                          height: 46,
-                          decoration: BoxDecoration(
-                            color: context.colors.primary.withValues(
-                              alpha: 0.10,
-                            ),
-                            borderRadius: AppRadii.lgBorder,
+        ],
+      ),
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+          child: Row(
+            children: [
+              GestureDetector(
+                onTap: hasItems ? widget.onShowCart : null,
+                behavior: HitTestBehavior.opaque,
+                child: Row(
+                  children: [
+                    AnimatedBuilder(
+                      animation: _pulse,
+                      builder: (context, child) {
+                        return Transform.scale(
+                          scale: _pulse.value,
+                          child: child,
+                        );
+                      },
+                      child: Container(
+                        width: 46,
+                        height: 46,
+                        decoration: BoxDecoration(
+                          color: context.colors.primary.withValues(
+                            alpha: 0.10,
                           ),
-                          child: Icon(
-                            Icons.shopping_cart_rounded,
-                            color: context.colors.primary,
-                          ),
+                          borderRadius: AppRadii.lgBorder,
                         ),
-                        const SizedBox(width: AppSpacing.sm),
-                        Column(
+                        child: Icon(
+                          Icons.shopping_cart_rounded,
+                          color: context.colors.primary,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.sm),
+                    Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          _articulosLabel(totalArticulos),
+                          style: Theme.of(context).textTheme.titleMedium
+                              ?.copyWith(fontWeight: FontWeight.w800),
+                        ),
+                        const SizedBox(height: 2),
+                        Row(
                           mainAxisSize: MainAxisSize.min,
-                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              _articulosLabel(totalArticulos),
-                              style: Theme.of(context).textTheme.titleMedium
-                                  ?.copyWith(fontWeight: FontWeight.w800),
+                              'Ver carrito',
+                              style: Theme.of(context).textTheme.bodyMedium
+                                  ?.copyWith(color: context.colors.primary),
                             ),
-                            const SizedBox(height: 2),
-                            Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text(
-                                  'Ver carrito',
-                                  style: Theme.of(context).textTheme.bodyMedium
-                                      ?.copyWith(color: context.colors.primary),
-                                ),
-                                Icon(
-                                  Icons.keyboard_arrow_down_rounded,
-                                  size: 16,
-                                  color: context.colors.primary,
-                                ),
-                              ],
+                            Icon(
+                              Icons.keyboard_arrow_down_rounded,
+                              size: 16,
+                              color: context.colors.primary,
                             ),
                           ],
                         ),
                       ],
                     ),
-                  ),
-                  const SizedBox(width: AppSpacing.md),
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: hasItems
-                          ? () {
-                              Haptics.confirm(context);
-                              onComplete();
-                            }
-                          : null,
-                      style: ElevatedButton.styleFrom(
-                        minimumSize: const Size.fromHeight(54),
-                        shape: const RoundedRectangleBorder(
-                          borderRadius: AppRadii.lgBorder,
-                        ),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Flexible(
-                            child: Text(
-                              'Cobrar ${formatCurrency(total)}',
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                          const SizedBox(width: AppSpacing.sm),
-                          const Icon(Icons.arrow_forward_rounded, size: 20),
-                        ],
-                      ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: hasItems
+                      ? () {
+                          Haptics.confirm(context);
+                          widget.onComplete();
+                        }
+                      : null,
+                  style: ElevatedButton.styleFrom(
+                    minimumSize: const Size.fromHeight(54),
+                    shape: const RoundedRectangleBorder(
+                      borderRadius: AppRadii.lgBorder,
                     ),
                   ),
-                ],
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Flexible(
+                        child: AnimatedBuilder(
+                          animation: _totalCtrl,
+                          builder: (context, child) {
+                            final displayTotal = _animFrom +
+                                (_totalCtrl.value * (_animTo - _animFrom));
+                            return Text(
+                              'Cobrar ${formatCurrency(displayTotal)}',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            );
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: AppSpacing.sm),
+                      const Icon(Icons.arrow_forward_rounded, size: 20),
+                    ],
+                  ),
+                ),
               ),
-            ),
+            ],
           ),
-        );
-      },
+        ),
+      ),
     );
   }
 }
@@ -1038,6 +1242,97 @@ class _CartSheet extends ConsumerWidget {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Widgets auxiliares para la barra de búsqueda mejorada
+// ═══════════════════════════════════════════════════════════════════════════
+
+class _AnimatedClearButton extends StatefulWidget {
+  const _AnimatedClearButton({required this.onPressed});
+  
+  final VoidCallback onPressed;
+
+  @override
+  State<_AnimatedClearButton> createState() => _AnimatedClearButtonState();
+}
+
+class _AnimatedClearButtonState extends State<_AnimatedClearButton>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<double> _scale;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 200),
+    );
+    _scale = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeOutBack),
+    );
+    _controller.forward();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ScaleTransition(
+      scale: _scale,
+      child: IconButton(
+        icon: const Icon(Icons.close_rounded, size: 20),
+        onPressed: widget.onPressed,
+        color: Theme.of(context).extension<AppColorsExtension>()?.muted,
+      ),
+    );
+  }
+}
+
+class _AnimatedFilterButton extends StatelessWidget {
+  const _AnimatedFilterButton({
+    required this.isActive,
+    required this.onPressed,
+  });
+
+  final bool isActive;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 200),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: isActive
+            ? [
+                BoxShadow(
+                  color: context.colors.primary.withValues(alpha: 0.3),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+              ]
+            : null,
+      ),
+      child: IconButton.filledTonal(
+        onPressed: onPressed,
+        icon: Icon(
+          Icons.tune_rounded,
+          color: isActive ? context.colors.primary : null,
+        ),
+        style: IconButton.styleFrom(
+          backgroundColor: isActive
+              ? context.colors.primary.withValues(alpha: 0.15)
+              : null,
         ),
       ),
     );

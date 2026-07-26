@@ -21,10 +21,42 @@ class CuadreDetalleScreen extends ConsumerStatefulWidget {
       _CuadreDetalleScreenState();
 }
 
-class _CuadreDetalleScreenState extends ConsumerState<CuadreDetalleScreen> {
+class _CuadreDetalleScreenState extends ConsumerState<CuadreDetalleScreen>
+    with SingleTickerProviderStateMixin {
   bool _mostrarProductos = false;
   bool _isApproving = false;
   bool _isRejecting = false;
+
+  late final AnimationController _entranceController;
+  late final Animation<double> _fadeAnimation;
+  late final Animation<Offset> _slideAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _entranceController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 400),
+    );
+    _fadeAnimation = CurvedAnimation(
+      parent: _entranceController,
+      curve: Curves.easeOutCubic,
+    );
+    _slideAnimation = Tween<Offset>(
+      begin: const Offset(0, 0.02),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(
+      parent: _entranceController,
+      curve: Curves.easeOutCubic,
+    ));
+    _entranceController.forward();
+  }
+
+  @override
+  void dispose() {
+    _entranceController.dispose();
+    super.dispose();
+  }
 
   Map<String, _ProductoAgrupado> _agruparProductos(List<Venta> ventas) {
     final map = <String, _ProductoAgrupado>{};
@@ -81,81 +113,117 @@ class _CuadreDetalleScreenState extends ConsumerState<CuadreDetalleScreen> {
         child: Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 800),
-            child: Column(
-              children: [
-                // ── Header con avatar ──
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
-                  child: _DetalleHeader(cuadre: cuadre),
-                ),
-
-                // ── Hero KPIs ──
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
-                  child: _HeroKPIs(
-                    total: total,
-                    ventasCount: ventas.length,
-                    unidades: totalUnidades,
-                    estado: cuadre.estado,
+            child: AnimatedBuilder(
+              animation: _entranceController,
+              builder: (context, child) {
+                return Opacity(
+                  opacity: _fadeAnimation.value,
+                  child: Transform.translate(
+                    offset: _slideAnimation.value * 8,
+                    child: child,
                   ),
-                ),
-                const SizedBox(height: 16),
-
-                // ── Toggle ──
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: _ToggleOption(
-                          label: 'Resumen',
-                          icon: Icons.receipt_long_rounded,
-                          selected: !_mostrarProductos,
-                          onTap: () =>
-                              setState(() => _mostrarProductos = false),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: _ToggleOption(
-                          label: 'Productos',
-                          icon: Icons.inventory_2_rounded,
-                          selected: _mostrarProductos,
-                          onTap: () =>
-                              setState(() => _mostrarProductos = true),
-                        ),
-                      ),
-                    ],
+                );
+              },
+              child: Column(
+                children: [
+                  // ── Header con avatar ──
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+                    child: _DetalleHeader(cuadre: cuadre),
                   ),
-                ),
-                const SizedBox(height: 16),
 
-                // ── Contenido scrolleable ──
-                Expanded(
-                  child: ventas.isEmpty
-                      ? const _EmptyDetalle()
-                      : ListView(
-                          padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
-                          children: _mostrarProductos
-                              ? _buildProductosView(
-                                  context, ventas, total, totalUnidades,
-                                  comentario)
-                              : _buildResumenView(
-                                  context, ventas, total, totalUnidades,
-                                  comentario),
-                        ),
-                ),
-
-                // ── Acciones ──
-                if (isPendiente)
-                  _AccionesBar(
-                    cuadreId: cuadre.id,
-                    isApproving: _isApproving,
-                    isRejecting: _isRejecting,
-                    onApproving: (v) => setState(() => _isApproving = v),
-                    onRejecting: (v) => setState(() => _isRejecting = v),
+                  // ── Hero KPIs ──
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+                    child: _AnimatedHeroKPIs(
+                      total: total,
+                      ventasCount: ventas.length,
+                      unidades: totalUnidades,
+                      estado: cuadre.estado,
+                    ),
                   ),
-              ],
+                  const SizedBox(height: 16),
+
+                  // ── Toggle ──
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: _ToggleOption(
+                            label: 'Resumen',
+                            icon: Icons.receipt_long_rounded,
+                            selected: !_mostrarProductos,
+                            onTap: () =>
+                                setState(() => _mostrarProductos = false),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: _ToggleOption(
+                            label: 'Productos',
+                            icon: Icons.inventory_2_rounded,
+                            selected: _mostrarProductos,
+                            onTap: () =>
+                                setState(() => _mostrarProductos = true),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // ── Contenido scrolleable ──
+                  Expanded(
+                    child: ventas.isEmpty
+                        ? const _EmptyDetalle()
+                        : AnimatedSwitcher(
+                            duration: const Duration(milliseconds: 300),
+                            switchInCurve: Curves.easeOutCubic,
+                            switchOutCurve: Curves.easeInCubic,
+                            transitionBuilder: (child, animation) {
+                              return FadeTransition(
+                                opacity: animation,
+                                child: SlideTransition(
+                                  position: Tween<Offset>(
+                                    begin: const Offset(0, 0.015),
+                                    end: Offset.zero,
+                                  ).animate(animation),
+                                  child: child,
+                                ),
+                              );
+                            },
+                            child: _mostrarProductos
+                                ? ListView(
+                                    key: const ValueKey('productos'),
+                                    padding:
+                                        const EdgeInsets.fromLTRB(20, 0, 20, 16),
+                                    children: _buildProductosView(
+                                        context, ventas, total, totalUnidades,
+                                        comentario),
+                                  )
+                                : ListView(
+                                    key: const ValueKey('resumen'),
+                                    padding:
+                                        const EdgeInsets.fromLTRB(20, 0, 20, 16),
+                                    children: _buildResumenView(
+                                        context, ventas, total, totalUnidades,
+                                        comentario),
+                                  ),
+                          ),
+                  ),
+
+                  // ── Acciones ──
+                  if (isPendiente)
+                    _AccionesBar(
+                      cuadreId: cuadre.id,
+                      isApproving: _isApproving,
+                      isRejecting: _isRejecting,
+                      onApproving: (v) => setState(() => _isApproving = v),
+                      onRejecting: (v) => setState(() => _isRejecting = v),
+                    ),
+                ],
+              ),
             ),
           ),
         ),
@@ -171,10 +239,12 @@ class _CuadreDetalleScreenState extends ConsumerState<CuadreDetalleScreen> {
     String? comentario,
   ) {
     final children = <Widget>[
-      for (final venta in ventas) ...[
-        _VentaViewCard(venta: venta),
-        const SizedBox(height: 10),
-      ],
+      for (int i = 0; i < ventas.length; i++)
+        _StaggeredItem(
+          index: i,
+          child: _VentaViewCard(venta: ventas[i]),
+        ),
+      if (ventas.isNotEmpty) const SizedBox(height: 10),
       const SizedBox(height: 6),
       const Divider(),
       const SizedBox(height: 12),
@@ -207,12 +277,11 @@ class _CuadreDetalleScreenState extends ConsumerState<CuadreDetalleScreen> {
       ..sort((a, b) => b.subtotal.compareTo(a.subtotal));
 
     final children = <Widget>[
-      ...sorted.map(
-        (p) => Padding(
-          padding: const EdgeInsets.only(bottom: 10),
-          child: _ProductoCard(producto: p),
+      for (int i = 0; i < sorted.length; i++)
+        _StaggeredItem(
+          index: i,
+          child: _ProductoCard(producto: sorted[i]),
         ),
-      ),
       const SizedBox(height: 6),
       const Divider(),
       const SizedBox(height: 12),
@@ -283,6 +352,77 @@ class _ProductoAgrupado {
   });
 }
 
+// ─── Staggered list item ─────────────────────────────────────────────────────
+
+class _StaggeredItem extends StatefulWidget {
+  const _StaggeredItem({required this.index, required this.child});
+
+  final int index;
+  final Widget child;
+
+  @override
+  State<_StaggeredItem> createState() => _StaggeredItemState();
+}
+
+class _StaggeredItemState extends State<_StaggeredItem>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<double> _fadeAnimation;
+  late final Animation<Offset> _slideAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 400),
+    );
+    _fadeAnimation = CurvedAnimation(
+      parent: _controller,
+      curve: Curves.easeOutCubic,
+    );
+    _slideAnimation = Tween<Offset>(
+      begin: const Offset(0, 0.03),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(
+      parent: _controller,
+      curve: Curves.easeOutCubic,
+    ));
+    _startDelayed();
+  }
+
+  Future<void> _startDelayed() async {
+    await Future.delayed(Duration(milliseconds: (widget.index * 60).clamp(0, 400)));
+    if (mounted) _controller.forward();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        return Opacity(
+          opacity: _fadeAnimation.value,
+          child: Transform.translate(
+            offset: _slideAnimation.value * 12,
+            child: child,
+          ),
+        );
+      },
+      child: Padding(
+        padding: const EdgeInsets.only(bottom: 10),
+        child: widget.child,
+      ),
+    );
+  }
+}
+
 // ─── Subwidgets ───────────────────────────────────────────────────────────────
 
 class _DetalleHeader extends StatelessWidget {
@@ -336,8 +476,8 @@ class _DetalleHeader extends StatelessWidget {
   }
 }
 
-class _HeroKPIs extends StatelessWidget {
-  const _HeroKPIs({
+class _AnimatedHeroKPIs extends StatefulWidget {
+  const _AnimatedHeroKPIs({
     required this.total,
     required this.ventasCount,
     required this.unidades,
@@ -350,18 +490,76 @@ class _HeroKPIs extends StatelessWidget {
   final CuadreEstado estado;
 
   @override
+  State<_AnimatedHeroKPIs> createState() => _AnimatedHeroKPIsState();
+}
+
+class _AnimatedHeroKPIsState extends State<_AnimatedHeroKPIs>
+    with TickerProviderStateMixin {
+  late final AnimationController _countController;
+  late final Animation<double> _countAnimation;
+  late final AnimationController _metricsController;
+  late final Animation<double> _metricsScale;
+  late final Animation<double> _metricsFade;
+
+  @override
+  void initState() {
+    super.initState();
+
+    // Count animation for total value
+    _countController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    );
+    _countAnimation = CurvedAnimation(
+      parent: _countController,
+      curve: Curves.easeOutCubic,
+    );
+
+    // Scale-in for metric cards
+    _metricsController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 400),
+    );
+    _metricsScale = Tween<double>(begin: 0.85, end: 1.0).animate(
+      CurvedAnimation(parent: _metricsController, curve: Curves.easeOutBack),
+    );
+    _metricsFade = CurvedAnimation(
+      parent: _metricsController,
+      curve: Curves.easeOutCubic,
+    );
+
+    // Start sequentially: count first, then metrics
+    _countController.forward().then((_) {
+      if (mounted) _metricsController.forward();
+    });
+  }
+
+  @override
+  void dispose() {
+    _countController.dispose();
+    _metricsController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Column(
       children: [
-        // Total hero
-        Text(
-          formatCurrency(total),
-          style: Theme.of(context).textTheme.headlineLarge?.copyWith(
-            color: context.colors.primary,
-            fontWeight: FontWeight.w800,
-            fontFeatures: const [FontFeature.tabularFigures()],
-          ),
-          textAlign: TextAlign.center,
+        // Total hero — animated count
+        AnimatedBuilder(
+          animation: _countAnimation,
+          builder: (context, child) {
+            final currentValue = widget.total * _countAnimation.value;
+            return Text(
+              formatCurrency(currentValue),
+              style: Theme.of(context).textTheme.headlineLarge?.copyWith(
+                color: context.colors.primary,
+                fontWeight: FontWeight.w800,
+                fontFeatures: const [FontFeature.tabularFigures()],
+              ),
+              textAlign: TextAlign.center,
+            );
+          },
         ),
         const SizedBox(height: 2),
         Text(
@@ -369,27 +567,39 @@ class _HeroKPIs extends StatelessWidget {
           style: Theme.of(context).textTheme.bodyMedium,
         ),
         const SizedBox(height: 16),
-        // Métricas secundarias
-        Row(
-          children: [
-            Expanded(
-              child: _MetricCard(
-                icon: Icons.receipt_long_rounded,
-                value: '$ventasCount',
-                label: ventasCount == 1 ? 'venta' : 'ventas',
-                color: context.colors.primary,
+        // Metric cards — scale in with stagger
+        AnimatedBuilder(
+          animation: _metricsController,
+          builder: (context, child) {
+            return Opacity(
+              opacity: _metricsFade.value,
+              child: Transform.scale(
+                scale: _metricsScale.value,
+                child: child,
               ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _MetricCard(
-                icon: Icons.inventory_2_rounded,
-                value: '$unidades',
-                label: unidades == 1 ? 'unidad' : 'unidades',
-                color: context.colors.success,
+            );
+          },
+          child: Row(
+            children: [
+              Expanded(
+                child: _MetricCard(
+                  icon: Icons.receipt_long_rounded,
+                  value: '${widget.ventasCount}',
+                  label: widget.ventasCount == 1 ? 'venta' : 'ventas',
+                  color: context.colors.primary,
+                ),
               ),
-            ),
-          ],
+              const SizedBox(width: 12),
+              Expanded(
+                child: _MetricCard(
+                  icon: Icons.inventory_2_rounded,
+                  value: '${widget.unidades}',
+                  label: widget.unidades == 1 ? 'unidad' : 'unidades',
+                  color: context.colors.success,
+                ),
+              ),
+            ],
+          ),
         ),
       ],
     );

@@ -15,14 +15,97 @@ import '../../../core/utils/haptics.dart';
 import '../../../shared/models/usuario.dart';
 import '../../auth/providers/auth_provider.dart';
 
+const _kEntranceDuration = Duration(milliseconds: 400);
+const _kStaggerInterval = Duration(milliseconds: 80);
+const _kSectionCount = 4;
+const _kSlideOffset = Offset(0, 0.02);
 
-class ConfiguracionScreen extends ConsumerWidget {
+class ConfiguracionScreen extends ConsumerStatefulWidget {
   const ConfiguracionScreen({super.key, this.isAdmin = true});
 
   final bool isAdmin;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ConfiguracionScreen> createState() =>
+      _ConfiguracionScreenState();
+}
+
+class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _entranceCtrl;
+  late final List<Animation<double>> _sectionFades;
+  late final List<Animation<Offset>> _sectionSlides;
+
+  @override
+  void initState() {
+    super.initState();
+    
+    // Inicializar controller con valor 0, luego animar
+    _entranceCtrl = AnimationController(
+      vsync: this,
+      duration: _kEntranceDuration + _kStaggerInterval * (_kSectionCount - 1),
+    );
+    
+    _sectionFades = List.generate(_kSectionCount, (i) {
+      final start = i * (_kStaggerInterval.inMilliseconds /
+          _entranceCtrl.duration!.inMilliseconds);
+      final end = (start + _kEntranceDuration.inMilliseconds /
+              _entranceCtrl.duration!.inMilliseconds)
+          .clamp(0.0, 1.0);
+      return CurvedAnimation(
+        parent: _entranceCtrl,
+        curve: Interval(start, end, curve: Curves.easeOutCubic),
+      );
+    });
+    _sectionSlides = List.generate(_kSectionCount, (i) {
+      final start = i * (_kStaggerInterval.inMilliseconds /
+          _entranceCtrl.duration!.inMilliseconds);
+      final end = (start + _kEntranceDuration.inMilliseconds /
+              _entranceCtrl.duration!.inMilliseconds)
+          .clamp(0.0, 1.0);
+      return Tween<Offset>(begin: _kSlideOffset, end: Offset.zero).animate(
+        CurvedAnimation(
+          parent: _entranceCtrl,
+          curve: Interval(start, end, curve: Curves.easeOutCubic),
+        ),
+      );
+    });
+    
+    // Iniciar animación después de que el frame esté construido
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        final reduceMotion =
+            MediaQuery.of(context).disableAnimations;
+        if (reduceMotion) {
+          _entranceCtrl.value = 1;
+        } else {
+          _entranceCtrl.forward();
+        }
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _entranceCtrl.dispose();
+    super.dispose();
+  }
+
+  Widget _staggeredSection(int index, Widget child) {
+    return AnimatedBuilder(
+      animation: Listenable.merge([_sectionFades[index], _sectionSlides[index]]),
+      builder: (context, _) => FadeTransition(
+        opacity: _sectionFades[index],
+        child: SlideTransition(
+          position: _sectionSlides[index],
+          child: child,
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final user = ref.watch(authControllerProvider.select((s) => s.user));
 
     return Scaffold(
@@ -50,121 +133,168 @@ class ConfiguracionScreen extends ConsumerWidget {
             child: ListView(
               padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
               children: [
-                // ── PERFIL ──
-                const _SectionHeader(
-                  icon: Icons.person_rounded,
-                  label: 'Perfil',
-                ),
-                if (user != null)
-                  Card(
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Row(
-                        children: [
-                          _ProfileAvatar(user: user),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                _staggeredSection(
+                  0,
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const _SectionHeader(
+                        icon: Icons.person_rounded,
+                        label: 'Perfil',
+                      ),
+                      if (user != null)
+                        Card(
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Row(
                               children: [
-                                Text(
-                                  user.nombre,
-                                  style:
-                                      Theme.of(context).textTheme.titleMedium,
+                                _ProfileAvatar(user: user),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        user.nombre,
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .titleMedium,
+                                      ),
+                                      Text(user.email),
+                                    ],
+                                  ),
                                 ),
-                                Text(user.email),
+                                if (!widget.isAdmin)
+                                  IconButton(
+                                    onPressed: () => _showEditProfileDialog(
+                                        context, ref, user),
+                                    icon: const Icon(Icons.edit_rounded),
+                                    tooltip: 'Editar perfil',
+                                  ),
                               ],
                             ),
                           ),
-                          if (!isAdmin)
-                            IconButton(
-                              onPressed: () =>
-                                  _showEditProfileDialog(context, ref, user),
-                              icon: const Icon(Icons.edit_rounded),
-                              tooltip: 'Editar perfil',
-                            ),
-                        ],
-                      ),
-                    ),
+                        ),
+                    ],
                   ),
-                const SizedBox(height: 18),
-
-                // ── APARIENCIA ──
-                const _SectionHeader(
-                  icon: Icons.brightness_6_rounded,
-                  label: 'Apariencia',
                 ),
-                const _AparienciaExpandable(),
                 const SizedBox(height: 18),
-
-                // ── ACCESIBILIDAD ──
-                Card(
-                  child: ListTile(
-                    leading: const Icon(Icons.accessibility_new_rounded),
-                    title: const Text('Accesibilidad'),
-                    subtitle: const Text('Tamaño de texto, contraste y más'),
-                    trailing: const Icon(Icons.chevron_right_rounded),
-                    onTap: () => context.push(
-                      isAdmin
-                          ? '/admin/configuracion/accesibilidad'
-                          : '/dependiente/configuracion/accesibilidad',
-                    ),
+                _staggeredSection(
+                  1,
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const _SectionHeader(
+                        icon: Icons.brightness_6_rounded,
+                        label: 'Apariencia',
+                      ),
+                      const _AparienciaExpandable(),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 18),
+                _staggeredSection(
+                  2,
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Card(
+                        child: ListTile(
+                          leading:
+                              const Icon(Icons.accessibility_new_rounded),
+                          title: const Text('Accesibilidad'),
+                          subtitle:
+                              const Text('Tamaño de texto, contraste y más'),
+                          trailing:
+                              const Icon(Icons.chevron_right_rounded),
+                          onTap: () => context.push(
+                            widget.isAdmin
+                                ? '/admin/configuracion/accesibilidad'
+                                : '/dependiente/configuracion/accesibilidad',
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
                 const SizedBox(height: 18),
 
                 // ── CUADRES (solo dependiente) ──
-                if (!isAdmin) ...[
-                  const _SectionHeader(
-                    icon: Icons.receipt_long_rounded,
-                    label: 'Cuadres',
-                  ),
-                  Card(
-                    child: ListTile(
-                      leading: const Icon(Icons.history_rounded),
-                      title: const Text('Historial de cuadres'),
-                      subtitle: const Text('Ver mis cuadres anteriores'),
-                      trailing: const Icon(Icons.chevron_right_rounded),
-                      onTap: () =>
-                          context.push('/dependiente/cuadres/historial'),
-                    ),
-                  ),
-                  const SizedBox(height: 18),
-                ],
-
-                // ── GESTIÓN (solo admin) ──
-                if (isAdmin) ...[
-                  const _SectionHeader(
-                    icon: Icons.settings_rounded,
-                    label: 'Gestión',
-                  ),
-                  Card(
-                    child: Column(
+                if (!widget.isAdmin)
+                  _staggeredSection(
+                    3,
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        ListTile(
-                          leading: const Icon(Icons.people_outline),
-                          title: const Text('Equipo'),
-                          subtitle:
-                              const Text('Administrar miembros del equipo'),
-                          trailing: const Icon(Icons.chevron_right_rounded),
-                          onTap: () => context.push(
-                            '/admin/configuracion/equipo',
-                          ),
+                        const _SectionHeader(
+                          icon: Icons.receipt_long_rounded,
+                          label: 'Cuadres',
                         ),
-                        const Divider(height: 1, indent: 16, endIndent: 16),
-                        ListTile(
-                          leading: const Icon(Icons.category_outlined),
-                          title: const Text('Categorías'),
-                          subtitle: const Text('Organizar productos'),
-                          trailing: const Icon(Icons.chevron_right_rounded),
-                          onTap: () => context.push(
-                            '/admin/configuracion/categorias',
+                        Card(
+                          child: ListTile(
+                            leading: const Icon(Icons.history_rounded),
+                            title: const Text('Historial de cuadres'),
+                            subtitle:
+                                const Text('Ver mis cuadres anteriores'),
+                            trailing:
+                                const Icon(Icons.chevron_right_rounded),
+                            onTap: () => context
+                                .push('/dependiente/cuadres/historial'),
                           ),
                         ),
                       ],
                     ),
                   ),
-                ],
+
+                // ── GESTIÓN (solo admin) ──
+                if (widget.isAdmin)
+                  _staggeredSection(
+                    3,
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const _SectionHeader(
+                          icon: Icons.settings_rounded,
+                          label: 'Gestión',
+                        ),
+                        Card(
+                          child: Column(
+                            children: [
+                              ListTile(
+                                leading:
+                                    const Icon(Icons.people_outline),
+                                title: const Text('Equipo'),
+                                subtitle: const Text(
+                                    'Administrar miembros del equipo'),
+                                trailing: const Icon(
+                                    Icons.chevron_right_rounded),
+                                onTap: () => context.push(
+                                  '/admin/configuracion/equipo',
+                                ),
+                              ),
+                              const Divider(
+                                  height: 1,
+                                  indent: 16,
+                                  endIndent: 16),
+                              ListTile(
+                                leading: const Icon(
+                                    Icons.category_outlined),
+                                title: const Text('Categorías'),
+                                subtitle:
+                                    const Text('Organizar productos'),
+                                trailing: const Icon(
+                                    Icons.chevron_right_rounded),
+                                onTap: () => context.push(
+                                  '/admin/configuracion/categorias',
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
               ],
             ),
           ),
@@ -296,19 +426,47 @@ class _AparienciaExpandable extends StatefulWidget {
   State<_AparienciaExpandable> createState() => _AparienciaExpandableState();
 }
 
-class _AparienciaExpandableState extends State<_AparienciaExpandable> {
+class _AparienciaExpandableState extends State<_AparienciaExpandable>
+    with SingleTickerProviderStateMixin {
   bool _isExpanded = false;
+  late final AnimationController _tapCtrl;
+  late final Animation<double> _tapScale;
+
+  @override
+  void initState() {
+    super.initState();
+    _tapCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 200),
+    );
+    _tapScale = TweenSequence<double>([
+      TweenSequenceItem(tween: Tween(begin: 1, end: 0.98), weight: 50),
+      TweenSequenceItem(tween: Tween(begin: 0.98, end: 1), weight: 50),
+    ]).animate(CurvedAnimation(parent: _tapCtrl, curve: Curves.easeInOut));
+  }
+
+  @override
+  void dispose() {
+    _tapCtrl.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      clipBehavior: Clip.antiAlias,
-      child: Column(
-        children: [
-          InkWell(
-            onTap: () => setState(() => _isExpanded = !_isExpanded),
+    return ScaleTransition(
+      scale: _tapScale,
+      child: Card(
+        clipBehavior: Clip.antiAlias,
+        child: Column(
+          children: [
+            InkWell(
+              onTap: () {
+                _tapCtrl.forward(from: 0);
+                setState(() => _isExpanded = !_isExpanded);
+              },
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               child: Row(
                 children: [
                   const Icon(Icons.brightness_6_rounded),
@@ -329,7 +487,8 @@ class _AparienciaExpandableState extends State<_AparienciaExpandable> {
                               style: Theme.of(context)
                                   .textTheme
                                   .bodySmall
-                                  ?.copyWith(color: context.colors.muted),
+                                  ?.copyWith(
+                                      color: context.colors.muted),
                             );
                           },
                         ),
@@ -397,6 +556,7 @@ class _AparienciaExpandableState extends State<_AparienciaExpandable> {
           ),
         ],
       ),
+      ),
     );
   }
 }
@@ -412,10 +572,33 @@ class _ProfileAvatar extends ConsumerStatefulWidget {
   ConsumerState<_ProfileAvatar> createState() => _ProfileAvatarState();
 }
 
-class _ProfileAvatarState extends ConsumerState<_ProfileAvatar> {
+class _ProfileAvatarState extends ConsumerState<_ProfileAvatar>
+    with SingleTickerProviderStateMixin {
   final ImagePicker _picker = ImagePicker();
+  late final AnimationController _tapCtrl;
+  late final Animation<double> _tapScale;
+
+  @override
+  void initState() {
+    super.initState();
+    _tapCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 200),
+    );
+    _tapScale = TweenSequence<double>([
+      TweenSequenceItem(tween: Tween(begin: 1, end: 0.92), weight: 50),
+      TweenSequenceItem(tween: Tween(begin: 0.92, end: 1), weight: 50),
+    ]).animate(CurvedAnimation(parent: _tapCtrl, curve: Curves.easeInOut));
+  }
+
+  @override
+  void dispose() {
+    _tapCtrl.dispose();
+    super.dispose();
+  }
 
   Future<void> _pickAndSave() async {
+    _tapCtrl.forward(from: 0);
     final xfile = await _picker.pickImage(
       source: ImageSource.gallery,
       imageQuality: 80,
@@ -461,16 +644,19 @@ class _ProfileAvatarState extends ConsumerState<_ProfileAvatar> {
 
     return GestureDetector(
       onTap: _pickAndSave,
-      child: Stack(
-        alignment: Alignment.bottomRight,
-        children: [
-          avatar,
-          CircleAvatar(
-            radius: 10,
-            backgroundColor: context.colors.surface,
-            child: const Icon(Icons.camera_alt_rounded, size: 14),
+      child: ScaleTransition(
+        scale: _tapScale,
+        child: Stack(
+          alignment: Alignment.bottomRight,
+          children: [
+            avatar,
+            CircleAvatar(
+              radius: 10,
+              backgroundColor: context.colors.surface,
+              child: const Icon(Icons.camera_alt_rounded, size: 14),
           ),
         ],
+      ),
       ),
     );
   }
@@ -494,53 +680,90 @@ String _getThemeModeLabel(ThemeMode mode) {
 class _ThemeModeSelector extends ConsumerWidget {
   const _ThemeModeSelector();
 
+  static const _kButtonSize = 32.0;
+  static const _kButtonGap = 2.0;
+  static const _kPadding = 3.0;
+  static const _kIndicatorRadius = 6.0;
+
+  int _index(ThemeMode mode) {
+    switch (mode) {
+      case ThemeMode.light:
+        return 0;
+      case ThemeMode.dark:
+        return 1;
+      case ThemeMode.system:
+        return 2;
+    }
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final currentMode = ref.watch(themeModeProvider);
+    final currentIndex = _index(currentMode);
+
+    final indicatorLeft =
+        _kPadding + currentIndex * (_kButtonSize + _kButtonGap);
 
     return Container(
-      padding: const EdgeInsets.all(3),
+      padding: const EdgeInsets.all(_kPadding),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(8),
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
+      child: Stack(
         children: [
-          _ThemeModeButton(
-            icon: Icons.light_mode_rounded,
-            isSelected: currentMode == ThemeMode.light,
-            onTap: () {
-              ref
-                  .read(themeModeProvider.notifier)
-                  .setThemeMode(ThemeMode.light);
-              Haptics.tap(context);
-            },
-            tooltip: 'Claro',
+          AnimatedPositioned(
+            duration: const Duration(milliseconds: 250),
+            curve: Curves.easeOutCubic,
+            left: indicatorLeft,
+            top: 0,
+            width: _kButtonSize,
+            height: _kButtonSize,
+            child: Material(
+              color: Theme.of(context).colorScheme.primaryContainer,
+              borderRadius:
+                  BorderRadius.circular(_kIndicatorRadius),
+            ),
           ),
-          const SizedBox(width: 2),
-          _ThemeModeButton(
-            icon: Icons.dark_mode_rounded,
-            isSelected: currentMode == ThemeMode.dark,
-            onTap: () {
-              ref
-                  .read(themeModeProvider.notifier)
-                  .setThemeMode(ThemeMode.dark);
-              Haptics.tap(context);
-            },
-            tooltip: 'Oscuro',
-          ),
-          const SizedBox(width: 2),
-          _ThemeModeButton(
-            icon: Icons.brightness_auto_rounded,
-            isSelected: currentMode == ThemeMode.system,
-            onTap: () {
-              ref
-                  .read(themeModeProvider.notifier)
-                  .setThemeMode(ThemeMode.system);
-              Haptics.tap(context);
-            },
-            tooltip: 'Auto',
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _ThemeModeButton(
+                icon: Icons.light_mode_rounded,
+                isSelected: currentMode == ThemeMode.light,
+                onTap: () {
+                  ref
+                      .read(themeModeProvider.notifier)
+                      .setThemeMode(ThemeMode.light);
+                  Haptics.tap(context);
+                },
+                tooltip: 'Claro',
+              ),
+              const SizedBox(width: _kButtonGap),
+              _ThemeModeButton(
+                icon: Icons.dark_mode_rounded,
+                isSelected: currentMode == ThemeMode.dark,
+                onTap: () {
+                  ref
+                      .read(themeModeProvider.notifier)
+                      .setThemeMode(ThemeMode.dark);
+                  Haptics.tap(context);
+                },
+                tooltip: 'Oscuro',
+              ),
+              const SizedBox(width: _kButtonGap),
+              _ThemeModeButton(
+                icon: Icons.brightness_auto_rounded,
+                isSelected: currentMode == ThemeMode.system,
+                onTap: () {
+                  ref
+                      .read(themeModeProvider.notifier)
+                      .setThemeMode(ThemeMode.system);
+                  Haptics.tap(context);
+                },
+                tooltip: 'Auto',
+              ),
+            ],
           ),
         ],
       ),
@@ -566,9 +789,7 @@ class _ThemeModeButton extends StatelessWidget {
     return Tooltip(
       message: tooltip,
       child: Material(
-        color: isSelected
-            ? Theme.of(context).colorScheme.primaryContainer
-            : Colors.transparent,
+        color: Colors.transparent,
         borderRadius: BorderRadius.circular(6),
         child: InkWell(
           onTap: onTap,

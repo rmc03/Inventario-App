@@ -11,7 +11,7 @@ enum UserRole {
 
   String get homePath {
     return switch (this) {
-      UserRole.admin => '/admin/inventario',
+      UserRole.admin => '/admin/resumen',
       UserRole.dependiente => '/dependiente/turno',
     };
   }

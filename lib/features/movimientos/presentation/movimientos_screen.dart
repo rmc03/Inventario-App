@@ -277,48 +277,82 @@ class _MovimientosScreenState extends ConsumerState<MovimientosScreen> {
                   child: Row(
                     children: [
                       Expanded(
-                        child: TextField(
-                          controller: _searchController,
-                          onChanged: _onSearchChanged,
-                          decoration: InputDecoration(
-                            hintText: 'Buscar producto o dependiente...',
-                            prefixIcon: const Icon(Icons.search_rounded),
-                            suffixIcon: filtro.query.isNotEmpty
-                                ? IconButton(
-                                    icon: const Icon(Icons.clear_rounded),
-                                    onPressed: () {
-                                      _searchController.clear();
-                                      ref.read(movimientosFilterProvider.notifier)
-                                          .setQuery('');
-                                    },
-                                  )
-                                : null,
-                            border: OutlineInputBorder(
-                              borderRadius: AppRadii.pillBorder,
-                              borderSide: BorderSide(color: context.colors.line),
+                        child: Container(
+                          decoration: BoxDecoration(
+                            borderRadius: AppRadii.pillBorder,
+                            boxShadow: [
+                              BoxShadow(
+                                color: context.colors.primary.withValues(alpha: filtro.query.isNotEmpty ? 0.08 : 0.03),
+                                blurRadius: 12,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: TextField(
+                            controller: _searchController,
+                            onChanged: _onSearchChanged,
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w500,
                             ),
-                            enabledBorder: OutlineInputBorder(
-                              borderRadius: AppRadii.pillBorder,
-                              borderSide: BorderSide(color: context.colors.line),
-                            ),
-                            focusedBorder: OutlineInputBorder(
-                              borderRadius: AppRadii.pillBorder,
-                              borderSide: BorderSide(
-                                color: context.colors.primary,
-                                width: 1.5,
+                            decoration: InputDecoration(
+                              hintText: 'Buscar producto o dependiente...',
+                              hintStyle: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w400,
+                                color: context.colors.muted,
+                              ),
+                              prefixIcon: Icon(
+                                Icons.search_rounded,
+                                size: 24,
+                                color: filtro.query.isNotEmpty 
+                                    ? context.colors.primary 
+                                    : context.colors.muted,
+                              ),
+                              suffixIcon: filtro.query.isNotEmpty
+                                  ? _AnimatedClearButton(
+                                      onPressed: () {
+                                        _searchController.clear();
+                                        ref.read(movimientosFilterProvider.notifier)
+                                            .setQuery('');
+                                      },
+                                    )
+                                  : null,
+                              border: OutlineInputBorder(
+                                borderRadius: AppRadii.pillBorder,
+                                borderSide: BorderSide(
+                                  color: context.colors.line,
+                                  width: 1.5,
+                                ),
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: AppRadii.pillBorder,
+                                borderSide: BorderSide(
+                                  color: context.colors.line,
+                                  width: 1.5,
+                                ),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: AppRadii.pillBorder,
+                                borderSide: BorderSide(
+                                  color: context.colors.primary,
+                                  width: 2,
+                                ),
+                              ),
+                              filled: true,
+                              fillColor: context.colors.surface,
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 20,
+                                vertical: 16,
                               ),
                             ),
                           ),
                         ),
                       ),
-                      const SizedBox(width: AppSpacing.sm),
-                      IconButton.filledTonal(
+                      const SizedBox(width: AppSpacing.md),
+                      _AnimatedFilterButton(
+                        isActive: hayFiltrosActivos,
                         onPressed: () => _showFilterSheet(context),
-                        icon: Badge(
-                          isLabelVisible: hayFiltrosActivos,
-                          child: const Icon(Icons.tune_rounded),
-                        ),
-                        tooltip: 'Filtrar',
                       ),
                     ],
                   ),
@@ -329,25 +363,47 @@ class _MovimientosScreenState extends ConsumerState<MovimientosScreen> {
                   Padding(
                     padding: const EdgeInsets.fromLTRB(
                       AppSpacing.xl,
-                      AppSpacing.sm,
+                      AppSpacing.md,
                       AppSpacing.xl,
                       AppSpacing.sm,
                     ),
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.calendar_today_rounded,
-                          size: 16,
-                          color: context.colors.muted,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 10,
+                      ),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            context.colors.primary.withValues(alpha: 0.08),
+                            context.colors.primary.withValues(alpha: 0.04),
+                          ],
                         ),
-                        const SizedBox(width: 6),
-                        Text(
-                          'Mostrando: ${_rangoLabel(filtro)}',
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                color: context.colors.muted,
-                              ),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: context.colors.primary.withValues(alpha: 0.15),
+                          width: 1,
                         ),
-                      ],
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.calendar_today_rounded,
+                            size: 18,
+                            color: context.colors.primary,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Mostrando: ${_rangoLabel(filtro)}',
+                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                  fontSize: 14,
+                                  color: context.colors.primary,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 
@@ -362,31 +418,68 @@ class _MovimientosScreenState extends ConsumerState<MovimientosScreen> {
                     ),
                     child: Align(
                       alignment: Alignment.centerLeft,
-                      child: InputChip(
-                        avatar: Icon(
-                          switch (filtro.tipo) {
-                            TipoMovimientoFiltro.entradas => Icons.arrow_forward_rounded,
-                            TipoMovimientoFiltro.salidas => Icons.arrow_back_rounded,
-                            TipoMovimientoFiltro.ventas => Icons.shopping_cart_rounded,
-                            TipoMovimientoFiltro.inicioTurno => Icons.login_rounded,
-                            TipoMovimientoFiltro.eliminados => Icons.delete_outline_rounded,
-                            _ => Icons.filter_list_rounded,
-                          },
-                          size: 18,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 8,
                         ),
-                        label: Text(
-                          switch (filtro.tipo) {
-                            TipoMovimientoFiltro.entradas => 'Solo Entradas',
-                            TipoMovimientoFiltro.salidas => 'Solo Disminuciones',
-                            TipoMovimientoFiltro.ventas => 'Solo Ventas',
-                            TipoMovimientoFiltro.inicioTurno => 'Solo Inicios de Turno',
-                            TipoMovimientoFiltro.eliminados => 'Solo Eliminados',
-                            _ => 'Filtrado',
-                          },
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              context.colors.primary.withValues(alpha: 0.12),
+                              context.colors.primary.withValues(alpha: 0.08),
+                            ],
+                          ),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: context.colors.primary.withValues(alpha: 0.2),
+                            width: 1,
+                          ),
                         ),
-                        onDeleted: () => ref
-                            .read(movimientosFilterProvider.notifier)
-                            .setTipo(TipoMovimientoFiltro.todos),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              switch (filtro.tipo) {
+                                TipoMovimientoFiltro.entradas => Icons.arrow_forward_rounded,
+                                TipoMovimientoFiltro.salidas => Icons.arrow_back_rounded,
+                                TipoMovimientoFiltro.ventas => Icons.shopping_cart_rounded,
+                                TipoMovimientoFiltro.inicioTurno => Icons.login_rounded,
+                                TipoMovimientoFiltro.eliminados => Icons.delete_rounded,
+                                _ => Icons.filter_list_rounded,
+                              },
+                              size: 18,
+                              color: context.colors.primary,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              switch (filtro.tipo) {
+                                TipoMovimientoFiltro.entradas => 'Solo Entradas',
+                                TipoMovimientoFiltro.salidas => 'Solo Disminuciones',
+                                TipoMovimientoFiltro.ventas => 'Solo Ventas',
+                                TipoMovimientoFiltro.inicioTurno => 'Solo Inicios de Turno',
+                                TipoMovimientoFiltro.eliminados => 'Solo Eliminados',
+                                _ => 'Filtrado',
+                              },
+                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                    color: context.colors.primary,
+                                  ),
+                            ),
+                            const SizedBox(width: 6),
+                            GestureDetector(
+                              onTap: () => ref
+                                  .read(movimientosFilterProvider.notifier)
+                                  .setTipo(TipoMovimientoFiltro.todos),
+                              child: Icon(
+                                Icons.close_rounded,
+                                size: 18,
+                                color: context.colors.primary,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),
@@ -406,50 +499,55 @@ class _MovimientosScreenState extends ConsumerState<MovimientosScreen> {
                           itemCount: items.length,
                           itemBuilder: (context, index) {
                             final item = items[index]; // Mantener orden original (más reciente al final)
-                            return switch (item) {
-                              _DayHeaderItem(:final day) => _DayHeader(
-                                  day: day,
-                                  label: _dateHeader(day),
-                                ),
-                              _MovimientoCardItem(:final movimiento) =>
-                                Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: AppSpacing.xl,
+                            
+                            // Animación de entrada sutil para cada item
+                            return _AnimatedListItem(
+                              index: index,
+                              child: switch (item) {
+                                _DayHeaderItem(:final day) => _DayHeader(
+                                    day: day,
+                                    label: _dateHeader(day),
                                   ),
-                                  child: Column(
-                                    children: [
-                                      _MovimientoCard(
-                                        key: ValueKey(movimiento.id),
-                                        movimiento: movimiento,
-                                      ),
-                                      const SizedBox(height: AppSpacing.sm),
-                                    ],
+                                _MovimientoCardItem(:final movimiento) =>
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: AppSpacing.xl,
+                                    ),
+                                    child: Column(
+                                      children: [
+                                        _MovimientoCard(
+                                          key: ValueKey(movimiento.id),
+                                          movimiento: movimiento,
+                                        ),
+                                        const SizedBox(height: AppSpacing.sm),
+                                      ],
+                                    ),
                                   ),
-                                ),
-                              _VentaCardItem(
-                                :final ventaId,
-                                :final movimientos,
-                                :final matchedProduct,
-                                :final venta,
-                              ) =>
-                                Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: AppSpacing.xl,
+                                _VentaCardItem(
+                                  :final ventaId,
+                                  :final movimientos,
+                                  :final matchedProduct,
+                                  :final venta,
+                                ) =>
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: AppSpacing.xl,
+                                    ),
+                                    child: Column(
+                                      children: [
+                                        _VentaCard(
+                                          key: ValueKey(ventaId),
+                                          ventaId: ventaId,
+                                          movimientos: movimientos,
+                                          matchedProduct: matchedProduct,
+                                          venta: venta,
+                                        ),
+                                        const SizedBox(height: AppSpacing.sm),
+                                      ],
+                                    ),
                                   ),
-                                  child: Column(
-                                    children: [
-                                      _VentaCard(
-                                        key: ValueKey(ventaId),
-                                        ventaId: ventaId,
-                                        movimientos: movimientos,
-                                        matchedProduct: matchedProduct,
-                                        venta: venta,
-                                      ),
-                                      const SizedBox(height: AppSpacing.sm),
-                                    ],
-                                  ),
-                                ),
-                            };
+                              },
+                            );
                           },
                         ),
                 ),
@@ -474,50 +572,83 @@ class _DayHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
     return Padding(
       padding: const EdgeInsets.symmetric(
-        vertical: AppSpacing.lg,
+        vertical: AppSpacing.xl,
       ),
       child: Row(
         children: [
           Expanded(
-            child: Divider(
-              color: context.colors.line.withValues(alpha: 0.4),
-              thickness: 1,
-              endIndent: 12,
+            child: Container(
+              height: 1,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    context.colors.line.withValues(alpha: 0.0),
+                    context.colors.line.withValues(alpha: 0.5),
+                  ],
+                ),
+              ),
             ),
           ),
+          const SizedBox(width: 16),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
             decoration: BoxDecoration(
-              gradient: LinearGradient(
+              // Fondo azul sólido en dark mode
+              color: isDark ? context.colors.primary : null,
+              gradient: isDark ? null : LinearGradient(
                 colors: [
+                  context.colors.primary.withValues(alpha: 0.16),
                   context.colors.primary.withValues(alpha: 0.08),
-                  context.colors.primary.withValues(alpha: 0.02),
                 ],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(
-                color: context.colors.primary.withValues(alpha: 0.15),
-                width: 1,
+              borderRadius: BorderRadius.circular(24),
+              border: isDark ? null : Border.all(
+                color: context.colors.primary.withValues(alpha: 0.25),
+                width: 1.5,
               ),
+              // Sombra mínima y sutil
+              boxShadow: isDark ? [
+                BoxShadow(
+                  color: context.colors.primary.withValues(alpha: 0.15),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+              ] : [
+                BoxShadow(
+                  color: context.colors.primary.withValues(alpha: 0.1),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+              ],
             ),
             child: Text(
-              label,
+              label.toUpperCase(),
               style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                    fontWeight: FontWeight.w700,
-                    color: context.colors.primary,
-                    letterSpacing: 0.3,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w800,
+                    color: isDark ? Colors.white : context.colors.primary,
+                    letterSpacing: 0.8,
                   ),
             ),
           ),
+          const SizedBox(width: 16),
           Expanded(
-            child: Divider(
-              color: context.colors.line.withValues(alpha: 0.4),
-              thickness: 1,
-              indent: 12,
+            child: Container(
+              height: 1,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    context.colors.line.withValues(alpha: 0.5),
+                    context.colors.line.withValues(alpha: 0.0),
+                  ],
+                ),
+              ),
             ),
           ),
         ],
@@ -533,64 +664,85 @@ class _EmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.xl),
+        padding: const EdgeInsets.all(AppSpacing.xxl),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Ícono con diseño mejorado
+            // Ícono simple sin excesivos brillos
             Container(
-              padding: const EdgeInsets.all(28),
+              padding: const EdgeInsets.all(36),
               decoration: BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [
-                    context.colors.primary.withValues(alpha: 0.08),
-                    context.colors.primary.withValues(alpha: 0.02),
+                  colors: isDark ? [
+                    context.colors.primary.withValues(alpha: 0.12),
+                    context.colors.primary.withValues(alpha: 0.06),
+                  ] : [
+                    context.colors.primary.withValues(alpha: 0.14),
+                    context.colors.primary.withValues(alpha: 0.06),
                   ],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
                 shape: BoxShape.circle,
                 border: Border.all(
-                  color: context.colors.primary.withValues(alpha: 0.12),
+                  color: context.colors.primary.withValues(alpha: 0.2),
                   width: 2,
                 ),
+                // Sombra sutil, no exagerada
+                boxShadow: [
+                  BoxShadow(
+                    color: context.colors.primary.withValues(alpha: 0.1),
+                    blurRadius: 16,
+                    offset: const Offset(0, 6),
+                  ),
+                ],
               ),
               child: Icon(
-                Icons.inventory_2_outlined,
-                size: 80,
-                color: context.colors.primary.withValues(alpha: 0.4),
+                Icons.inventory_2_rounded,
+                size: 88,
+                color: context.colors.primary.withValues(alpha: 0.6),
               ),
             ),
-            const SizedBox(height: AppSpacing.xl),
+            const SizedBox(height: AppSpacing.xxl),
             Text(
               'No hay movimientos',
-              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+              style: Theme.of(context).textTheme.headlineLarge?.copyWith(
+                    fontSize: 28,
                     color: context.colors.ink,
-                    fontWeight: FontWeight.w700,
+                    fontWeight: FontWeight.w800,
                   ),
             ),
-            const SizedBox(height: AppSpacing.sm),
+            const SizedBox(height: AppSpacing.md),
             Text(
               'Los movimientos de inventario\naparecerán aquí',
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                    fontSize: 18,
                     color: context.colors.muted,
-                    height: 1.5,
+                    height: 1.6,
                   ),
             ),
-            const SizedBox(height: AppSpacing.xl),
+            const SizedBox(height: AppSpacing.xxl + AppSpacing.sm),
             FilledButton.icon(
               onPressed: onLimpiar,
-              icon: const Icon(Icons.filter_list_off_rounded),
+              icon: const Icon(Icons.filter_list_off_rounded, size: 22),
               label: const Text('Limpiar filtros'),
               style: FilledButton.styleFrom(
                 padding: const EdgeInsets.symmetric(
-                  horizontal: 24,
-                  vertical: 16,
+                  horizontal: 32,
+                  vertical: 18,
                 ),
-                elevation: 0,
+                elevation: 2,
+                shadowColor: context.colors.primary.withValues(alpha: 0.3),
+                textStyle: const TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.2,
+                ),
               ),
             ),
           ],
@@ -638,13 +790,13 @@ class _MovimientoCard extends StatelessWidget {
       icon = Icons.remove_circle_outline_rounded;
       accionTexto = 'Reducidas ${movimiento.cantidad.abs()} ${movimiento.cantidad.abs() == 1 ? 'unidad' : 'unidades'} de ${movimiento.productoNombre}';
     } else if (esAlta) {
-      // 🔵 Azul: Nueva adición al inventario
-      color = context.colors.info;
+      // 🟢 Verde: Nueva adición al inventario
+      color = context.colors.success;
       icon = Icons.add_box_outlined;
       accionTexto = 'Añadidas ${movimiento.cantidad} ${movimiento.cantidad == 1 ? 'unidad' : 'unidades'} de ${movimiento.productoNombre}';
     } else {
-      // 🔵 Azul: Entrada/reposición de stock
-      color = context.colors.info;
+      // 🟢 Verde: Entrada/reposición de stock
+      color = context.colors.success;
       icon = Icons.add_box_outlined;
       accionTexto = 'Añadidas ${movimiento.cantidad} ${movimiento.cantidad == 1 ? 'unidad' : 'unidades'} de ${movimiento.productoNombre}';
     }
@@ -652,8 +804,17 @@ class _MovimientoCard extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: context.colors.surface,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: color.withValues(alpha: 0.15),
+          width: 1.5,
+        ),
         boxShadow: [
+          BoxShadow(
+            color: color.withValues(alpha: 0.08),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
+          ),
           BoxShadow(
             color: context.colors.ink.withValues(alpha: 0.04),
             blurRadius: 8,
@@ -662,20 +823,31 @@ class _MovimientoCard extends StatelessWidget {
         ],
       ),
       child: Padding(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(16),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Ícono
             Container(
               decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(10),
+                gradient: LinearGradient(
+                  colors: [
+                    color.withValues(alpha: 0.18),
+                    color.withValues(alpha: 0.12),
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: color.withValues(alpha: 0.25),
+                  width: 1,
+                ),
               ),
-              padding: const EdgeInsets.all(10),
-              child: Icon(icon, color: color, size: 22),
+              padding: const EdgeInsets.all(12),
+              child: Icon(icon, color: color, size: 26),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: 14),
             
             // Contenido
             Expanded(
@@ -685,46 +857,51 @@ class _MovimientoCard extends StatelessWidget {
                   Text(
                     accionTexto,
                     style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                          fontWeight: FontWeight.w600,
-                          height: 1.3,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                          height: 1.4,
                         ),
                   ),
-                  const SizedBox(height: 6),
+                  const SizedBox(height: 8),
                   Row(
                     children: [
                       Icon(
                         Icons.access_time_rounded,
-                        size: 13,
+                        size: 14,
                         color: context.colors.muted,
                       ),
-                      const SizedBox(width: 4),
+                      const SizedBox(width: 5),
                       Text(
                         timeFormatter.format(movimiento.fecha),
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              fontSize: 13,
                               color: context.colors.muted,
+                              fontWeight: FontWeight.w500,
                             ),
                       ),
-                      const SizedBox(width: 8),
+                      const SizedBox(width: 10),
                       Container(
-                        width: 3,
-                        height: 3,
+                        width: 4,
+                        height: 4,
                         decoration: BoxDecoration(
-                          color: context.colors.muted.withValues(alpha: 0.4),
+                          color: context.colors.muted.withValues(alpha: 0.5),
                           shape: BoxShape.circle,
                         ),
                       ),
-                      const SizedBox(width: 8),
+                      const SizedBox(width: 10),
                       Icon(
                         Icons.person_outline_rounded,
-                        size: 13,
+                        size: 14,
                         color: context.colors.muted,
                       ),
-                      const SizedBox(width: 4),
+                      const SizedBox(width: 5),
                       Expanded(
                         child: Text(
                           movimiento.usuarioNombre,
                           style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                fontSize: 13,
                                 color: context.colors.muted,
+                                fontWeight: FontWeight.w500,
                               ),
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -756,30 +933,45 @@ class _MovimientoCard extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: context.colors.surface,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: context.colors.muted.withValues(alpha: 0.15),
+          width: 1.5,
+        ),
         boxShadow: [
           BoxShadow(
-            color: context.colors.ink.withValues(alpha: 0.04),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
+            color: context.colors.ink.withValues(alpha: 0.06),
+            blurRadius: 12,
+            offset: const Offset(0, 3),
           ),
         ],
       ),
       child: Padding(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(16),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Ícono
             Container(
               decoration: BoxDecoration(
-                color: context.colors.muted.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(10),
+                gradient: LinearGradient(
+                  colors: [
+                    context.colors.muted.withValues(alpha: 0.16),
+                    context.colors.muted.withValues(alpha: 0.10),
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: context.colors.muted.withValues(alpha: 0.2),
+                  width: 1,
+                ),
               ),
-              padding: const EdgeInsets.all(10),
-              child: Icon(icon, color: color, size: 22),
+              padding: const EdgeInsets.all(12),
+              child: Icon(icon, color: color, size: 26),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: 14),
             
             // Contenido
             Expanded(
@@ -789,23 +981,26 @@ class _MovimientoCard extends StatelessWidget {
                   Text(
                     accionTexto,
                     style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                          fontWeight: FontWeight.w600,
-                          height: 1.3,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                          height: 1.4,
                         ),
                   ),
-                  const SizedBox(height: 6),
+                  const SizedBox(height: 8),
                   Row(
                     children: [
                       Icon(
                         Icons.access_time_rounded,
-                        size: 13,
+                        size: 14,
                         color: context.colors.muted,
                       ),
-                      const SizedBox(width: 4),
+                      const SizedBox(width: 5),
                       Text(
                         timeFormatter.format(movimiento.fecha),
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              fontSize: 13,
                               color: context.colors.muted,
+                              fontWeight: FontWeight.w500,
                             ),
                       ),
                     ],
@@ -831,8 +1026,17 @@ class _MovimientoCard extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: context.colors.surface,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: color.withValues(alpha: 0.2),
+          width: 1.5,
+        ),
         boxShadow: [
+          BoxShadow(
+            color: color.withValues(alpha: 0.1),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
+          ),
           BoxShadow(
             color: context.colors.ink.withValues(alpha: 0.04),
             blurRadius: 8,
@@ -841,20 +1045,31 @@ class _MovimientoCard extends StatelessWidget {
         ],
       ),
       child: Padding(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(16),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Ícono
             Container(
               decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(10),
+                gradient: LinearGradient(
+                  colors: [
+                    color.withValues(alpha: 0.18),
+                    color.withValues(alpha: 0.12),
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: color.withValues(alpha: 0.3),
+                  width: 1,
+                ),
               ),
-              padding: const EdgeInsets.all(10),
-              child: Icon(Icons.delete_outline_rounded, color: color, size: 22),
+              padding: const EdgeInsets.all(12),
+              child: Icon(Icons.delete_rounded, color: color, size: 26),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: 14),
             
             // Contenido
             Expanded(
@@ -864,42 +1079,47 @@ class _MovimientoCard extends StatelessWidget {
                   Text(
                     accionTexto,
                     style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                          fontWeight: FontWeight.w600,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
                           color: color,
-                          height: 1.3,
+                          height: 1.4,
                         ),
                   ),
-                  const SizedBox(height: 6),
+                  const SizedBox(height: 8),
                   Row(
                     children: [
                       Icon(
                         Icons.access_time_rounded,
-                        size: 13,
+                        size: 14,
                         color: context.colors.muted,
                       ),
-                      const SizedBox(width: 4),
+                      const SizedBox(width: 5),
                       Text(
                         timeFormatter.format(movimiento.fecha),
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              fontSize: 13,
                               color: context.colors.muted,
+                              fontWeight: FontWeight.w500,
                             ),
                       ),
                       if (movimiento.nota != null) ...[
-                        const SizedBox(width: 8),
+                        const SizedBox(width: 10),
                         Container(
-                          width: 3,
-                          height: 3,
+                          width: 4,
+                          height: 4,
                           decoration: BoxDecoration(
-                            color: context.colors.muted.withValues(alpha: 0.4),
+                            color: context.colors.muted.withValues(alpha: 0.5),
                             shape: BoxShape.circle,
                           ),
                         ),
-                        const SizedBox(width: 8),
+                        const SizedBox(width: 10),
                         Flexible(
                           child: Text(
                             movimiento.nota!,
                             style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                  fontSize: 13,
                                   color: context.colors.muted,
+                                  fontWeight: FontWeight.w500,
                                 ),
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -995,8 +1215,8 @@ class _VentaCardState extends ConsumerState<_VentaCard> with SingleTickerProvide
       (sum, m) => sum + ((m.precioUnitario ?? 0) * m.cantidad.abs()),
     );
 
-    // 🟢 Verde = Venta (acción comercial exitosa)
-    final color = context.colors.success;
+    // 🔵 Azul cyan distintivo para ventas (diferente al primary)
+    final color = const Color(0xFF0891B2); // Cyan 600 - distintivo de ventas
 
     final venta = widget.venta;
 
@@ -1006,8 +1226,17 @@ class _VentaCardState extends ConsumerState<_VentaCard> with SingleTickerProvide
       child: Container(
         decoration: BoxDecoration(
           color: context.colors.surface,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: color.withValues(alpha: 0.15),
+            width: 1.5,
+          ),
           boxShadow: [
+            BoxShadow(
+              color: color.withValues(alpha: 0.08),
+              blurRadius: 16,
+              offset: const Offset(0, 4),
+            ),
             BoxShadow(
               color: context.colors.ink.withValues(alpha: 0.04),
               blurRadius: 8,
@@ -1022,12 +1251,12 @@ class _VentaCardState extends ConsumerState<_VentaCard> with SingleTickerProvide
           Material(
             color: Colors.transparent,
             child: InkWell(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(16),
               onTap: venta != null
                   ? () => context.push('/admin/movimientos/ventas/${venta.id}', extra: venta)
                   : null,
               child: Padding(
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.all(16),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -1036,17 +1265,33 @@ class _VentaCardState extends ConsumerState<_VentaCard> with SingleTickerProvide
                       duration: const Duration(milliseconds: 300),
                       curve: Curves.easeInOutCubic,
                       decoration: BoxDecoration(
-                        color: color.withValues(alpha: _expandido ? 0.15 : 0.12),
-                        borderRadius: BorderRadius.circular(10),
+                        gradient: LinearGradient(
+                          colors: _expandido 
+                              ? [
+                                  color.withValues(alpha: 0.22),
+                                  color.withValues(alpha: 0.16),
+                                ]
+                              : [
+                                  color.withValues(alpha: 0.18),
+                                  color.withValues(alpha: 0.12),
+                                ],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: color.withValues(alpha: _expandido ? 0.35 : 0.25),
+                          width: 1,
+                        ),
                       ),
-                      padding: const EdgeInsets.all(10),
+                      padding: const EdgeInsets.all(12),
                       child: Icon(
                         Icons.shopping_bag_rounded,
                         color: color,
-                        size: 22,
+                        size: 26,
                       ),
                     ),
-                    const SizedBox(width: 12),
+                    const SizedBox(width: 14),
                     
                     // Contenido
                     Expanded(
@@ -1059,8 +1304,9 @@ class _VentaCardState extends ConsumerState<_VentaCard> with SingleTickerProvide
                                 child: Text(
                                   'Venta de ${formatCurrency(totalAmount)}',
                                   style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                                        fontWeight: FontWeight.w600,
-                                        height: 1.3,
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w700,
+                                        height: 1.4,
                                       ),
                                 ),
                               ),
@@ -1072,123 +1318,109 @@ class _VentaCardState extends ConsumerState<_VentaCard> with SingleTickerProvide
                                 child: AnimatedContainer(
                                   duration: const Duration(milliseconds: 300),
                                   curve: Curves.easeInOutCubic,
-                                  padding: const EdgeInsets.all(6),
+                                  padding: const EdgeInsets.all(7),
                                   decoration: BoxDecoration(
                                     color: _expandido 
-                                        ? color.withValues(alpha: 0.12)
-                                        : context.colors.muted.withValues(alpha: 0.08),
-                                    borderRadius: BorderRadius.circular(8),
+                                        ? color.withValues(alpha: 0.15)
+                                        : context.colors.muted.withValues(alpha: 0.10),
+                                    borderRadius: BorderRadius.circular(9),
                                   ),
                                   child: RotationTransition(
                                     turns: _rotationAnimation,
                                     child: Icon(
                                       Icons.keyboard_arrow_down_rounded,
                                       color: _expandido ? color : context.colors.muted,
-                                      size: 20,
+                                      size: 22,
                                     ),
                                   ),
                                 ),
                               ),
                             ],
                           ),
-                          const SizedBox(height: 2),
+                          const SizedBox(height: 3),
                           Row(
                             children: [
                               Icon(
                                 Icons.access_time_rounded,
-                                size: 13,
+                                size: 14,
                                 color: context.colors.muted,
                               ),
-                              const SizedBox(width: 4),
+                              const SizedBox(width: 5),
                               Text(
                                 timeFormatter.format(first.fecha),
                                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                      fontSize: 13,
                                       color: context.colors.muted,
+                                      fontWeight: FontWeight.w500,
                                     ),
                               ),
-                              const SizedBox(width: 8),
+                              const SizedBox(width: 10),
                               Container(
-                                width: 3,
-                                height: 3,
+                                width: 4,
+                                height: 4,
                                 decoration: BoxDecoration(
-                                  color: context.colors.muted.withValues(alpha: 0.4),
+                                  color: context.colors.muted.withValues(alpha: 0.5),
                                   shape: BoxShape.circle,
                                 ),
                               ),
-                              const SizedBox(width: 8),
+                              const SizedBox(width: 10),
                               Icon(
                                 Icons.person_outline_rounded,
-                                size: 13,
+                                size: 14,
                                 color: context.colors.muted,
                               ),
-                              const SizedBox(width: 4),
+                              const SizedBox(width: 5),
                               Expanded(
                                 child: Text(
                                   first.usuarioNombre,
                                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                        fontSize: 13,
                                         color: context.colors.muted,
+                                        fontWeight: FontWeight.w500,
                                       ),
                                   overflow: TextOverflow.ellipsis,
                                 ),
                               ),
                             ],
                           ),
-                          const SizedBox(height: 8),
-                          Row(
-                            children: [
-                              // Badge de unidades
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                                decoration: BoxDecoration(
-                                  color: context.colors.info.withValues(alpha: 0.10),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(
-                                      Icons.inventory_2_outlined,
-                                      size: 14,
-                                      color: context.colors.info,
-                                    ),
-                                    const SizedBox(width: 6),
-                                    Text(
-                                      '$totalUnits ${totalUnits == 1 ? 'ud' : 'uds'}',
-                                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                            color: context.colors.info,
-                                            fontWeight: FontWeight.w600,
-                                          ),
-                                    ),
-                                  ],
-                                ),
+                          const SizedBox(height: 10),
+                          // Badge de unidades
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: [
+                                  color.withValues(alpha: 0.14),
+                                  color.withValues(alpha: 0.10),
+                                ],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
                               ),
-                              const SizedBox(width: 8),
-                              // Badge de monto
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                                decoration: BoxDecoration(
-                                  color: context.colors.success.withValues(alpha: 0.10),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(
-                                      Icons.attach_money_rounded,
-                                      size: 16,
-                                      color: context.colors.success,
-                                    ),
-                                    Text(
-                                      formatCurrency(totalAmount).replaceAll('\$', ''),
-                                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                                            color: context.colors.success,
-                                            fontWeight: FontWeight.w700,
-                                          ),
-                                    ),
-                                  ],
-                                ),
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(
+                                color: color.withValues(alpha: 0.25),
+                                width: 1,
                               ),
-                            ],
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.inventory_2_rounded,
+                                  size: 16,
+                                  color: color,
+                                ),
+                                const SizedBox(width: 7),
+                                Text(
+                                  '$totalUnits ${totalUnits == 1 ? 'ud' : 'uds'}',
+                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                        fontSize: 14,
+                                        color: color,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                ),
+                              ],
+                            ),
                           ),
                         ],
                       ),
@@ -1251,7 +1483,7 @@ class _VentaCardState extends ConsumerState<_VentaCard> with SingleTickerProvide
                         final index = entry.key;
                         final producto = entry.value;
                         return TweenAnimationBuilder<double>(
-                          duration: Duration(milliseconds: 200 + (index * 50)),
+                          duration: Duration(milliseconds: 150 + (index * 30)),  // 🔥 Más rápido: 200+50 → 150+30
                           curve: Curves.easeOutCubic,
                           tween: Tween(begin: 0.0, end: 1.0),
                           builder: (context, value, child) {
@@ -1292,7 +1524,7 @@ class _VentaCardState extends ConsumerState<_VentaCard> with SingleTickerProvide
                         final index = entry.key;
                         final mov = entry.value;
                         return TweenAnimationBuilder<double>(
-                          duration: Duration(milliseconds: 200 + (index * 50)),
+                          duration: Duration(milliseconds: 150 + (index * 30)),  // 🔥 Más rápido: 200+50 → 150+30
                           curve: Curves.easeOutCubic,
                           tween: Tween(begin: 0.0, end: 1.0),
                           builder: (context, value, child) {
@@ -1386,6 +1618,258 @@ class _VentaCardState extends ConsumerState<_VentaCard> with SingleTickerProvide
         ],
       ),
       ),
+    );
+  }
+}
+
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Animated Widgets - Motion Layer
+// ═══════════════════════════════════════════════════════════════════════════
+
+/// Animated entrance for list items - gentle upward slide with fade.
+/// Matches the reverse scroll direction (items settle from below).
+class _AnimatedListItem extends StatefulWidget {
+  const _AnimatedListItem({
+    required this.index,
+    required this.child,
+  });
+
+  final int index;
+  final Widget child;
+
+  @override
+  State<_AnimatedListItem> createState() => _AnimatedListItemState();
+}
+
+class _AnimatedListItemState extends State<_AnimatedListItem>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _fadeAnimation;
+  late Animation<Offset> _slideAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    
+    // Staggered delay based on index (cap at 10 items to avoid long waits)
+    final delay = (widget.index.clamp(0, 10) * 30);
+    
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 300),  // 🔥 Más rápido: 400 → 300
+      vsync: this,
+    );
+    
+    _fadeAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(
+      parent: _controller,
+      curve: const Interval(0.0, 0.8, curve: Curves.easeOut),
+    ));
+    
+    _slideAnimation = Tween<Offset>(
+      begin: const Offset(0, 0.15), // Gentle upward from below
+      end: Offset.zero,
+    ).animate(CurvedAnimation(
+      parent: _controller,
+      curve: Curves.easeOutCubic,
+    ));
+    
+    // Start animation after delay
+    Future.delayed(Duration(milliseconds: delay), () {
+      if (mounted) {
+        _controller.forward();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FadeTransition(
+      opacity: _fadeAnimation,
+      child: SlideTransition(
+        position: _slideAnimation,
+        child: widget.child,
+      ),
+    );
+  }
+}
+
+/// Animated clear button with scale press feedback.
+class _AnimatedClearButton extends StatefulWidget {
+  const _AnimatedClearButton({
+    required this.onPressed,
+  });
+
+  final VoidCallback onPressed;
+
+  @override
+  State<_AnimatedClearButton> createState() => _AnimatedClearButtonState();
+}
+
+class _AnimatedClearButtonState extends State<_AnimatedClearButton>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _scaleAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 150),
+      vsync: this,
+    );
+    
+    _scaleAnimation = Tween<double>(
+      begin: 1.0,
+      end: 0.85,
+    ).animate(CurvedAnimation(
+      parent: _controller,
+      curve: Curves.easeInOut,
+    ));
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _handleTapDown(TapDownDetails details) {
+    _controller.forward();
+  }
+
+  void _handleTapUp(TapUpDetails details) {
+    _controller.reverse();
+    widget.onPressed();
+  }
+
+  void _handleTapCancel() {
+    _controller.reverse();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTapDown: _handleTapDown,
+      onTapUp: _handleTapUp,
+      onTapCancel: _handleTapCancel,
+      child: ScaleTransition(
+        scale: _scaleAnimation,
+        child: Icon(
+          Icons.clear_rounded,
+          color: Theme.of(context).extension<AppColorsExtension>()?.muted,
+        ),
+      ),
+    );
+  }
+}
+
+/// Animated filter button with pulsing effect when active.
+class _AnimatedFilterButton extends StatefulWidget {
+  const _AnimatedFilterButton({
+    required this.isActive,
+    required this.onPressed,
+  });
+
+  final bool isActive;
+  final VoidCallback onPressed;
+
+  @override
+  State<_AnimatedFilterButton> createState() => _AnimatedFilterButtonState();
+}
+
+class _AnimatedFilterButtonState extends State<_AnimatedFilterButton>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _pulseAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 1500),
+      vsync: this,
+    );
+    
+    _pulseAnimation = Tween<double>(
+      begin: 1.0,
+      end: 1.08,
+    ).animate(CurvedAnimation(
+      parent: _controller,
+      curve: Curves.easeInOut,
+    ));
+    
+    if (widget.isActive) {
+      _controller.repeat(reverse: true);
+    }
+  }
+
+  @override
+  void didUpdateWidget(_AnimatedFilterButton oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.isActive && !oldWidget.isActive) {
+      _controller.repeat(reverse: true);
+    } else if (!widget.isActive && oldWidget.isActive) {
+      _controller.stop();
+      _controller.value = 0.0;
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).extension<AppColorsExtension>()!;
+    
+    return AnimatedBuilder(
+      animation: _pulseAnimation,
+      builder: (context, child) {
+        return Container(
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            boxShadow: widget.isActive
+                ? [
+                    BoxShadow(
+                      color: colors.primary.withValues(alpha: 0.15 * _pulseAnimation.value),
+                      blurRadius: 12 * _pulseAnimation.value,
+                      offset: const Offset(0, 4),
+                    ),
+                  ]
+                : null,
+          ),
+          child: IconButton.filledTonal(
+            onPressed: widget.onPressed,
+            icon: Badge(
+              isLabelVisible: widget.isActive,
+              backgroundColor: colors.primary,
+              child: Icon(
+                Icons.tune_rounded,
+                size: 24,
+                color: widget.isActive ? colors.primary : colors.muted,
+              ),
+            ),
+            tooltip: 'Filtrar',
+            style: IconButton.styleFrom(
+              backgroundColor: widget.isActive
+                  ? colors.primary.withValues(alpha: 0.12)
+                  : colors.surfaceSecondary,
+              padding: const EdgeInsets.all(14),
+            ),
+          ),
+        );
+      },
     );
   }
 }

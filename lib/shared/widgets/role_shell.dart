@@ -331,6 +331,12 @@ List<ShellItem> _adminItems(WidgetRef ref) {
 
   return [
     ShellItem(
+      path: '/admin/resumen',
+      label: 'Resumen',
+      icon: Icons.dashboard_outlined,
+      activeIcon: Icons.dashboard,
+    ),
+    ShellItem(
       path: '/admin/inventario',
       label: 'Inventario',
       icon: Icons.inventory_2_outlined,

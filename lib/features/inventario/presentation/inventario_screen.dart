@@ -104,66 +104,102 @@ class _InventarioScreenState extends ConsumerState<InventarioScreen> {
               parent: BouncingScrollPhysics(),
             ),
             slivers: [
-              // ─── Barra de búsqueda tipo pill ────────────────────────────
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(
-                    AppSpacing.xl,
-                    AppSpacing.sm,
-                    AppSpacing.xl,
-                    0,
-                  ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: TextField(
-                          onChanged: ref
-                              .read(inventarioControllerProvider.notifier)
-                              .setSearch,
-                          decoration: InputDecoration(
-                            hintText: 'Buscar producto...',
-                            prefixIcon: const Icon(Icons.search_rounded),
-                            suffixIcon: state.search.isNotEmpty
-                                ? IconButton(
-                                    icon: const Icon(Icons.close_rounded, size: 20),
-                                    onPressed: () => ref
-                                        .read(inventarioControllerProvider.notifier)
-                                        .setSearch(''),
-                                  )
-                                : null,
-                            border: OutlineInputBorder(
+              // ─── Barra de búsqueda tipo pill (sticky) ────────────────────────────
+              SliverPersistentHeader(
+                pinned: true,
+                delegate: _SearchBarDelegate(
+                  child: Container(
+                    color: Theme.of(context).scaffoldBackgroundColor,
+                    padding: const EdgeInsets.fromLTRB(
+                      AppSpacing.xl,
+                      AppSpacing.sm,
+                      AppSpacing.xl,
+                      AppSpacing.sm,
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Container(
+                            decoration: BoxDecoration(
                               borderRadius: AppRadii.pillBorder,
-                              borderSide: BorderSide(color: context.colors.line),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: context.colors.primary.withValues(
+                                    alpha: state.search.isNotEmpty ? 0.08 : 0.03,
+                                  ),
+                                  blurRadius: 12,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ],
                             ),
-                            enabledBorder: OutlineInputBorder(
-                              borderRadius: AppRadii.pillBorder,
-                              borderSide: BorderSide(color: context.colors.line),
-                            ),
-                            focusedBorder: OutlineInputBorder(
-                              borderRadius: AppRadii.pillBorder,
-                              borderSide: BorderSide(
-                                color: context.colors.primary,
-                                width: 1.5,
+                            child: TextField(
+                              onChanged: ref
+                                  .read(inventarioControllerProvider.notifier)
+                                  .setSearch,
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w500,
+                              ),
+                              decoration: InputDecoration(
+                                hintText: 'Buscar producto...',
+                                hintStyle: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w400,
+                                  color: context.colors.muted,
+                                ),
+                                prefixIcon: Icon(
+                                  Icons.search_rounded,
+                                  size: 24,
+                                  color: state.search.isNotEmpty
+                                      ? context.colors.primary
+                                      : context.colors.muted,
+                                ),
+                                suffixIcon: state.search.isNotEmpty
+                                    ? _AnimatedClearButton(
+                                        onPressed: () => ref
+                                            .read(inventarioControllerProvider.notifier)
+                                            .setSearch(''),
+                                      )
+                                    : null,
+                                border: OutlineInputBorder(
+                                  borderRadius: AppRadii.pillBorder,
+                                  borderSide: BorderSide(
+                                    color: context.colors.line,
+                                    width: 1.5,
+                                  ),
+                                ),
+                                enabledBorder: OutlineInputBorder(
+                                  borderRadius: AppRadii.pillBorder,
+                                  borderSide: BorderSide(
+                                    color: context.colors.line,
+                                    width: 1.5,
+                                  ),
+                                ),
+                                focusedBorder: OutlineInputBorder(
+                                  borderRadius: AppRadii.pillBorder,
+                                  borderSide: BorderSide(
+                                    color: context.colors.primary,
+                                    width: 2,
+                                  ),
+                                ),
+                                filled: true,
+                                fillColor: context.colors.surface,
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 20,
+                                  vertical: 16,
+                                ),
                               ),
                             ),
                           ),
                         ),
-                      ),
-                      const SizedBox(width: AppSpacing.sm),
-                      Badge(
-                        label: activeFilterCount > 0
-                            ? Text('$activeFilterCount')
-                            : null,
-                        isLabelVisible: activeFilterCount > 0,
-                        backgroundColor: context.colors.primary,
-                        smallSize: 18,
-                        child: IconButton.filledTonal(
+                        const SizedBox(width: AppSpacing.md),
+                        _AnimatedFilterButton(
+                          isActive: activeFilterCount > 0,
+                          badgeCount: activeFilterCount,
                           onPressed: () => _showFilterSheet(context),
-                          icon: const Icon(Icons.tune_rounded),
-                          tooltip: 'Filtrar y Ordenar',
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -222,9 +258,15 @@ class _InventarioScreenState extends ConsumerState<InventarioScreen> {
                     ),
                   ),
                 ),
-              const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.xl)),
+              // ─── Espacio después de chips (solo si hay chips) ───────
+              if (state.categoriaId != null ||
+                  state.soloStockBajo ||
+                  state.sortBy != ProductoSortBy.nombreAsc)
+                const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.md)),
+              
               // ─── Stats (solo admin) ───────────────────────────────────
-              if (widget.isAdmin)
+              if (widget.isAdmin) ...[
+                const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.lg)),
                 SliverToBoxAdapter(
                   child: Padding(
                     padding: EdgeInsets.symmetric(horizontal: AppSpacing.xl),
@@ -245,7 +287,11 @@ class _InventarioScreenState extends ConsumerState<InventarioScreen> {
                     ),
                   ),
                 ),
-              const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.xl)),
+                const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.xl)),
+              ] else
+                // Para dependiente: espacio más pequeño
+                const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.lg)),
+              
               // ─── Lista de productos ────────────────────────────────
               if (state.isLoading)
                 SliverToBoxAdapter(
@@ -673,6 +719,127 @@ class _EmptyInventory extends StatelessWidget {
               ),
             ],
           ],
+        ),
+      ),
+    );
+  }
+}
+// ═══════════════════════════════════════════════════════════════════════════
+// Widgets auxiliares para la barra de búsqueda mejorada
+// ═══════════════════════════════════════════════════════════════════════════
+
+class _SearchBarDelegate extends SliverPersistentHeaderDelegate {
+  _SearchBarDelegate({required this.child});
+  
+  final Widget child;
+
+  @override
+  double get minExtent => 88.0;  // Altura fija más precisa
+
+  @override
+  double get maxExtent => 88.0;  // Misma altura para pinned header
+
+  @override
+  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
+    return SizedBox(
+      height: maxExtent,
+      child: child,
+    );
+  }
+
+  @override
+  bool shouldRebuild(covariant _SearchBarDelegate oldDelegate) => false;  // Solo rebuild si cambia el child
+}
+
+class _AnimatedClearButton extends StatefulWidget {
+  const _AnimatedClearButton({required this.onPressed});
+  
+  final VoidCallback onPressed;
+
+  @override
+  State<_AnimatedClearButton> createState() => _AnimatedClearButtonState();
+}
+
+class _AnimatedClearButtonState extends State<_AnimatedClearButton>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<double> _scale;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 200),
+    );
+    _scale = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeOutBack),
+    );
+    _controller.forward();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ScaleTransition(
+      scale: _scale,
+      child: IconButton(
+        icon: const Icon(Icons.close_rounded, size: 20),
+        onPressed: widget.onPressed,
+        color: Theme.of(context).extension<AppColorsExtension>()?.muted,
+      ),
+    );
+  }
+}
+
+class _AnimatedFilterButton extends StatelessWidget {
+  const _AnimatedFilterButton({
+    required this.isActive,
+    required this.onPressed,
+    this.badgeCount = 0,
+  });
+
+  final bool isActive;
+  final VoidCallback onPressed;
+  final int badgeCount;
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 200),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: isActive
+            ? [
+                BoxShadow(
+                  color: context.colors.primary.withValues(alpha: 0.3),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+              ]
+            : null,
+      ),
+      child: Badge(
+        label: badgeCount > 0 ? Text('$badgeCount') : null,
+        isLabelVisible: badgeCount > 0,
+        backgroundColor: context.colors.primary,
+        textColor: Colors.white,
+        child: IconButton.filledTonal(
+          onPressed: onPressed,
+          icon: Icon(
+            Icons.tune_rounded,
+            color: isActive ? context.colors.primary : null,
+          ),
+          style: IconButton.styleFrom(
+            backgroundColor: isActive
+                ? context.colors.primary.withValues(alpha: 0.15)
+                : null,
+          ),
         ),
       ),
     );
