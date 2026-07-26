@@ -514,7 +514,7 @@ class _AjustarStockSheetState extends ConsumerState<_AjustarStockSheet> {
     final usuario = authUser ?? Usuario(
       id: '00000000-0000-4000-9000-000000000001',
       email: 'admin@mypime.com',
-      nombre: 'Ruslan Jefe',
+      nombre: 'Jefe',
       rol: UserRole.admin,
       fotoUrl: null,
       createdAt: DateTime.now(),

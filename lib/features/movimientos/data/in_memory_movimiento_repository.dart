@@ -43,7 +43,7 @@ List<Movimiento> _buildTestMovimientos() {
   }
 
   const jefeId = '00000000-0000-4000-9000-000000000001';
-  const jefeNombre = 'Ruslan Jefe';
+  const jefeNombre = 'Jefe';
   const dependienteId = '00000000-0000-4000-9000-000000000002';
   const dependienteNombre = 'Dependiente Demo';
 

@@ -27,7 +27,7 @@ class AuthRepository {
     final user = Usuario(
       id: id,
       email: normalizedEmail.isEmpty ? _demoEmailFor(role) : normalizedEmail,
-      nombre: role == UserRole.admin ? 'Ruslan Jefe' : 'Dependiente Demo',
+      nombre: role == UserRole.admin ? 'Jefe' : 'Dependiente Demo',
       rol: role,
       createdAt: DateTime.now(),
     );
