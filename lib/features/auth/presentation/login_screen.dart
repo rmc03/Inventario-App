@@ -15,24 +15,63 @@ class LoginScreen extends ConsumerStatefulWidget {
   ConsumerState<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _LoginScreenState extends ConsumerState<LoginScreen> {
+class _LoginScreenState extends ConsumerState<LoginScreen>
+    with SingleTickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController(
     text: 'admin@inventario.local',
   );
   final _passwordController = TextEditingController(text: 'demo123');
   UserRole _selectedRole = UserRole.admin;
+  late AnimationController _animController;
+  late Animation<double> _fadeAnim;
+  late Animation<Offset> _slideAnim;
+
+  @override
+  void initState() {
+    super.initState();
+    _animController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 400),
+    );
+    _fadeAnim = CurvedAnimation(
+      parent: _animController,
+      curve: Curves.easeOutCubic,
+    );
+    _slideAnim = Tween<Offset>(
+      begin: const Offset(0, 0.05),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(
+      parent: _animController,
+      curve: Curves.easeOutCubic,
+    ));
+    _animController.forward();
+  }
 
   @override
   void dispose() {
+    _animController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
 
+  void _switchRole(UserRole role) {
+    if (role == _selectedRole) return;
+    Haptics.tap(context);
+    setState(() {
+      _selectedRole = role;
+      _emailController.text =
+          role == UserRole.admin
+              ? 'admin@inventario.local'
+              : 'dependiente@inventario.local';
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final authState = ref.watch(authControllerProvider);
+    final colors = context.colors;
 
     return LoadingOverlay(
       isLoading: authState.isLoading,
@@ -45,76 +84,70 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 vertical: AppSpacing.lg,
               ),
               child: ConstrainedBox(
-                constraints: BoxConstraints(maxWidth: 430),
+                constraints: const BoxConstraints(maxWidth: 430),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    // Demo mode indicator
+                    _DemoBadge(),
+                    const SizedBox(height: AppSpacing.xxl),
+
+                    // App identity
                     Row(
                       children: [
-                        DecoratedBox(
-                          decoration: BoxDecoration(
-                            color: context.colors.surface,
-                            borderRadius: BorderRadius.all(
-                              Radius.circular(AppRadii.md),
-                            ),
-                            boxShadow: AppShadows.subtle,
-                          ),
-                          child: Padding(
-                            padding: EdgeInsets.all(AppSpacing.md),
-                            child: Icon(
-                              Icons.inventory_2_outlined,
-                              color: context.colors.primary,
-                              size: 30,
-                            ),
-                          ),
-                        ),
+                        _AppIcon(colors: colors),
                         const SizedBox(width: AppSpacing.md),
                         Text(
                           'Gestión de\nInventario',
-                          style: Theme.of(
-                            context,
-                          ).textTheme.headlineMedium?.copyWith(fontSize: 27),
+                          style: Theme.of(context)
+                              .textTheme
+                              .headlineMedium
+                              ?.copyWith(fontSize: 27),
                         ),
                       ],
                     ),
                     const SizedBox(height: AppSpacing.xxl + AppSpacing.xs),
-                    Text(
-                      'Ingresar',
-                      style: Theme.of(context).textTheme.headlineMedium,
-                    ),
-                    SizedBox(height: AppSpacing.sm),
-                    Text(
-                      'Acceso interno para jefe y dependientes.',
-                      style: Theme.of(
-                        context,
-                      ).textTheme.bodyLarge?.copyWith(color: context.colors.muted),
-                    ),
-                    const SizedBox(height: AppSpacing.xl),
-                    SegmentedButton<UserRole>(
-                      segments: const [
-                        ButtonSegment(
-                          value: UserRole.admin,
-                          label: Text('Admin'),
-                          icon: Icon(Icons.admin_panel_settings_outlined),
-                        ),
-                        ButtonSegment(
-                          value: UserRole.dependiente,
-                          label: Text('Dependiente'),
-                          icon: Icon(Icons.badge_outlined),
-                        ),
-                      ],
-                      selected: {_selectedRole},
-                      onSelectionChanged: (selection) {
-                        setState(() {
-                          _selectedRole = selection.first;
-                          _emailController.text =
+
+                    // Welcome message
+                    FadeTransition(
+                      opacity: _fadeAnim,
+                      child: SlideTransition(
+                        position: _slideAnim,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
                               _selectedRole == UserRole.admin
-                              ? 'admin@inventario.local'
-                              : 'dependiente@inventario.local';
-                        });
-                      },
+                                  ? 'Bienvenido, Jefe'
+                                  : 'Hola, equipo',
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .headlineMedium,
+                            ),
+                            const SizedBox(height: AppSpacing.sm),
+                            Text(
+                              _selectedRole == UserRole.admin
+                                  ? 'Acceso al panel de control.'
+                                  : 'Acceso para gestionar tu turno.',
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodyLarge
+                                  ?.copyWith(color: colors.muted),
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
                     const SizedBox(height: AppSpacing.xl),
+
+                    // Role selection tiles
+                    _RoleTiles(
+                      selected: _selectedRole,
+                      onSelect: _switchRole,
+                    ),
+                    const SizedBox(height: AppSpacing.xl),
+
+                    // Form
                     Form(
                       key: _formKey,
                       child: Column(
@@ -122,7 +155,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           TextFormField(
                             controller: _emailController,
                             keyboardType: TextInputType.emailAddress,
-                            autovalidateMode: AutovalidateMode.onUserInteraction,
+                            autovalidateMode:
+                                AutovalidateMode.onUserInteraction,
                             validator: (value) {
                               if (value == null || value.isEmpty) {
                                 return 'El email es requerido';
@@ -142,7 +176,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           TextFormField(
                             controller: _passwordController,
                             obscureText: true,
-                            autovalidateMode: AutovalidateMode.onUserInteraction,
+                            autovalidateMode:
+                                AutovalidateMode.onUserInteraction,
                             validator: (value) {
                               if (value == null || value.isEmpty) {
                                 return 'La contraseña es requerida';
@@ -162,11 +197,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       ),
                     ),
                     if (authState.error != null) ...[
-                      SizedBox(height: AppSpacing.sm),
+                      const SizedBox(height: AppSpacing.sm),
                       Text(
                         authState.error!,
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: context.colors.danger,
+                          color: colors.danger,
                           fontWeight: FontWeight.w500,
                         ),
                       ),
@@ -204,5 +239,190 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           password: _passwordController.text,
           preferredRole: _selectedRole,
         );
+  }
+}
+
+class _DemoBadge extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.sm,
+        vertical: AppSpacing.xs,
+      ),
+      decoration: BoxDecoration(
+        color: context.colors.info.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(AppRadii.sm),
+        border: Border.all(
+          color: context.colors.info.withValues(alpha: 0.2),
+          width: 1,
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            Icons.science_outlined,
+            size: 14,
+            color: context.colors.info,
+          ),
+          const SizedBox(width: AppSpacing.xs),
+          Text(
+            'Modo demo',
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              color: context.colors.info,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AppIcon extends StatelessWidget {
+  const _AppIcon({required this.colors});
+  final AppColorsExtension colors;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: colors.surface,
+        borderRadius: const BorderRadius.all(
+          Radius.circular(AppRadii.md),
+        ),
+        boxShadow: AppShadows.subtle,
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.md),
+        child: Icon(
+          Icons.inventory_2_outlined,
+          color: colors.primary,
+          size: 30,
+        ),
+      ),
+    );
+  }
+}
+
+class _RoleTiles extends StatelessWidget {
+  const _RoleTiles({
+    required this.selected,
+    required this.onSelect,
+  });
+
+  final UserRole selected;
+  final ValueChanged<UserRole> onSelect;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: _RoleTile(
+            role: UserRole.admin,
+            isSelected: selected == UserRole.admin,
+            onTap: () => onSelect(UserRole.admin),
+          ),
+        ),
+        const SizedBox(width: AppSpacing.sm),
+        Expanded(
+          child: _RoleTile(
+            role: UserRole.dependiente,
+            isSelected: selected == UserRole.dependiente,
+            onTap: () => onSelect(UserRole.dependiente),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _RoleTile extends StatelessWidget {
+  const _RoleTile({
+    required this.role,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  final UserRole role;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 250),
+        curve: Curves.easeOutCubic,
+        padding: const EdgeInsets.all(AppSpacing.md),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? colors.primary.withValues(alpha: isDark ? 0.15 : 0.08)
+              : colors.surfaceSecondary,
+          borderRadius: BorderRadius.circular(AppRadii.lg),
+          border: Border.all(
+            color: isSelected
+                ? colors.primary.withValues(alpha: 0.4)
+                : colors.line,
+            width: isSelected ? 1.5 : 1,
+          ),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: colors.primary.withValues(alpha: 0.1),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
+                ]
+              : null,
+        ),
+        child: Column(
+          children: [
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 250),
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: isSelected
+                    ? colors.primary.withValues(alpha: isDark ? 0.2 : 0.12)
+                    : colors.surface,
+                borderRadius: BorderRadius.circular(AppRadii.sm),
+              ),
+              child: Icon(
+                role == UserRole.admin
+                    ? Icons.admin_panel_settings_outlined
+                    : Icons.badge_outlined,
+                color: isSelected ? colors.primary : colors.muted,
+                size: 24,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            Text(
+              role == UserRole.admin ? 'Admin' : 'Dependiente',
+              style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                color: isSelected ? colors.primary : colors.muted,
+                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 2),
+            Text(
+              role == UserRole.admin ? 'Control total' : 'Ventas y turno',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: isSelected
+                    ? colors.primary.withValues(alpha: 0.7)
+                    : colors.muted,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }

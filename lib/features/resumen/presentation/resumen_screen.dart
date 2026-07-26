@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/theme/app_dimens.dart';
 import '../../../core/theme/app_theme.dart';
@@ -34,7 +35,7 @@ class ResumenScreen extends ConsumerWidget {
             items: [
               ScreenMenuItem(
                 value: 'ajustes',
-                icon: Icons.settings_rounded,
+                icon: LucideIcons.settings,
                 iconColor: context.colors.muted,
                 title: 'Ajustes',
                 subtitle: 'Preferencias de la app',
@@ -182,7 +183,7 @@ class _ResumenBodyState extends State<_ResumenBody>
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(
-              Icons.error_outline_rounded,
+              LucideIcons.alertTriangle,
               size: 48,
               color: context.colors.danger,
             ),
@@ -204,7 +205,7 @@ class _ResumenBodyState extends State<_ResumenBody>
               button: true,
               child: OutlinedButton.icon(
                 onPressed: widget.onRetry,
-                icon: const Icon(Icons.refresh_rounded),
+                icon: const Icon(LucideIcons.refreshCw),
                 label: const Text('Reintentar'),
               ),
             ),
@@ -345,7 +346,7 @@ class _HeroStats extends StatelessWidget {
           child: _AnimatedHeroStatCard(
             label: 'Ventas totales',
             value: ventasTotales,
-            icon: Icons.attach_money_rounded,
+            icon: LucideIcons.dollarSign,
             color: context.colors.success,
             delta: deltaVentas,
             formatter: (val) => NumberFormat.currency(
@@ -360,7 +361,7 @@ class _HeroStats extends StatelessWidget {
           child: _AnimatedHeroStatCard(
             label: 'Unidades vendidas',
             value: unidadesVendidas.toDouble(),
-            icon: Icons.shopping_bag_outlined,
+            icon: LucideIcons.shoppingBag,
             color: context.colors.info,
             delta: deltaUnidades,
             formatter: (val) => val.toInt().toString(),
@@ -505,9 +506,13 @@ class _AnimatedHeroStatCardState extends State<_AnimatedHeroStatCard>
                     padding: EdgeInsets.all(AppSpacing.sm),
                     decoration: BoxDecoration(
                       color: widget.color.withValues(alpha: AppAlphas.fill),
-                      borderRadius: BorderRadius.circular(AppRadii.sm),
+                      borderRadius: BorderRadius.circular(AppRadii.md),
                     ),
-                    child: Icon(widget.icon, size: 22, color: widget.color),
+                    child: Icon(
+                      widget.icon,
+                      size: 40,
+                      color: widget.color,
+                    ),
                   ),
                 ),
                 SizedBox(height: AppSpacing.sm),
@@ -602,10 +607,10 @@ class _DeltaIndicator extends StatelessWidget {
           children: [
             Icon(
               isNeutral
-                  ? Icons.remove_rounded
+                  ? LucideIcons.minus
                   : isPositive
-                      ? Icons.trending_up_rounded
-                      : Icons.trending_down_rounded,
+                      ? LucideIcons.trendingUp
+                      : LucideIcons.trendingDown,
               size: 14,
               color: color,
             ),
@@ -656,7 +661,7 @@ class _TopProductosCard extends StatelessWidget {
               Row(
                 children: [
                   Icon(
-                    Icons.trending_up_rounded,
+                    LucideIcons.chartLine,
                     color: context.colors.primary,
                     size: 22,
                   ),
@@ -708,7 +713,7 @@ class _TopProductosCard extends StatelessWidget {
                     if (!isLast) ...[
                       SizedBox(height: AppSpacing.sm),
                       Padding(
-                        padding: EdgeInsets.only(left: 44),
+                        padding: EdgeInsets.only(left: 48), // 32 (badge) + 16 (spacing)
                         child: Divider(
                           height: 1,
                           thickness: 1,
@@ -756,7 +761,7 @@ class _TopProductosCard extends StatelessWidget {
               Row(
                 children: [
                   Icon(
-                    Icons.trending_up_rounded,
+                    LucideIcons.chartLine,
                     color: context.colors.primary,
                     size: 22,
                   ),
@@ -787,7 +792,7 @@ class _TopProductosCard extends StatelessWidget {
                   child: Column(
                     children: [
                       Icon(
-                        Icons.inventory_2_outlined,
+                        LucideIcons.package,
                         size: 48,
                         color: context.colors.muted.withValues(alpha: 0.3),
                       ),
@@ -848,7 +853,7 @@ class _TopProductoItem extends StatelessWidget {
         label: 'Puesto $ranking: $nombre, $unidades unidades, '
             '${NumberFormat.currency(symbol: '\$', decimalDigits: 0).format(valor)}',
         child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             _RankingBadge(ranking: ranking, isFirst: isFirst),
             SizedBox(width: AppSpacing.md),
@@ -870,7 +875,7 @@ class _TopProductoItem extends StatelessWidget {
                   Row(
                     children: [
                       Icon(
-                        Icons.shopping_bag_outlined,
+                        LucideIcons.shoppingBag,
                         size: 14,
                         color: context.colors.info,
                       ),
@@ -952,7 +957,7 @@ class _RankingBadge extends StatelessWidget {
       alignment: Alignment.center,
       child: isFirst
           ? Icon(
-              Icons.emoji_events_rounded,
+              LucideIcons.trophy,
               size: 18,
               color: context.colors.surface,
             )
@@ -1079,8 +1084,8 @@ class _AlertasOperacionales extends StatelessWidget {
       children: [
         _AlertaCard(
           icon: productosStockBajo > 0
-              ? Icons.warning_amber_rounded
-              : Icons.check_circle_rounded,
+              ? LucideIcons.alertTriangle
+              : LucideIcons.checkCircle,
           title: productosStockBajo > 0 ? 'Stock bajo' : 'Stock OK',
           subtitle: productosStockBajo > 0
               ? '$productosStockBajo ${productosStockBajo == 1 ? 'producto necesita' : 'productos necesitan'} reposición'
@@ -1096,8 +1101,8 @@ class _AlertasOperacionales extends StatelessWidget {
         SizedBox(height: AppSpacing.md),
         _AlertaCard(
           icon: cuadresPendientes > 0
-              ? Icons.pending_actions_rounded
-              : Icons.verified_rounded,
+              ? LucideIcons.clock
+              : LucideIcons.checkCircle,
           title: cuadresPendientes > 0
               ? 'Cuadres pendientes'
               : 'Cuadres al día',
@@ -1232,7 +1237,11 @@ class _AlertaCardState extends State<_AlertaCard>
                             : widget.color.withValues(alpha: AppAlphas.fill),
                         shape: BoxShape.circle,
                       ),
-                      child: Icon(widget.icon, size: 22, color: widget.color),
+                      child: Icon(
+                        widget.icon,
+                        size: 32,
+                        color: widget.color,
+                      ),
                     ),
                   ),
                   SizedBox(width: AppSpacing.md),
@@ -1262,7 +1271,7 @@ class _AlertaCardState extends State<_AlertaCard>
                   if (widget.hasAction) ...[
                     SizedBox(width: AppSpacing.sm),
                     Icon(
-                      Icons.arrow_forward_ios_rounded,
+                      LucideIcons.arrowRight,
                       color: widget.color,
                       size: 16,
                     ),
@@ -1316,7 +1325,7 @@ class _TendenciaVentasCard extends StatelessWidget {
               Row(
                 children: [
                   Icon(
-                    Icons.show_chart_rounded,
+                    LucideIcons.chartLine,
                     color: context.colors.primary,
                     size: 22,
                   ),
@@ -1472,7 +1481,7 @@ class _MiniStat extends StatelessWidget {
         Text(
           label,
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                fontSize: 11,
+                fontSize: 13,
                 color: context.colors.muted,
               ),
         ),
@@ -1482,7 +1491,7 @@ class _MiniStat extends StatelessWidget {
           style: Theme.of(context).textTheme.titleMedium?.copyWith(
                 color: color,
                 fontWeight: FontWeight.w600,
-                fontSize: 15,
+                fontSize: 18,
               ),
         ),
       ],

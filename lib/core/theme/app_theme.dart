@@ -83,44 +83,40 @@ class AppColorsExtension extends ThemeExtension<AppColorsExtension> {
     );
   }
 
-  // Light mode: Azure blue + copper accent — fresh, professional, memorable
-  // Azure blue is vibrant yet trustworthy, perfect for retail operations.
-  // Copper (info) creates warm moments against the cool blue foundation.
-  // Delight thesis: "Warmth in reliability" — copper signals success, completion, and human moments.
+  // 💳 LIGHT MODE: Cash App Style — Minimalista Premium
+  // Inspiración: Cash App, Mercury, Brex
+  // Neutros suaves + azul índigo como acento estratégico
+  // Tipografía bold, radii grandes, espaciado generoso
   static const light = AppColorsExtension(
-    primary: Color(0xFF0F62FE),           // Azure blue — vibrant, modern, trustworthy
-    primaryDark: Color(0xFF0043CE),       // Pressed state (deeper blue)
-    ink: Color(0xFF161616),               // Near-black text (softer than pure black)
-    muted: Color(0xFF6F6F6F),             // Warm gray (secondary content)
-    line: Color(0xFFE0E0E0),              // Light border
-    surface: Color(0xFFFFFFFF),           // Card surface (white)
-    surfaceSecondary: Color(0xFFF0F2F5),  // Neutral gray-blue (subtle)
-    background: Color(0xFFF5F5F5),        // Neutral gray scaffold (más gris)
-    success: Color(0xFF24A148),           // Fresh green (operational success)
-    warning: Color(0xFFB95000),           // Deep amber (caution, legible on white)
-    danger: Color(0xFFDA1E28),            // Vibrant red (errors, stock alerts)
-    info: Color(0xFFE8743B),              // 🔥 Warm copper — PERSONALITY ACCENT
-                                          // Use for: sale completions, sync success, daily close,
-                                          // inventory additions, positive milestones, unit counts
+    primary: Color(0xFF4F46E5),           // 💼 Índigo 600 — acento estratégico (no dominante)
+    primaryDark: Color(0xFF4338CA),       // Índigo 700 (pressed)
+    ink: Color(0xFF1A1A1A),               // Negro suave (no puro) — títulos pesados
+    muted: Color(0xFF6B7280),             // Gray 500 — texto secundario
+    line: Color(0xFFE5E7EB),              // Gray 200 — bordes sutiles
+    surface: Color(0xFFFFFFFF),           // Blanco puro (cards destacadas)
+    surfaceSecondary: Color(0xFFF3F4F6),  // Gray 100 — botones pill, fondos secundarios
+    background: Color(0xFFFAFAFA),        // 🎨 Gris ultra claro — scaffold limpio (Cash App style)
+    success: Color(0xFF10B981),           // Emerald 500 — éxito
+    warning: Color(0xFFF59E0B),           // Amber 500 — advertencias
+    danger: Color(0xFFEF4444),            // Red 500 — errores
+    info: Color(0xFF8B5CF6),              // 🔮 Violet 500 — ilustraciones, momentos especiales
   );
 
-  // Dark mode: Clean minimal — WhatsApp-inspired gray + blue accent
-  // Clean neutral dark gray matching WhatsApp's aesthetic
-  // Blue hero accent appears strategically (AppBar, key moments)
-  // Delight thesis: "Clean focus" — minimal, clear, functional
+  // 🌙 DARK MODE: Premium Dark
+  // Slate oscuro profesional + índigo vibrante
   static const dark = AppColorsExtension(
-    primary: Color(0xFF5B9FFF),           // Electric azure — vibrant hero accent
-    primaryDark: Color(0xFF85B8FF),       // Pressed state (brighter for feedback)
-    ink: Color(0xFFE5E5E5),               // Soft white text (easy on eyes)
-    muted: Color(0xFF999999),             // Medium gray for secondary content
-    line: Color(0xFF2A2A2A),              // Subtle dark border
-    surface: Color(0xFF1F1F1F),           // Card surface (slightly lighter than background)
-    surfaceSecondary: Color(0xFF2A2A2A),  // Slightly lighter gray
-    background: Color(0xFF111111),        // 🔥 WhatsApp-style background (very similar to #0E0E0E)
-    success: Color(0xFF3FD372),           // Neon green — vibrant success moments
-    warning: Color(0xFFFFD23F),           // Bright amber — high visibility warnings
-    danger: Color(0xFFFF6B7A),            // Hot pink-red — urgent alerts
-    info: Color(0xFFFF8B5A),              // Vibrant copper — warm personality accent
+    primary: Color(0xFF818CF8),           // 💼 Índigo 400 — vibrante
+    primaryDark: Color(0xFFA5B4FC),       // Índigo 300 (pressed)
+    ink: Color(0xFFFAFAFA),               // Blanco suave — títulos
+    muted: Color(0xFF9CA3AF),             // Gray 400 — secundario
+    line: Color(0xFF374151),              // Gray 700 — bordes
+    surface: Color(0xFF1F2937),           // Gray 800 — cards
+    surfaceSecondary: Color(0xFF111827),  // Gray 900 — fondos secundarios
+    background: Color(0xFF0F172A),        // Slate 900 — base oscura
+    success: Color(0xFF34D399),           // Emerald 400
+    warning: Color(0xFFFBBF24),           // Amber 400
+    danger: Color(0xFFF87171),            // Red 400
+    info: Color(0xFFA78BFA),              // 🔮 Violet 400
   );
 }
 
@@ -171,30 +167,47 @@ class AppTheme {
       extensions: [ext],
       textTheme: _buildTextTheme(ext, textScaleFactor, boldText),
       appBarTheme: AppBarTheme(
-        // 🔥 En light mode: fondo azul vibrante con texto blanco
-        // En dark mode: fondo oscuro limpio como WhatsApp
-        backgroundColor: brightness == Brightness.light ? ext.primary : ext.background,
-        foregroundColor: brightness == Brightness.light ? Colors.white : ext.ink,
-        surfaceTintColor: Colors.transparent,  // 🔥 Evita el tint azul claro en transiciones
+        // 💳 CASH APP STYLE: Fondo casi blanco, título NEGRO bold y grande
+        // Sin colores en el título — minimalista y limpio
+        backgroundColor: brightness == Brightness.light 
+            ? ext.background      // Gris ultra claro (como Cash App)
+            : ext.background,     // Oscuro en dark mode
+        foregroundColor: ext.ink,
+        surfaceTintColor: Colors.transparent,
         elevation: 0,
-        scrolledUnderElevation: 0,
+        scrolledUnderElevation: 0,  // Sin sombra — flat como Cash App
         centerTitle: false,
         titleTextStyle: TextStyle(
-          color: brightness == Brightness.light ? Colors.white : ext.ink,
-          fontSize: 20 * textScaleFactor,
-          fontWeight: FontWeight.w600,
-          letterSpacing: -0.1,
+          fontFamily: AppFonts.family,
+          color: ext.ink,  // 🎨 NEGRO en light, blanco en dark (no color primario)
+          fontSize: 32 * textScaleFactor,  // MÁS GRANDE — Cash App style
+          fontWeight: FontWeight.w900,     // BLACK weight — máximo peso
+          letterSpacing: -1.0,             // Tight tracking
+          height: 1.0,
         ),
         iconTheme: IconThemeData(
-          color: brightness == Brightness.light ? Colors.white : ext.ink,
+          color: ext.ink,
+          size: 28,  // Íconos más grandes
+        ),
+        actionsIconTheme: IconThemeData(
+          color: ext.ink,
+          size: 28,
         ),
       ),
       cardTheme: CardThemeData(
         color: ext.surface,
-        elevation: 0,  // Sin elevación en dark mode tampoco
+        elevation: 0,
         margin: EdgeInsets.zero,
-        shadowColor: ext.ink.withValues(alpha: 0.06),
-        shape: const RoundedRectangleBorder(borderRadius: AppRadii.mdBorder),
+        shadowColor: Colors.transparent,  // Sin sombra — flat como Cash App
+        shape: RoundedRectangleBorder(
+          borderRadius: AppRadii.lgBorder,  // 20px — radii grande Cash App style
+          side: brightness == Brightness.dark
+              ? BorderSide(
+                  color: ext.line,
+                  width: 0.5,
+                )
+              : BorderSide.none,
+        ),
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
@@ -205,32 +218,46 @@ class AppTheme {
         focusedBorder: OutlineInputBorder(borderRadius: AppRadii.mdBorder, borderSide: BorderSide(color: ext.primary, width: 1.5)),
         errorBorder: OutlineInputBorder(borderRadius: AppRadii.mdBorder, borderSide: BorderSide(color: ext.danger, width: 1.5)),
         focusedErrorBorder: OutlineInputBorder(borderRadius: AppRadii.mdBorder, borderSide: BorderSide(color: ext.danger, width: 1.5)),
-        labelStyle: TextStyle(color: ext.muted, fontSize: 15 * textScaleFactor, fontWeight: FontWeight.w500, letterSpacing: -0.1),
-        hintStyle: TextStyle(color: ext.muted, fontSize: 17 * textScaleFactor, fontWeight: FontWeight.w400, letterSpacing: -0.1),
+        labelStyle: TextStyle(fontFamily: AppFonts.family,color: ext.muted, fontSize: 15 * textScaleFactor, fontWeight: FontWeight.w500, letterSpacing: -0.1),
+        hintStyle: TextStyle(fontFamily: AppFonts.family,color: ext.muted, fontSize: 17 * textScaleFactor, fontWeight: FontWeight.w400, letterSpacing: -0.1),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
           backgroundColor: ext.primary,
           foregroundColor: Colors.white,
           elevation: 0,
-          minimumSize: const Size.fromHeight(52),
-          shape: const RoundedRectangleBorder(borderRadius: AppRadii.mdBorder),
-          textStyle: TextStyle(fontSize: 17 * textScaleFactor, fontWeight: FontWeight.w600, letterSpacing: -0.1),
+          shadowColor: Colors.transparent,
+          minimumSize: const Size.fromHeight(56),  // Más alto — Cash App style
+          shape: const RoundedRectangleBorder(borderRadius: AppRadii.lgBorder),  // 20px radius
+          textStyle: TextStyle(
+            fontFamily: AppFonts.family,
+            fontSize: 17 * textScaleFactor,
+            fontWeight: FontWeight.w700,  // Bold
+            letterSpacing: -0.3,
+          ),
         ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
+          // 💳 CASH APP STYLE: Botones pill con fondo gris claro (no outlined)
+          backgroundColor: ext.surfaceSecondary,  // Fondo gris claro
           foregroundColor: ext.ink,
-          minimumSize: const Size.fromHeight(50),
-          shape: const RoundedRectangleBorder(borderRadius: AppRadii.mdBorder),
-          side: BorderSide(color: ext.line),
-          textStyle: TextStyle(fontSize: 17 * textScaleFactor, fontWeight: FontWeight.w600, letterSpacing: -0.1),
+          elevation: 0,
+          minimumSize: const Size.fromHeight(52),
+          shape: const RoundedRectangleBorder(borderRadius: AppRadii.pillBorder),  // Pill shape
+          side: BorderSide.none,  // Sin border — solo fondo
+          textStyle: TextStyle(
+            fontFamily: AppFonts.family,
+            fontSize: 16 * textScaleFactor,
+            fontWeight: FontWeight.w600,
+            letterSpacing: -0.2,
+          ),
         ),
       ),
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
           foregroundColor: ext.primary,
-          textStyle: TextStyle(fontSize: 17 * textScaleFactor, fontWeight: FontWeight.w600, letterSpacing: -0.1),
+          textStyle: TextStyle(fontFamily: AppFonts.family,fontSize: 17 * textScaleFactor, fontWeight: FontWeight.w600, letterSpacing: -0.1),
         ),
       ),
       floatingActionButtonTheme: FloatingActionButtonThemeData(
@@ -240,11 +267,23 @@ class AppTheme {
         shape: const CircleBorder(),
       ),
       bottomNavigationBarTheme: BottomNavigationBarThemeData(
-        backgroundColor: ext.surface.withValues(alpha: 0.85),
+        backgroundColor: brightness == Brightness.light
+            ? ext.surface.withValues(alpha: 0.95)
+            : ext.surface.withValues(alpha: 0.95),
         selectedItemColor: ext.primary,
         unselectedItemColor: ext.muted,
         type: BottomNavigationBarType.fixed,
-        elevation: 0,
+        elevation: 8,
+        selectedLabelStyle: TextStyle(
+          fontFamily: AppFonts.family,
+          fontWeight: FontWeight.w700,  // Bold cuando está seleccionado
+          fontSize: 11,
+        ),
+        unselectedLabelStyle: TextStyle(
+          fontFamily: AppFonts.family,
+          fontWeight: FontWeight.w500,
+          fontSize: 11,
+        ),
       ),
       dividerTheme: DividerThemeData(
         color: ext.line,
@@ -254,13 +293,13 @@ class AppTheme {
       chipTheme: ChipThemeData(
         backgroundColor: ext.surfaceSecondary,
         selectedColor: ext.primary.withValues(alpha: AppAlphas.fillStrong),
-        labelStyle: TextStyle(fontSize: 15 * textScaleFactor, fontWeight: FontWeight.w500, color: ext.ink),
+        labelStyle: TextStyle(fontFamily: AppFonts.family,fontSize: 15 * textScaleFactor, fontWeight: FontWeight.w500, color: ext.ink),
         side: BorderSide.none,
         shape: const RoundedRectangleBorder(borderRadius: AppRadii.pillBorder),
       ),
       snackBarTheme: SnackBarThemeData(
         backgroundColor: ext.ink,
-        contentTextStyle: TextStyle(color: ext.background, fontSize: 15 * textScaleFactor, fontWeight: FontWeight.w400),
+        contentTextStyle: TextStyle(fontFamily: AppFonts.family,color: ext.background, fontSize: 15 * textScaleFactor, fontWeight: FontWeight.w400),
         behavior: SnackBarBehavior.floating,
         shape: const RoundedRectangleBorder(borderRadius: AppRadii.mdBorder),
       ),
@@ -272,52 +311,92 @@ class AppTheme {
     double scale,
     bool bold,
   ) {
-    final baseBold = bold ? FontWeight.w700 : FontWeight.w600;
-    final titleBold = bold ? FontWeight.w800 : FontWeight.w700;
-    final normalWeight = bold ? FontWeight.w600 : FontWeight.w400;
+    // 💳 CASH APP STYLE: Pesos más pesados, tamaños más grandes
+    final baseBold = bold ? FontWeight.w800 : FontWeight.w700;  // Más pesado
+    final titleBold = bold ? FontWeight.w900 : FontWeight.w800; // BLACK weight
+    final normalWeight = bold ? FontWeight.w600 : FontWeight.w500;  // Medium por defecto
 
     return TextTheme(
-      headlineLarge: TextStyle(
-        fontSize: 34 * scale,
+      displayLarge: TextStyle(fontFamily: AppFonts.family,
+        fontSize: 40 * scale,  // Más grande
+        fontWeight: FontWeight.w900,  // BLACK
+        color: ext.ink,
+        letterSpacing: -1.2,
+        height: 1.0,
+      ),
+      displayMedium: TextStyle(fontFamily: AppFonts.family,
+        fontSize: 28 * scale,
+        fontWeight: FontWeight.w800,
+        color: ext.ink,
+        letterSpacing: -0.8,
+        height: 1.1,
+      ),
+      headlineLarge: TextStyle(fontFamily: AppFonts.family,
+        fontSize: 32 * scale,  // AppBar titles
+        fontWeight: FontWeight.w900,
+        color: ext.ink,
+        letterSpacing: -1.0,
+        height: 1.0,
+      ),
+      headlineMedium: TextStyle(fontFamily: AppFonts.family,
+        fontSize: 24 * scale,
         fontWeight: titleBold,
         color: ext.ink,
-        letterSpacing: -0.5,
+        letterSpacing: -0.6,
+        height: 1.1,
       ),
-      headlineMedium: TextStyle(
+      titleLarge: TextStyle(fontFamily: AppFonts.family,
         fontSize: 22 * scale,
-        fontWeight: titleBold,
+        fontWeight: baseBold,
+        color: ext.ink,
+        letterSpacing: -0.4,
+        height: 1.2,
+      ),
+      titleMedium: TextStyle(fontFamily: AppFonts.family,
+        fontSize: 18 * scale,  // Card headers más grandes
+        fontWeight: baseBold,
         color: ext.ink,
         letterSpacing: -0.3,
+        height: 1.2,
       ),
-      titleLarge: TextStyle(
-        fontSize: 20 * scale,
-        fontWeight: baseBold,
-        color: ext.ink,
-        letterSpacing: -0.2,
-      ),
-      titleMedium: TextStyle(
-        fontSize: 17 * scale,
-        fontWeight: baseBold,
-        color: ext.ink,
-        letterSpacing: -0.1,
-      ),
-      bodyLarge: TextStyle(
+      bodyLarge: TextStyle(fontFamily: AppFonts.family,
         fontSize: 17 * scale,
         fontWeight: normalWeight,
         color: ext.ink,
-        letterSpacing: -0.1,
+        letterSpacing: -0.2,
+        height: 1.4,
       ),
-      bodyMedium: TextStyle(
+      bodyMedium: TextStyle(fontFamily: AppFonts.family,
+        fontSize: 15 * scale,  // Un poco más grande
+        fontWeight: normalWeight,
+        color: ext.muted,
+        letterSpacing: -0.1,
+        height: 1.4,
+      ),
+      bodySmall: TextStyle(fontFamily: AppFonts.family,
         fontSize: 13 * scale,
         fontWeight: normalWeight,
         color: ext.muted,
         letterSpacing: 0,
+        height: 1.3,
       ),
-      labelLarge: TextStyle(
+      labelLarge: TextStyle(fontFamily: AppFonts.family,
         fontSize: 17 * scale,
         fontWeight: baseBold,
         color: ext.ink,
+        letterSpacing: -0.2,
+      ),
+      labelMedium: TextStyle(fontFamily: AppFonts.family,
+        fontSize: 15 * scale,
+        fontWeight: FontWeight.w600,
+        color: ext.ink,
         letterSpacing: -0.1,
+      ),
+      labelSmall: TextStyle(fontFamily: AppFonts.family,
+        fontSize: 12 * scale,
+        fontWeight: FontWeight.w600,
+        color: ext.muted,
+        letterSpacing: 0,
       ),
     );
   }

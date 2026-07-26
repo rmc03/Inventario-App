@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../models/usuario.dart';
 import 'indicador_conexion.dart';
@@ -65,19 +66,23 @@ class RoleShell extends ConsumerWidget {
             leading: Padding(
               padding: const EdgeInsets.only(top: 8, bottom: 8),
               child: Icon(
-                Icons.inventory_2,
+                LucideIcons.package,
                 color: Theme.of(context).colorScheme.primary,
               ),
             ),
             destinations: [
               for (final item in items)
                 NavigationRailDestination(
-                  icon: item.badge
-                      ? _BadgedIcon(icon: item.icon, showBadge: true)
-                      : Icon(item.icon),
-                  selectedIcon: item.badge
-                      ? _BadgedIcon(icon: item.activeIcon, showBadge: true)
-                      : Icon(item.activeIcon),
+                  icon: _AnimatedNavIcon(
+                    icon: item.icon,
+                    isSelected: false,
+                    showBadge: item.badge,
+                  ),
+                  selectedIcon: _AnimatedNavIcon(
+                    icon: item.activeIcon,
+                    isSelected: true,
+                    showBadge: item.badge,
+                  ),
                   label: Text(item.label),
                 ),
             ],
@@ -129,15 +134,16 @@ class RoleShell extends ConsumerWidget {
                 items: [
                   for (final item in items)
                     BottomNavigationBarItem(
-                      icon: item.badge
-                          ? _BadgedIcon(icon: item.icon, showBadge: true)
-                          : Icon(item.icon),
-                      activeIcon: item.badge
-                          ? _BadgedIcon(
-                              icon: item.activeIcon,
-                              showBadge: true,
-                            )
-                          : Icon(item.activeIcon),
+                      icon: _AnimatedNavIcon(
+                        icon: item.icon,
+                        isSelected: false,
+                        showBadge: item.badge,
+                      ),
+                      activeIcon: _AnimatedNavIcon(
+                        icon: item.activeIcon,
+                        isSelected: true,
+                        showBadge: item.badge,
+                      ),
                       label: item.label,
                     ),
                 ],
@@ -288,28 +294,108 @@ class ShellItem {
   final bool badge;
 }
 
-class _BadgedIcon extends StatelessWidget {
-  const _BadgedIcon({
+class _AnimatedNavIcon extends StatefulWidget {
+  const _AnimatedNavIcon({
     required this.icon,
-    required this.showBadge,
+    required this.isSelected,
+    this.showBadge = false,
   });
 
   final IconData icon;
+  final bool isSelected;
   final bool showBadge;
 
   @override
+  State<_AnimatedNavIcon> createState() => _AnimatedNavIconState();
+}
+
+class _AnimatedNavIconState extends State<_AnimatedNavIcon>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _scaleAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 200),
+    );
+
+    _scaleAnimation = Tween<double>(begin: 0.8, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: Curves.easeOutBack,
+      ),
+    );
+
+    if (widget.isSelected) {
+      _controller.value = 1.0;
+    }
+  }
+
+  @override
+  void didUpdateWidget(_AnimatedNavIcon oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.isSelected != oldWidget.isSelected) {
+      if (widget.isSelected) {
+        _controller.forward(from: 0.0);
+      } else {
+        _controller.reverse();
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final activeColor = Theme.of(context).colorScheme.primary;
+    final inactiveColor = Theme.of(context).colorScheme.onSurfaceVariant;
+
     return Stack(
       clipBehavior: Clip.none,
+      alignment: Alignment.center,
       children: [
-        Icon(icon),
-        if (showBadge)
+        // Fondo circular para el ícono activo
+        AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          curve: Curves.easeOut,
+          width: widget.isSelected ? 40 : 0,
+          height: widget.isSelected ? 40 : 0,
+          decoration: BoxDecoration(
+            color: widget.isSelected
+                ? activeColor.withValues(alpha: 0.12)
+                : Colors.transparent,
+            shape: BoxShape.circle,
+          ),
+        ),
+        // Ícono con animación de escala
+        AnimatedBuilder(
+          animation: _scaleAnimation,
+          builder: (context, child) {
+            return Transform.scale(
+              scale: widget.isSelected ? _scaleAnimation.value : 1.0,
+              child: Icon(
+                widget.icon,
+                color: widget.isSelected ? activeColor : inactiveColor,
+                size: 22,
+              ),
+            );
+          },
+        ),
+        // Badge de notificación
+        if (widget.showBadge)
           Positioned(
-            top: -2,
-            right: -2,
+            top: 2,
+            right: 4,
             child: Container(
-              width: 10,
-              height: 10,
+              width: 8,
+              height: 8,
               decoration: BoxDecoration(
                 color: context.colors.danger,
                 shape: BoxShape.circle,
@@ -333,26 +419,26 @@ List<ShellItem> _adminItems(WidgetRef ref) {
     ShellItem(
       path: '/admin/resumen',
       label: 'Resumen',
-      icon: Icons.dashboard_outlined,
-      activeIcon: Icons.dashboard,
+      icon: LucideIcons.lineChart,
+      activeIcon: LucideIcons.chartLine,
     ),
     ShellItem(
       path: '/admin/inventario',
       label: 'Inventario',
-      icon: Icons.inventory_2_outlined,
-      activeIcon: Icons.inventory_2,
+      icon: LucideIcons.box,
+      activeIcon: LucideIcons.package,
     ),
     ShellItem(
       path: '/admin/movimientos',
       label: 'Movimientos',
-      icon: Icons.swap_vert_circle_outlined,
-      activeIcon: Icons.swap_vert_circle,
+      icon: LucideIcons.repeat,
+      activeIcon: LucideIcons.arrowLeftRight,
     ),
     ShellItem(
       path: '/admin/cuadres',
       label: 'Cuadres',
-      icon: Icons.fact_check_outlined,
-      activeIcon: Icons.fact_check,
+      icon: LucideIcons.fileText,
+      activeIcon: LucideIcons.fileCheck,
       badge: hasPending,
     ),
   ];
@@ -362,13 +448,13 @@ const _dependienteItems = [
   ShellItem(
     path: '/dependiente/turno',
     label: 'Mi turno',
-    icon: Icons.today_outlined,
-    activeIcon: Icons.today,
+    icon: LucideIcons.clock,
+    activeIcon: LucideIcons.calendar,
   ),
   ShellItem(
     path: '/dependiente/inventario',
     label: 'Inventario',
-    icon: Icons.inventory_2_outlined,
-    activeIcon: Icons.inventory_2,
+    icon: LucideIcons.box,
+    activeIcon: LucideIcons.package,
   ),
 ];

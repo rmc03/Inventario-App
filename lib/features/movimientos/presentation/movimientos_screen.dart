@@ -788,17 +788,17 @@ class _MovimientoCard extends StatelessWidget {
     if (esAjusteNegativo) {
       // 🟠 Naranja: Reducción de stock por ajuste manual
       color = context.colors.warning;
-      icon = Icons.remove_circle_outline_rounded;
+      icon = Icons.remove_circle_rounded;
       accionTexto = 'Reducidas ${movimiento.cantidad.abs()} ${movimiento.cantidad.abs() == 1 ? 'unidad' : 'unidades'} de ${movimiento.productoNombre}';
     } else if (esAlta) {
       // 🟢 Verde: Nueva adición al inventario
       color = context.colors.success;
-      icon = Icons.add_box_outlined;
+      icon = Icons.add_circle_rounded;
       accionTexto = 'Añadidas ${movimiento.cantidad} ${movimiento.cantidad == 1 ? 'unidad' : 'unidades'} de ${movimiento.productoNombre}';
     } else {
       // 🟢 Verde: Entrada/reposición de stock
       color = context.colors.success;
-      icon = Icons.add_box_outlined;
+      icon = Icons.add_circle_rounded;
       accionTexto = 'Añadidas ${movimiento.cantidad} ${movimiento.cantidad == 1 ? 'unidad' : 'unidades'} de ${movimiento.productoNombre}';
     }
 
@@ -921,29 +921,34 @@ class _MovimientoCard extends StatelessWidget {
 
   /// Inicio/Cierre de turno (color neutral)
   Widget _buildInicioTurnoCard(BuildContext context) {
-    // Color neutral para acciones administrativas
-    final color = context.colors.ink.withValues(alpha: 0.7);
+    // Color primary para acciones de turno
+    final color = context.colors.primary;
     final esInicio = movimiento.nota?.toLowerCase().contains('inicio') ?? true;
     
     final accionTexto = esInicio 
         ? '${movimiento.usuarioNombre} inició turno'
         : '${movimiento.usuarioNombre} cerró turno';
     
-    final icon = esInicio ? Icons.login_rounded : Icons.logout_rounded;
+    final icon = esInicio ? Icons.play_circle_rounded : Icons.pause_circle_rounded;
 
     return Container(
       decoration: BoxDecoration(
         color: context.colors.surface,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: context.colors.muted.withValues(alpha: 0.15),
+          color: color.withValues(alpha: 0.15),
           width: 1.5,
         ),
         boxShadow: [
           BoxShadow(
-            color: context.colors.ink.withValues(alpha: 0.06),
-            blurRadius: 12,
-            offset: const Offset(0, 3),
+            color: color.withValues(alpha: 0.08),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
+          ),
+          BoxShadow(
+            color: context.colors.ink.withValues(alpha: 0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
           ),
         ],
       ),
@@ -957,15 +962,15 @@ class _MovimientoCard extends StatelessWidget {
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   colors: [
-                    context.colors.muted.withValues(alpha: 0.16),
-                    context.colors.muted.withValues(alpha: 0.10),
+                    color.withValues(alpha: 0.18),
+                    color.withValues(alpha: 0.12),
                   ],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
-                  color: context.colors.muted.withValues(alpha: 0.2),
+                  color: color.withValues(alpha: 0.25),
                   width: 1,
                 ),
               ),
@@ -1029,12 +1034,12 @@ class _MovimientoCard extends StatelessWidget {
         color: context.colors.surface,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: color.withValues(alpha: 0.2),
+          color: color.withValues(alpha: 0.15),
           width: 1.5,
         ),
         boxShadow: [
           BoxShadow(
-            color: color.withValues(alpha: 0.1),
+            color: color.withValues(alpha: 0.08),
             blurRadius: 16,
             offset: const Offset(0, 4),
           ),
@@ -1063,7 +1068,7 @@ class _MovimientoCard extends StatelessWidget {
                 ),
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
-                  color: color.withValues(alpha: 0.3),
+                  color: color.withValues(alpha: 0.25),
                   width: 1,
                 ),
               ),
@@ -1216,8 +1221,8 @@ class _VentaCardState extends ConsumerState<_VentaCard> with SingleTickerProvide
       (sum, m) => sum + ((m.precioUnitario ?? 0) * m.cantidad.abs()),
     );
 
-    // 🔵 Azul cyan distintivo para ventas (diferente al primary)
-    final color = const Color(0xFF0891B2); // Cyan 600 - distintivo de ventas
+    // 🟣 Morado/Primary: Color distintivo para ventas alineado con el tema de la app
+    final color = context.colors.primary;
 
     final venta = widget.venta;
 
@@ -1287,7 +1292,7 @@ class _VentaCardState extends ConsumerState<_VentaCard> with SingleTickerProvide
                       ),
                       padding: const EdgeInsets.all(12),
                       child: Icon(
-                        Icons.shopping_bag_rounded,
+                        Icons.receipt_long_rounded,
                         color: color,
                         size: 26,
                       ),

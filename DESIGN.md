@@ -14,8 +14,8 @@
 
 ### Light Mode
 ```dart
-primary: #0F62FE        // Azure blue — vibrant, modern, trustworthy
-primaryDark: #0043CE    // Pressed state (deeper blue)
+primary: #0F62FE        // 🔥 Azure blue (IBM Carbon) — vibrante, moderno, confiable, MEMORABLE
+primaryDark: #0043CE    // Pressed state (azure profundo)
 ink: #161616            // Near-black text (softer than pure black)
 muted: #6F6F6F          // Warm gray (secondary content)
 line: #E0E0E0           // Light border
@@ -30,8 +30,8 @@ info: #E8743B           // 🔥 Warm copper — PERSONALITY ACCENT
 
 ### Dark Mode — WhatsApp-Inspired Clean Edition
 ```dart
-primary: #5B9FFF        // Electric azure — hero accent (like WhatsApp green)
-primaryDark: #85B8FF    // Pressed state (brighter)
+primary: #5B9FFF        // 🔥 Electric azure — HERO ACCENT (más vibrante que índigo)
+primaryDark: #85B8FF    // Pressed state (brighter azure)
 ink: #E5E5E5            // Soft white text (easy on eyes)
 muted: #999999          // Medium gray for secondary
 line: #2A2A2A           // Subtle dark border
@@ -45,6 +45,7 @@ info: #FF8B5A           // Vibrant copper
 ```
 
 **Philosophy:** 
+- **Azul Azure con personalidad** — no genérico, vibrante, memorable
 - **Fondo como WhatsApp** (#111111) — oscuro pero no negro puro
 - **AppBar oscuro** en dark mode (como WhatsApp) con texto claro
 - AppBar azul solo en light mode (más colorido y vibrante)
@@ -87,17 +88,23 @@ Borders sutiles en gris neutro, excepto cuando se usa color para énfasis:
 
 ## Typography
 
-**System Font:** San Francisco (iOS) / Roboto (Android) — native platform fonts
+**Family:** Outfit — modern geometric sans-serif with distinctive character. Excellent Spanish support (ñ, accents). Bundled as asset fonts (works offline).
+**Fallback:** San Francisco (iOS) / Roboto (Android)
 **Scale:** Material Design 3 type scale with Apple HIG alignment
 
 ```
 Display Large:  34pt/Bold   (headlines, hero moments)
 Display Medium: 22pt/Bold   (section titles)
+Headline Large: 34pt/Bold   (screen headers)
+Headline Medium:22pt/Bold   (section titles)
 Title Large:    20pt/SemiBold (screen titles)
 Title Medium:   17pt/SemiBold (card headers)
 Body Large:     17pt/Regular (primary text)
 Body Medium:    13pt/Regular (secondary text, labels)
+Body Small:     11pt/Regular (captions, metadata)
 Label Large:    17pt/SemiBold (buttons, CTAs)
+Label Medium:   13pt/Medium  (chips, badges)
+Label Small:    11pt/Medium  (fine print)
 ```
 
 **Bold Text Support:** Accessibility setting increases all weights by 100-200.

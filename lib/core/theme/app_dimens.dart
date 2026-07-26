@@ -1,26 +1,24 @@
 import 'package:flutter/material.dart';
 
-/// Design tokens centralizados.
+/// Design tokens centralizados — Cash App Style.
 ///
-/// Reemplazan los magic numbers dispersos por la app (radios de 6/8/10/12/14/20,
-/// alphas de 0.025 a 0.72, BoxShadows duplicadas) por una escala única y consistente
-/// alineada con el lenguaje visual de iOS.
+/// Radii grandes, espaciado generoso, estilo minimalista premium.
 class AppRadii {
   AppRadii._();
 
-  /// Radio pequeño (badges, botones de control).
-  static const sm = 8.0;
+  /// Radio pequeño (badges, chips pequeños).
+  static const sm = 10.0;
 
-  /// Radio medio (inputs, chips, tarjetas internas).
-  static const md = 12.0;
+  /// Radio medio (botones estándar).
+  static const md = 16.0;
 
-  /// Radio grande (cards principales, bottom sheets).
-  static const lg = 16.0;
+  /// Radio grande (cards principales) — Cash App style.
+  static const lg = 20.0;
 
-  /// Radio extra grande (hero images, contenedores destacados).
-  static const xl = 20.0;
+  /// Radio extra grande (hero cards, containers destacados).
+  static const xl = 24.0;
 
-  /// Radio de píldora completa (botones tipo pill, buscadores).
+  /// Radio de píldora completa (botones pill, tags).
   static const pill = 999.0;
 
   static const smBorder = BorderRadius.all(Radius.circular(sm));
@@ -66,14 +64,30 @@ class AppShadows {
   ];
 }
 
-/// Espaciado base de 4px. Mantiene consistencia entre pantallas.
+/// Espaciado base de 4px — Cash App style (más generoso).
 class AppSpacing {
   AppSpacing._();
-
   static const xs = 4.0;
   static const sm = 8.0;
-  static const md = 12.0;
-  static const lg = 16.0;
-  static const xl = 20.0;
-  static const xxl = 24.0;
+  static const md = 16.0;   // Aumentado de 12 para más respiro
+  static const lg = 20.0;   // Aumentado de 16
+  static const xl = 24.0;   // Aumentado de 20
+  static const xxl = 32.0;  // Aumentado de 24
+  static const xxxl = 40.0; // Nuevo — para separaciones grandes
+}
+
+/// Familia tipográfica de la app.
+///
+/// Roboto: la fuente predeterminada de Material Design.
+/// Neutral, profesional, universalmente disponible.
+/// Excepcionalmente legible en pantallas de todos los tamaños.
+class AppFonts {
+  AppFonts._();
+
+  /// Roboto - fuente del sistema Material Design
+  /// Neutral, profesional, siempre disponible en Flutter
+  static const String family = 'Roboto';
+
+  /// Tamaño mínimo de fuente para legibilidad.
+  static const double floor = 11.0;
 }

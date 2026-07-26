@@ -596,41 +596,38 @@ class _ProductoVentaTile extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(width: AppSpacing.sm),
-                    SizedBox(
-                      width: 118,
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
-                          Text(
-                            formatCurrency(producto.precio),
-                            style: Theme.of(context).textTheme.titleMedium
-                                ?.copyWith(
-                                  color: context.colors.primary,
-                                  fontWeight: FontWeight.w800,
-                                ),
+                    Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text(
+                          formatCurrency(producto.precio),
+                          style: Theme.of(context).textTheme.titleMedium
+                              ?.copyWith(
+                                color: context.colors.primary,
+                                fontWeight: FontWeight.w800,
+                              ),
+                        ),
+                        const SizedBox(height: AppSpacing.md),
+                        SizedBox(
+                          height: 34,
+                          child: AnimatedSwitcher(
+                            duration: const Duration(milliseconds: 180),
+                            child: isSelected
+                                ? _InlineQtySelector(
+                                    key: const ValueKey('qty'),
+                                    cantidad: qtyInCart,
+                                    onDecrement: onDecrement,
+                                    onIncrement: onIncrement,
+                                    onTap: onQtyTap,
+                                  )
+                                : _AddProductButton(
+                                    key: const ValueKey('add'),
+                                    onPressed: onAdd,
+                                  ),
                           ),
-                          const SizedBox(height: AppSpacing.md),
-                          SizedBox(
-                            height: 34,
-                            child: AnimatedSwitcher(
-                              duration: const Duration(milliseconds: 180),
-                              child: isSelected
-                                  ? _InlineQtySelector(
-                                      key: const ValueKey('qty'),
-                                      cantidad: qtyInCart,
-                                      onDecrement: onDecrement,
-                                      onIncrement: onIncrement,
-                                      onTap: onQtyTap,
-                                    )
-                                  : _AddProductButton(
-                                      key: const ValueKey('add'),
-                                      onPressed: onAdd,
-                                    ),
-                            ),
-                          ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
