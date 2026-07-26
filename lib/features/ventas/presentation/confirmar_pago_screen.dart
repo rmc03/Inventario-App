@@ -1,7 +1,8 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/providers/accessibility_provider.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../core/utils/haptics.dart';
@@ -25,6 +26,7 @@ class _ConfirmarPagoScreenState extends ConsumerState<ConfirmarPagoScreen>
     with TickerProviderStateMixin {
   // Modo de pago seleccionado
   ModoPago _modo = ModoPago.efectivo;
+  ModoPago? _modoAnterior;
 
   late final AnimationController _entranceController;
   List<Animation<double>> _itemAnimations = [];
@@ -85,6 +87,7 @@ class _ConfirmarPagoScreenState extends ConsumerState<ConfirmarPagoScreen>
 
   void _actualizarModoEfectivo() {
     setState(() {
+      _modoAnterior = _modo;
       _montoEfectivo = _totalVenta;
       _montoTransferencia = 0.0;
       _efectivoMixtoController.clear();
@@ -97,6 +100,7 @@ class _ConfirmarPagoScreenState extends ConsumerState<ConfirmarPagoScreen>
 
   void _actualizarModoTransferencia() {
     setState(() {
+      _modoAnterior = _modo;
       _montoEfectivo = 0.0;
       _montoTransferencia = _totalVenta;
       _efectivoMixtoController.clear();
@@ -109,6 +113,7 @@ class _ConfirmarPagoScreenState extends ConsumerState<ConfirmarPagoScreen>
 
   void _actualizarModoMixto() {
     setState(() {
+      _modoAnterior = _modo;
       _montoEfectivo = 0.0;
       _montoTransferencia = 0.0;
       _efectivoMixtoController.clear();
@@ -119,15 +124,34 @@ class _ConfirmarPagoScreenState extends ConsumerState<ConfirmarPagoScreen>
     });
   }
 
+  Widget _buildModoContentWithTransition() {
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 180),
+      switchInCurve: Curves.easeOut,
+      switchOutCurve: Curves.easeIn,
+      transitionBuilder: (child, animation) {
+        return SizeTransition(
+          sizeFactor: animation,
+          axisAlignment: -1.0,
+          child: FadeTransition(
+            opacity: animation,
+            child: child,
+          ),
+        );
+      },
+      child: _buildModoContent(),
+    );
+  }
+
   Widget _buildModoContent() {
     switch (_modo) {
       case ModoPago.efectivo:
         return KeyedSubtree(
           key: const ValueKey('efectivo'),
           child: Column(
+            mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Botón completo "Calcular efectivo"
               InkWell(
                 onTap: () => setState(() => _mostrarCalculadoraEfectivo = !_mostrarCalculadoraEfectivo),
                 borderRadius: BorderRadius.circular(12),
@@ -142,14 +166,14 @@ class _ConfirmarPagoScreenState extends ConsumerState<ConfirmarPagoScreen>
                   child: Row(
                     children: [
                       Icon(
-                        Icons.payments_outlined,
+                        Icons.calculate_outlined,
                         size: 20,
                         color: context.colors.ink,
                       ),
                       const SizedBox(width: 10),
                       Expanded(
                         child: Text(
-                          'Calcular efectivo',
+                          'Calcular vuelto',
                           style: TextStyle(
                             fontSize: 15,
                             fontWeight: FontWeight.w600,
@@ -159,9 +183,9 @@ class _ConfirmarPagoScreenState extends ConsumerState<ConfirmarPagoScreen>
                         ),
                       ),
                       Icon(
-                        Icons.calculate_outlined,
+                        _mostrarCalculadoraEfectivo ? Icons.keyboard_arrow_up_rounded : Icons.keyboard_arrow_down_rounded,
                         size: 20,
-                        color: context.colors.primary,
+                        color: context.colors.muted,
                       ),
                     ],
                   ),
@@ -170,7 +194,7 @@ class _ConfirmarPagoScreenState extends ConsumerState<ConfirmarPagoScreen>
               AnimatedCrossFade(
                 firstChild: const SizedBox.shrink(),
                 secondChild: Padding(
-                  padding: const EdgeInsets.only(top: 16),
+                  padding: const EdgeInsets.only(top: 12),
                   child: _CalculadoraCambio(
                     controller: _efectivoRecibidoController,
                     montoEfectivo: _montoEfectivo,
@@ -191,9 +215,9 @@ class _ConfirmarPagoScreenState extends ConsumerState<ConfirmarPagoScreen>
         return KeyedSubtree(
           key: const ValueKey('transferencia'),
           child: Column(
+            mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Botón/Contenedor del mismo tamaño para consistencia visual
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
@@ -237,6 +261,7 @@ class _ConfirmarPagoScreenState extends ConsumerState<ConfirmarPagoScreen>
         return KeyedSubtree(
           key: const ValueKey('mixto'),
           child: Column(
+            mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _CampoMontoMixto(
@@ -247,7 +272,7 @@ class _ConfirmarPagoScreenState extends ConsumerState<ConfirmarPagoScreen>
                 onChanged: (valor) => setState(() => _montoEfectivo = valor),
                 onCompletarResto: () {
                   final resto = _totalVenta - _montoTransferencia;
-                  _efectivoMixtoController.text = resto > 0 ? resto.toStringAsFixed(2) : '0.00';
+                  _efectivoMixtoController.text = resto > 0 ? resto.toInt().toString() : '0';
                   setState(() => _montoEfectivo = resto > 0 ? resto : 0.0);
                 },
               ),
@@ -260,7 +285,7 @@ class _ConfirmarPagoScreenState extends ConsumerState<ConfirmarPagoScreen>
                 onChanged: (valor) => setState(() => _montoTransferencia = valor),
                 onCompletarResto: () {
                   final resto = _totalVenta - _montoEfectivo;
-                  _transferenciaMixtoController.text = resto > 0 ? resto.toStringAsFixed(2) : '0.00';
+                  _transferenciaMixtoController.text = resto > 0 ? resto.toInt().toString() : '0';
                   setState(() => _montoTransferencia = resto > 0 ? resto : 0.0);
                 },
               ),
@@ -320,27 +345,44 @@ class _ConfirmarPagoScreenState extends ConsumerState<ConfirmarPagoScreen>
                 ),
               if (_montoEfectivo > 0) ...[
                 const SizedBox(height: 16),
-                Row(
-                  children: [
-                    Icon(Icons.payments_outlined, size: 16, color: context.colors.muted),
-                    const SizedBox(width: 6),
-                    Text('Cambio sobre efectivo', style: TextStyle(
-                      fontSize: 14, fontWeight: FontWeight.w600,
-                      color: context.colors.ink, letterSpacing: -0.2,
-                    )),
-                    const Spacer(),
-                    Semantics(
-                      label: 'Abrir calculadora de cambio para efectivo', button: true,
-                      child: InkWell(
-                        onTap: () => setState(() => _mostrarCalculadoraEfectivo = !_mostrarCalculadoraEfectivo),
-                        borderRadius: BorderRadius.circular(8),
-                        child: Padding(
-                          padding: const EdgeInsets.all(6),
-                          child: Icon(Icons.calculate_outlined, size: 18, color: context.colors.primary),
-                        ),
-                      ),
+                InkWell(
+                  onTap: () => setState(() => _mostrarCalculadoraEfectivo = !_mostrarCalculadoraEfectivo),
+                  borderRadius: BorderRadius.circular(12),
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                    decoration: BoxDecoration(
+                      color: context.colors.surfaceSecondary,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: context.colors.line.withValues(alpha: 0.2), width: 1),
                     ),
-                  ],
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.calculate_outlined,
+                          size: 20,
+                          color: context.colors.ink,
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            'Calcular vuelto',
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w600,
+                              color: context.colors.ink,
+                              letterSpacing: -0.2,
+                            ),
+                          ),
+                        ),
+                        Icon(
+                          _mostrarCalculadoraEfectivo ? Icons.keyboard_arrow_up_rounded : Icons.keyboard_arrow_down_rounded,
+                          size: 20,
+                          color: context.colors.muted,
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
                 AnimatedCrossFade(
                   firstChild: const SizedBox.shrink(),
@@ -605,32 +647,8 @@ class _ConfirmarPagoScreenState extends ConsumerState<ConfirmarPagoScreen>
 
                         const SizedBox(height: 20),
 
-                        AnimatedSize(
-                          duration: const Duration(milliseconds: 400),
-                          curve: Curves.easeOutCubic,
-                          alignment: Alignment.topCenter,
-                          child: AnimatedSwitcher(
-                            duration: const Duration(milliseconds: 300),
-                            switchInCurve: Curves.easeOutCubic,
-                            switchOutCurve: Curves.easeInCubic,
-                            transitionBuilder: (child, animation) {
-                              return FadeTransition(
-                                opacity: animation,
-                                child: SlideTransition(
-                                  position: Tween<Offset>(
-                                    begin: const Offset(0, 0.03),
-                                    end: Offset.zero,
-                                  ).animate(CurvedAnimation(
-                                    parent: animation,
-                                    curve: Curves.easeOutCubic,
-                                  )),
-                                  child: child,
-                                ),
-                              );
-                            },
-                            child: _buildModoContent(),
-                          ),
-                        ),
+                        // Usar animación diferente dependiendo si hay cambio de tamaño
+                        _buildModoContentWithTransition(),
                       ],
                     ),
                   ),
@@ -656,44 +674,20 @@ class _ConfirmarPagoScreenState extends ConsumerState<ConfirmarPagoScreen>
                           ),
                           elevation: 0,
                         ),
-                        child: AnimatedSwitcher(
-                          duration: const Duration(milliseconds: 200),
-                          transitionBuilder: (child, animation) {
-                            return FadeTransition(opacity: animation, child: child);
-                          },
-                          child: _isConfirming
-                              ? Row(
-                                  key: const ValueKey('confirming'),
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Icon(Icons.check_circle_rounded, size: 24, color: Colors.white),
-                                    const SizedBox(width: 8),
-                                    const Text(
-                                      'Venta registrada',
-                                      style: TextStyle(
-                                        fontSize: 17,
-                                        fontWeight: FontWeight.w600,
-                                        letterSpacing: -0.3,
-                                      ),
-                                    ),
-                                  ],
-                                )
-                              : Row(
-                                  key: const ValueKey('idle'),
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    const Icon(Icons.check_circle_outline_rounded, size: 22),
-                                    const SizedBox(width: 8),
-                                    Text(
-                                      _esValido ? 'Confirmar y registrar venta' : 'Complete el pago',
-                                      style: const TextStyle(
-                                        fontSize: 17,
-                                        fontWeight: FontWeight.w600,
-                                        letterSpacing: -0.3,
-                                      ),
-                                    ),
-                                  ],
-                                ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(Icons.check_circle_outline_rounded, size: 22),
+                            const SizedBox(width: 8),
+                            Text(
+                              _esValido ? 'Confirmar y registrar venta' : 'Complete el pago',
+                              style: const TextStyle(
+                                fontSize: 17,
+                                fontWeight: FontWeight.w600,
+                                letterSpacing: -0.3,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ),
@@ -730,11 +724,13 @@ class _ConfirmarPagoScreenState extends ConsumerState<ConfirmarPagoScreen>
     }
 
     setState(() => _isConfirming = true);
-
+    
     ref.read(ventaEnCursoProvider.notifier).completarVentaConPagos(pagos);
-    Future.delayed(const Duration(milliseconds: 400), () {
-      if (mounted) Navigator.of(context).pop(true);
-    });
+    Haptics.confirm(context);
+    
+    // Hacer 2 pops para saltar Nueva Venta y regresar directo a Mi Turno
+    Navigator.of(context).pop(true);
+    Navigator.of(context).pop();
   }
 }
 
@@ -891,9 +887,9 @@ class _CampoMontoMixto extends StatelessWidget {
         const SizedBox(height: 8),
         TextFormField(
           controller: controller,
-          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          keyboardType: TextInputType.number,
           inputFormatters: [
-            FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d{0,2}')),
+            FilteringTextInputFormatter.digitsOnly,
           ],
           style: TextStyle(
             fontSize: 18,
@@ -902,7 +898,7 @@ class _CampoMontoMixto extends StatelessWidget {
             fontFeatures: const [FontFeature.tabularFigures()],
           ),
           decoration: InputDecoration(
-            hintText: '0.00',
+            hintText: '0',
             prefixText: '\$',
             prefixStyle: TextStyle(
               fontSize: 18,
@@ -989,9 +985,9 @@ class _CalculadoraCambio extends StatelessWidget {
         children: [
           TextFormField(
             controller: controller,
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            keyboardType: TextInputType.number,
             inputFormatters: [
-              FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d{0,2}')),
+              FilteringTextInputFormatter.digitsOnly,
             ],
             style: TextStyle(
               fontSize: 20,
@@ -1097,3 +1093,4 @@ class _CalculadoraCambio extends StatelessWidget {
     );
   }
 }
+

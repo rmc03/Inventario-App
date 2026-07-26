@@ -96,12 +96,10 @@ class _NuevaVentaScreenState extends ConsumerState<NuevaVentaScreen> {
       bottomNavigationBar: _CartBottomBar(
         onShowCart: () => _showCartSheet(context),
         onComplete: () async {
-          final res = await context.push<bool>(
+          await context.push<bool>(
             '/dependiente/turno/confirmar-pago',
           );
-          if (res == true) {
-            if (context.mounted) context.pop();
-          }
+          // No hacer nada aquí - ConfirmarPago hace ambos pops
         },
       ),
       body: SafeArea(

@@ -13,7 +13,7 @@ class VentaRepository {
   List<Venta> fetchVentas() => List.unmodifiable(_ventas);
 
   void addVenta(Venta venta) {
-    _ventas.add(venta);
+    _ventas.insert(0, venta); // Insertar al principio de la lista
     _notify();
   }
 

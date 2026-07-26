@@ -431,11 +431,21 @@ class _TurnoActivoView extends ConsumerStatefulWidget {
 }
 
 class _TurnoActivoViewState extends ConsumerState<_TurnoActivoView>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   bool _animInitialized = false;
+  bool _isNavigatingToNuevaVenta = false;
   late AnimationController _entranceCtrl;
   late List<Animation<double>> _itemFades;
   late List<Animation<Offset>> _itemSlides;
+
+  int _previousVentaCount = 0;
+  String? _lastVentaId;  // Track the ID of the most recent sale
+  late AnimationController _pulseCtrl;
+  late AnimationController _newVentaCtrl;
+  late Animation<double> _newVentaScale;
+  late Animation<double> _newVentaGlow;
+  late Animation<double> _newVentaFade;
+  late Animation<Offset> _newVentaSlide;
 
   static const _itemCount = 4;
 
@@ -443,6 +453,53 @@ class _TurnoActivoViewState extends ConsumerState<_TurnoActivoView>
   void initState() {
     super.initState();
     _entranceCtrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 500));
+    _pulseCtrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 500));
+    _newVentaCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    );
+
+    // Inicializar _lastVentaId ANTES del primer build
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && _lastVentaId == null) {
+        final ventas = ref.read(ventasDelTurnoProvider);
+        if (ventas.isNotEmpty) {
+          setState(() {
+            _lastVentaId = ventas.first.id;
+          });
+        }
+      }
+    });
+
+    // Animaciones para nueva venta (simplificadas para evitar errores)
+    _newVentaScale = Tween<double>(begin: 0.9, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _newVentaCtrl,
+        curve: Curves.easeOutBack,
+      ),
+    );
+
+    _newVentaGlow = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _newVentaCtrl,
+        curve: const Interval(0.0, 0.5, curve: Curves.easeOut),
+      ),
+    );
+
+    _newVentaFade = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _newVentaCtrl,
+        curve: const Interval(0.0, 0.3, curve: Curves.easeOut),
+      ),
+    );
+
+    _newVentaSlide = Tween<Offset>(
+      begin: const Offset(0, -0.2),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(
+      parent: _newVentaCtrl,
+      curve: Curves.easeOutCubic,
+    ));
 
     _itemFades = List.generate(_itemCount, (i) {
       final start = (i * 0.12).clamp(0.0, 1.0);
@@ -478,7 +535,23 @@ class _TurnoActivoViewState extends ConsumerState<_TurnoActivoView>
   @override
   void dispose() {
     _entranceCtrl.dispose();
+    _pulseCtrl.dispose();
+    _newVentaCtrl.dispose();
     super.dispose();
+  }
+
+  void _nuevaVentaConAnimacion() async {
+    if (_isNavigatingToNuevaVenta) return;
+    
+    setState(() => _isNavigatingToNuevaVenta = true);
+    Haptics.tap(context);
+
+    await Future.delayed(const Duration(milliseconds: 150));
+    
+    if (mounted) {
+      setState(() => _isNavigatingToNuevaVenta = false);
+      context.push('/dependiente/turno/nueva-venta');
+    }
   }
 
   Widget _staggeredItem(int index, Widget child) {
@@ -497,6 +570,35 @@ class _TurnoActivoViewState extends ConsumerState<_TurnoActivoView>
     final ventas = ref.watch(ventasDelTurnoProvider);
     final totalTurno = ventas.fold(0.0, (sum, v) => sum + v.total);
     final totalArticulos = ventas.fold(0, (sum, v) => sum + v.totalUnidades);
+
+    // Detectar nueva venta y activar animación
+    if (ventas.isNotEmpty && ventas.first.id != _lastVentaId) {
+      final isNewSale = _lastVentaId != null;
+      _lastVentaId = ventas.first.id;
+      
+      if (isNewSale) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            _pulseCtrl.forward(from: 0);
+            _newVentaCtrl.forward(from: 0);
+            Haptics.confirm(context);
+          }
+        });
+      } else {
+        // Para la primera venta, completar animación instantáneamente
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            _newVentaCtrl.value = 1.0;
+          }
+        });
+      }
+    }
+
+    if (ventas.length > _previousVentaCount && _previousVentaCount > 0) {
+      _previousVentaCount = ventas.length;
+    } else {
+      _previousVentaCount = ventas.length;
+    }
 
     return Scaffold(
       appBar: AppBar(
@@ -545,19 +647,27 @@ class _TurnoActivoViewState extends ConsumerState<_TurnoActivoView>
                 // Card resumen con badge, stats y cerrar turno
                 _staggeredItem(
                   0,
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(
-                      AppSpacing.xl,
-                      12,
-                      AppSpacing.xl,
-                      8,
-                    ),
-                    child: ShiftSummaryCard(
-                      totalVentas: totalTurno,
-                      cantidadVentas: ventas.length,
-                      cantidadUnidades: totalArticulos,
-                      activo: true,
-                      horaInicio: turno.horaInicio,
+                  AnimatedBuilder(
+                    animation: _pulseCtrl,
+                    builder: (context, child) {
+                      final t = _pulseCtrl.value;
+                      final scale = 1.0 + (0.02 * (t < 0.5 ? t * 2 : 2.0 * (1.0 - t)));
+                      return Transform.scale(scale: scale, child: child);
+                    },
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(
+                        AppSpacing.xl,
+                        12,
+                        AppSpacing.xl,
+                        8,
+                      ),
+                      child: ShiftSummaryCard(
+                        totalVentas: totalTurno,
+                        cantidadVentas: ventas.length,
+                        cantidadUnidades: totalArticulos,
+                        activo: true,
+                        horaInicio: turno.horaInicio,
+                      ),
                     ),
                   ),
                 ),
@@ -594,14 +704,28 @@ class _TurnoActivoViewState extends ConsumerState<_TurnoActivoView>
                         const SizedBox(height: AppSpacing.sm),
                         ...List.generate(
                           ventas.length > 5 ? 5 : ventas.length,
-                          (i) => _staggeredItem(
-                            2,
-                            Padding(
-                              padding:
-                                  const EdgeInsets.only(bottom: AppSpacing.md),
-                              child: _VentaCard(venta: ventas[i]),
-                            ),
-                          ),
+                          (i) {
+                            final venta = ventas[i];
+                            return _staggeredItem(
+                              2,
+                              Padding(
+                                padding: const EdgeInsets.only(bottom: AppSpacing.md),
+                                child: i == 0 
+                                  ? _AnimatedVentaCard(
+                                      key: ValueKey('animated_${venta.id}'),
+                                      venta: venta,
+                                      scaleAnimation: _newVentaScale,
+                                      glowAnimation: _newVentaGlow,
+                                      fadeAnimation: _newVentaFade,
+                                      slideAnimation: _newVentaSlide,
+                                    )
+                                  : _VentaCard(
+                                      key: ValueKey('normal_${venta.id}'),
+                                      venta: venta,
+                                    ),
+                              ),
+                            );
+                          },
                         ),
                         // Indicador de más ventas
                         if (ventas.length > 5)
@@ -646,14 +770,24 @@ class _TurnoActivoViewState extends ConsumerState<_TurnoActivoView>
                       height: 54,
                       width: double.infinity,
                       child: ElevatedButton.icon(
-                        onPressed: () {
-                          Haptics.tap(context);
-                          context.push('/dependiente/turno/nueva-venta');
-                        },
-                        icon: const Icon(Icons.add_rounded, size: 22),
-                        label: const Text(
-                          'Nueva venta',
-                          style: TextStyle(
+                        onPressed: _isNavigatingToNuevaVenta ? null : _nuevaVentaConAnimacion,
+                        icon: AnimatedSwitcher(
+                          duration: const Duration(milliseconds: 200),
+                          child: _isNavigatingToNuevaVenta
+                              ? SizedBox(
+                                  key: const ValueKey('loading'),
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2.5,
+                                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                  ),
+                                )
+                              : const Icon(Icons.add_rounded, size: 22, key: ValueKey('icon')),
+                        ),
+                        label: Text(
+                          _isNavigatingToNuevaVenta ? 'Cargando...' : 'Nueva venta',
+                          style: const TextStyle(
                             fontSize: 17,
                             fontWeight: FontWeight.w700,
                           ),
@@ -822,7 +956,7 @@ class _EmptyItems extends StatelessWidget {
 }
 
 class _VentaCard extends StatelessWidget {
-  const _VentaCard({required this.venta});
+  const _VentaCard({super.key, required this.venta});
 
   final Venta venta;
 
@@ -847,79 +981,210 @@ class _VentaCard extends StatelessWidget {
           ),
         ],
       ),
-      child: Material(
-        color: Colors.transparent,
-        borderRadius: BorderRadius.circular(16),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(16),
-          onTap: () =>
-              context.push('/dependiente/turno/venta/${venta.id}', extra: venta),
-          child: Padding(
-            padding: const EdgeInsets.all(AppSpacing.md),
-            child: Row(
-              children: [
-                // Ícono con gradiente
-                Container(
-                  width: 48,
-                  height: 48,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
-                        context.colors.primary.withValues(alpha: 0.15),
-                        context.colors.primary.withValues(alpha: 0.05),
-                      ],
+      child: _VentaCardContent(venta: venta, metodoPago: metodoPago),
+    );
+  }
+}
+
+/// Versión animada de _VentaCard para ventas recién agregadas
+class _AnimatedVentaCard extends StatelessWidget {
+  const _AnimatedVentaCard({
+    super.key,
+    required this.venta,
+    required this.scaleAnimation,
+    required this.glowAnimation,
+    required this.fadeAnimation,
+    required this.slideAnimation,
+  });
+
+  final Venta venta;
+  final Animation<double> scaleAnimation;
+  final Animation<double> glowAnimation;
+  final Animation<double> fadeAnimation;
+  final Animation<Offset> slideAnimation;
+
+  @override
+  Widget build(BuildContext context) {
+    final metodoPago = venta.pagos.isNotEmpty ? venta.pagos.first.metodo : null;
+
+    return AnimatedBuilder(
+      animation: Listenable.merge([scaleAnimation, glowAnimation, fadeAnimation, slideAnimation]),
+      builder: (context, child) {
+        return Opacity(
+          opacity: fadeAnimation.value.clamp(0.0, 1.0),
+          child: Transform.translate(
+            offset: Offset(0, slideAnimation.value.dy * 30),
+            child: Transform.scale(
+              scale: scaleAnimation.value.clamp(0.5, 1.5),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: context.colors.surface,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: Color.lerp(
+                      context.colors.line,
+                      context.colors.ink.withValues(alpha: 0.15),
+                      (glowAnimation.value * 0.8).clamp(0.0, 1.0),
+                    )!,
+                    width: (1 + (glowAnimation.value * 1.0).clamp(0.0, 1.5)),
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: context.colors.ink.withValues(alpha: 0.03),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
                     ),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Icon(
-                    Icons.shopping_cart_rounded,
-                    color: context.colors.primary,
-                    size: 22,
-                  ),
-                ),
-                const SizedBox(width: AppSpacing.md),
-                // Información de la venta
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Venta a las ${timeFormatter.format(venta.fecha)}',
-                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                              fontWeight: FontWeight.w600,
-                            ),
+                    // Sombra sutil para destacar
+                    if (glowAnimation.value > 0.1)
+                      BoxShadow(
+                        color: context.colors.ink.withValues(
+                          alpha: (glowAnimation.value * 0.08).clamp(0.0, 1.0),
+                        ),
+                        blurRadius: 16 * glowAnimation.value.clamp(0.0, 1.0),
+                        spreadRadius: 1 * glowAnimation.value.clamp(0.0, 1.0),
                       ),
-                      const SizedBox(height: 4),
-                      Row(
-                        children: [
-                          // Badge de artículos
+                  ],
+                ),
+                child: _VentaCardContent(venta: venta, metodoPago: metodoPago),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+/// Contenido compartido entre _VentaCard y _AnimatedVentaCard
+class _VentaCardContent extends StatelessWidget {
+  const _VentaCardContent({
+    required this.venta,
+    required this.metodoPago,
+  });
+
+  final Venta venta;
+  final MetodoPago? metodoPago;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: () =>
+            context.push('/dependiente/turno/venta/${venta.id}', extra: venta),
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.md),
+          child: Row(
+            children: [
+              // Ícono con gradiente
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      context.colors.primary.withValues(alpha: 0.15),
+                      context.colors.primary.withValues(alpha: 0.05),
+                    ],
+                  ),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  Icons.shopping_cart_rounded,
+                  color: context.colors.primary,
+                  size: 22,
+                ),
+              ),
+              const SizedBox(width: AppSpacing.md),
+              // Información de la venta
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Venta a las ${timeFormatter.format(venta.fecha)}',
+                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        // Badge de artículos
+                        Container(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 3,
+                          ),
+                          decoration: BoxDecoration(
+                            color: context.colors.primary.withValues(alpha: 0.08),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.inventory_2_rounded,
+                                size: 12,
+                                color: context.colors.primary,
+                              ),
+                              SizedBox(width: 4),
+                              Text(
+                                articulosLabel(venta.totalUnidades),
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodySmall
+                                    ?.copyWith(
+                                      color: context.colors.primary,
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 11,
+                                    ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        // Badge de método de pago (si aplica)
+                        if (metodoPago != null)
                           Container(
                             padding: EdgeInsets.symmetric(
                               horizontal: 8,
                               vertical: 3,
                             ),
                             decoration: BoxDecoration(
-                              color: context.colors.primary.withValues(alpha: 0.08),
+                              color: metodoPago == MetodoPago.efectivo
+                                  ? context.colors.success.withValues(alpha: 0.08)
+                                  : context.colors.warning.withValues(alpha: 0.08),
                               borderRadius: BorderRadius.circular(6),
                             ),
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 Icon(
-                                  Icons.inventory_2_rounded,
+                                  metodoPago == MetodoPago.efectivo
+                                      ? Icons.payments_rounded
+                                      : Icons.credit_card_rounded,
                                   size: 12,
-                                  color: context.colors.primary,
+                                  color: metodoPago == MetodoPago.efectivo
+                                      ? context.colors.success
+                                      : context.colors.warning,
                                 ),
-                                SizedBox(width: 4),
+                                const SizedBox(width: 4),
                                 Text(
-                                  articulosLabel(venta.totalUnidades),
+                                  metodoPago == MetodoPago.efectivo
+                                      ? 'Efectivo'
+                                      : 'Transferencia',
                                   style: Theme.of(context)
                                       .textTheme
                                       .bodySmall
                                       ?.copyWith(
-                                        color: context.colors.primary,
+                                        color: metodoPago == MetodoPago.efectivo
+                                            ? context.colors.success
+                                            : context.colors.warning,
                                         fontWeight: FontWeight.w600,
                                         fontSize: 11,
                                       ),
@@ -927,87 +1192,41 @@ class _VentaCard extends StatelessWidget {
                               ],
                             ),
                           ),
-                          const SizedBox(width: 6),
-                          // Badge de método de pago (si aplica)
-                          if (metodoPago != null)
-                            Container(
-                              padding: EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 3,
-                              ),
-                              decoration: BoxDecoration(
-                                color: metodoPago == MetodoPago.efectivo
-                                    ? context.colors.success.withValues(alpha: 0.08)
-                                    : context.colors.warning.withValues(alpha: 0.08),
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(
-                                    metodoPago == MetodoPago.efectivo
-                                        ? Icons.payments_rounded
-                                        : Icons.credit_card_rounded,
-                                    size: 12,
-                                    color: metodoPago == MetodoPago.efectivo
-                                        ? context.colors.success
-                                        : context.colors.warning,
-                                  ),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    metodoPago == MetodoPago.efectivo
-                                        ? 'Efectivo'
-                                        : 'Transferencia',
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .bodySmall
-                                        ?.copyWith(
-                                          color: metodoPago == MetodoPago.efectivo
-                                              ? context.colors.success
-                                              : context.colors.warning,
-                                          fontWeight: FontWeight.w600,
-                                          fontSize: 11,
-                                        ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: AppSpacing.sm),
-                // Precio y chevron
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text(
-                      formatCurrency(venta.total),
-                      style: Theme.of(
-                        context,
-                      ).textTheme.titleLarge?.copyWith(
-                            color: context.colors.primary,
-                            fontWeight: FontWeight.w800,
-                          ),
-                    ),
-                    SizedBox(height: 4),
-                    Container(
-                      padding: EdgeInsets.all(4),
-                      decoration: BoxDecoration(
-                        color: context.colors.primary.withValues(alpha: 0.08),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(
-                        Icons.chevron_right_rounded,
-                        color: context.colors.primary,
-                        size: 18,
-                      ),
+                      ],
                     ),
                   ],
                 ),
-              ],
-            ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              // Precio y chevron
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    formatCurrency(venta.total),
+                    style: Theme.of(
+                      context,
+                    ).textTheme.titleLarge?.copyWith(
+                          color: context.colors.primary,
+                          fontWeight: FontWeight.w800,
+                        ),
+                  ),
+                  SizedBox(height: 4),
+                  Container(
+                    padding: EdgeInsets.all(4),
+                    decoration: BoxDecoration(
+                      color: context.colors.primary.withValues(alpha: 0.08),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      Icons.chevron_right_rounded,
+                      color: context.colors.primary,
+                      size: 18,
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ),
         ),
       ),

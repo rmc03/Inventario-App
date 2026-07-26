@@ -212,11 +212,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: '/dependiente/turno',
-            pageBuilder: (context, state) => _buildPageWithFadeTransition(
-              context,
-              state,
-              const MiTurnoScreen(),
-            ),
+            builder: (context, state) => const MiTurnoScreen(),
           ),
           GoRoute(
             path: '/dependiente/turno/resumen',
