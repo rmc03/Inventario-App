@@ -7,6 +7,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../core/utils/haptics.dart';
 import '../../../shared/models/cuadre.dart';
+import '../../../shared/models/pago.dart';
 import '../../../shared/models/venta.dart';
 import '../../../shared/widgets/estado_badge.dart';
 import '../providers/cuadre_provider.dart';
@@ -79,6 +80,49 @@ class _CuadreDetalleScreenState extends ConsumerState<CuadreDetalleScreen>
       }
     }
     return map;
+  }
+
+  _ResumenPagos _calcularResumenPagos(List<Venta> ventas) {
+    double efectivoTotal = 0.0;
+    double transferenciaTotal = 0.0;
+    int cantidadEfectivo = 0;
+    int cantidadTransferencia = 0;
+    int cantidadMixto = 0;
+
+    for (final venta in ventas) {
+      if (venta.pagos.isEmpty) continue;
+
+      // Si hay más de un pago, es mixto
+      if (venta.pagos.length > 1) {
+        cantidadMixto++;
+        // Sumar los montos de cada tipo de pago
+        for (final pago in venta.pagos) {
+          if (pago.metodo == MetodoPago.efectivo) {
+            efectivoTotal += pago.monto;
+          } else if (pago.metodo == MetodoPago.transferencia) {
+            transferenciaTotal += pago.monto;
+          }
+        }
+      } else {
+        // Pago único
+        final pago = venta.pagos.first;
+        if (pago.metodo == MetodoPago.efectivo) {
+          cantidadEfectivo++;
+          efectivoTotal += pago.monto;
+        } else if (pago.metodo == MetodoPago.transferencia) {
+          cantidadTransferencia++;
+          transferenciaTotal += pago.monto;
+        }
+      }
+    }
+
+    return _ResumenPagos(
+      efectivoTotal: efectivoTotal,
+      transferenciaTotal: transferenciaTotal,
+      cantidadEfectivo: cantidadEfectivo,
+      cantidadTransferencia: cantidadTransferencia,
+      cantidadMixto: cantidadMixto,
+    );
   }
 
   @override
@@ -238,6 +282,8 @@ class _CuadreDetalleScreenState extends ConsumerState<CuadreDetalleScreen>
     int totalUnidades,
     String? comentario,
   ) {
+    final resumenPagos = _calcularResumenPagos(ventas);
+    
     final children = <Widget>[
       for (int i = 0; i < ventas.length; i++)
         _StaggeredItem(
@@ -248,6 +294,11 @@ class _CuadreDetalleScreenState extends ConsumerState<CuadreDetalleScreen>
       const SizedBox(height: 6),
       const Divider(),
       const SizedBox(height: 12),
+      
+      // Resumen de pagos
+      _ResumenPagosCard(resumen: resumenPagos, total: total),
+      const SizedBox(height: 16),
+      
       _buildTotal(
         context,
         '${ventas.length} ${ventas.length == 1 ? 'venta' : 'ventas'}',
@@ -349,6 +400,22 @@ class _ProductoAgrupado {
     required this.nombre,
     required this.cantidad,
     required this.subtotal,
+  });
+}
+
+class _ResumenPagos {
+  final double efectivoTotal;
+  final double transferenciaTotal;
+  final int cantidadEfectivo;
+  final int cantidadTransferencia;
+  final int cantidadMixto;
+
+  const _ResumenPagos({
+    required this.efectivoTotal,
+    required this.transferenciaTotal,
+    required this.cantidadEfectivo,
+    required this.cantidadTransferencia,
+    required this.cantidadMixto,
   });
 }
 
@@ -722,65 +789,120 @@ class _VentaViewCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      child: Theme(
-        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
-        child: ExpansionTile(
-          tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-          childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-          title: Text(
-            'Venta a las ${timeFormatter.format(venta.fecha)}',
-            style: Theme.of(context).textTheme.titleMedium,
-          ),
-          subtitle: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(
-                  color: context.colors.surfaceSecondary,
-                  borderRadius: BorderRadius.circular(AppRadii.sm),
-                ),
-                child: Text(
-                  '${venta.items.length} ${venta.items.length == 1 ? 'art\u00edculo' : 'art\u00edculos'}',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    fontWeight: FontWeight.w500,
+    // Detectar el método de pago (mixto si hay más de un tipo de pago)
+    MetodoPago? metodoPago;
+    if (venta.pagos.isNotEmpty) {
+      if (venta.pagos.length > 1) {
+        metodoPago = MetodoPago.mixto;
+      } else {
+        metodoPago = venta.pagos.first.metodo;
+      }
+    }
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () => context.push('/admin/cuadres/ventas/${venta.id}', extra: venta),
+        borderRadius: BorderRadius.circular(12),
+        child: Card(
+          child: Theme(
+            data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+            child: ExpansionTile(
+              tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+              childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+              title: Text(
+                'Venta a las ${timeFormatter.format(venta.fecha)}',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+              subtitle: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: context.colors.surfaceSecondary,
+                      borderRadius: BorderRadius.circular(AppRadii.sm),
+                    ),
+                    child: Text(
+                      '${venta.items.length} ${venta.items.length == 1 ? 'art\u00edculo' : 'art\u00edculos'}',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
                   ),
+                  const SizedBox(width: 6),
+                  // Badge de método de pago
+                  if (metodoPago != null)
+                    Builder(
+                      builder: (context) {
+                        final chipColor = metodoPago == MetodoPago.efectivo
+                            ? context.colors.success
+                            : metodoPago == MetodoPago.transferencia
+                                ? context.colors.warning
+                                : context.colors.info;
+
+                        return Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: chipColor.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(AppRadii.sm),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                metodoPago!.icon,
+                                size: 12,
+                                color: chipColor,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                metodoPago.label,
+                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                  fontWeight: FontWeight.w500,
+                                  color: chipColor,
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+                ],
+              ),
+              trailing: Text(
+                formatCurrency(venta.total),
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  color: context.colors.primary,
+                  fontWeight: FontWeight.w700,
+                  fontFeatures: const [FontFeature.tabularFigures()],
                 ),
               ),
-            ],
-          ),
-          trailing: Text(
-            formatCurrency(venta.total),
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              color: context.colors.primary,
-              fontWeight: FontWeight.w700,
-              fontFeatures: const [FontFeature.tabularFigures()],
+              children: [
+                const Divider(height: 1),
+                const SizedBox(height: 12),
+                for (final item in venta.items)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            '${item.cantidad}x ${item.productoNombre}',
+                            style: Theme.of(context).textTheme.bodyMedium,
+                          ),
+                        ),
+                        Text(
+                          formatCurrency(item.subtotal),
+                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            fontFeatures: const [FontFeature.tabularFigures()],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+              ],
             ),
           ),
-          children: [
-            const Divider(height: 1),
-            const SizedBox(height: 12),
-            for (final item in venta.items)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 8),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        '${item.cantidad}x ${item.productoNombre}',
-                        style: Theme.of(context).textTheme.bodyMedium,
-                      ),
-                    ),
-                    Text(
-                      formatCurrency(item.subtotal),
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        fontFeatures: const [FontFeature.tabularFigures()],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-          ],
         ),
       ),
     );
@@ -839,6 +961,262 @@ class _ProductoCard extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _ResumenPagosCard extends StatelessWidget {
+  const _ResumenPagosCard({
+    required this.resumen,
+    required this.total,
+  });
+
+  final _ResumenPagos resumen;
+  final double total;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: context.colors.surface,
+        borderRadius: BorderRadius.circular(AppRadii.md),
+        border: Border.all(
+          color: context.colors.line.withValues(alpha: 0.5),
+        ),
+      ),
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.payment_rounded,
+                size: 20,
+                color: context.colors.primary,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'Resumen de pagos',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          
+          // Totales por método de pago
+          if (resumen.efectivoTotal > 0) ...[
+            _ResumenPagoRow(
+              icon: Icons.payments_rounded,
+              label: 'Efectivo',
+              monto: resumen.efectivoTotal,
+              color: context.colors.success,
+            ),
+            const SizedBox(height: 10),
+          ],
+          
+          if (resumen.transferenciaTotal > 0) ...[
+            _ResumenPagoRow(
+              icon: Icons.credit_card_rounded,
+              label: 'Transferencia',
+              monto: resumen.transferenciaTotal,
+              color: context.colors.warning,
+            ),
+            const SizedBox(height: 10),
+          ],
+          
+          // Divider antes del total
+          if (resumen.efectivoTotal > 0 || resumen.transferenciaTotal > 0) ...[
+            const Divider(height: 20),
+          ],
+          
+          // Total general
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Total',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              Text(
+                formatCurrency(total),
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  color: context.colors.primary,
+                  fontWeight: FontWeight.w800,
+                  fontFeatures: const [FontFeature.tabularFigures()],
+                ),
+              ),
+            ],
+          ),
+          
+          const SizedBox(height: 14),
+          const Divider(height: 1),
+          const SizedBox(height: 14),
+          
+          // Cantidad de pagos por tipo
+          Text(
+            'Cantidad de pagos',
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              fontWeight: FontWeight.w600,
+              color: context.colors.muted,
+            ),
+          ),
+          const SizedBox(height: 10),
+          
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              if (resumen.cantidadEfectivo > 0)
+                _CantidadPagoBadge(
+                  icon: Icons.payments_rounded,
+                  label: 'Efectivo',
+                  cantidad: resumen.cantidadEfectivo,
+                  color: context.colors.success,
+                ),
+              if (resumen.cantidadTransferencia > 0)
+                _CantidadPagoBadge(
+                  icon: Icons.credit_card_rounded,
+                  label: 'Transferencia',
+                  cantidad: resumen.cantidadTransferencia,
+                  color: context.colors.warning,
+                ),
+              if (resumen.cantidadMixto > 0)
+                _CantidadPagoBadge(
+                  icon: Icons.sync_alt_rounded,
+                  label: 'Mixto',
+                  cantidad: resumen.cantidadMixto,
+                  color: context.colors.info,
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ResumenPagoRow extends StatelessWidget {
+  const _ResumenPagoRow({
+    required this.icon,
+    required this.label,
+    required this.monto,
+    required this.color,
+  });
+
+  final IconData icon;
+  final String label;
+  final double monto;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.12),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(
+            icon,
+            size: 18,
+            color: color,
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Text(
+            label,
+            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+        Text(
+          formatCurrency(monto),
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+            color: color,
+            fontWeight: FontWeight.w700,
+            fontFeatures: const [FontFeature.tabularFigures()],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _CantidadPagoBadge extends StatelessWidget {
+  const _CantidadPagoBadge({
+    required this.icon,
+    required this.label,
+    required this.cantidad,
+    required this.color,
+  });
+
+  final IconData icon;
+  final String label;
+  final int cantidad;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            color.withValues(alpha: 0.14),
+            color.withValues(alpha: 0.10),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: color.withValues(alpha: 0.25),
+          width: 1,
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            icon,
+            size: 16,
+            color: color,
+          ),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: color,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(width: 6),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.2),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Text(
+              '$cantidad',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: color,
+                fontWeight: FontWeight.w700,
+                fontSize: 13,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

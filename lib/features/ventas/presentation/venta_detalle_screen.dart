@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/formatters.dart';
+import '../../../shared/models/pago.dart';
 import '../../../shared/models/venta.dart';
 import '../../auth/providers/auth_provider.dart';
 
@@ -390,7 +391,9 @@ class VentaDetalleScreen extends ConsumerWidget {
                             borderRadius: BorderRadius.circular(10),
                           ),
                           child: Icon(
-                            venta.pagos.first.metodo.icon,
+                            venta.pagos.length > 1 
+                                ? MetodoPago.mixto.icon
+                                : venta.pagos.first.metodo.icon,
                             size: 18,
                             color: context.colors.primary,
                           ),

@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 
 enum MetodoPago {
   efectivo('Efectivo', Icons.payments_outlined),
-  transferencia('Transferencia', Icons.account_balance_outlined);
+  transferencia('Transferencia', Icons.account_balance_outlined),
+  mixto('Mixto', Icons.sync_alt_rounded);
 
   const MetodoPago(this.label, this.icon);
   final String label;

@@ -6,6 +6,7 @@ import '../../../core/theme/app_dimens.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../core/utils/haptics.dart';
+import '../../../shared/models/pago.dart';
 import '../../../shared/models/venta.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../cuadres/providers/cuadre_provider.dart';
@@ -549,6 +550,52 @@ class _ResumenVentaCard extends StatelessWidget {
                   ),
                 ),
               ),
+              const SizedBox(width: 6),
+              // Badge de método de pago
+              if (venta.pagos.isNotEmpty)
+                Builder(
+                  builder: (context) {
+                    // Detectar el método de pago (mixto si hay más de un tipo de pago)
+                    final MetodoPago metodoPago;
+                    if (venta.pagos.length > 1) {
+                      metodoPago = MetodoPago.mixto;
+                    } else {
+                      metodoPago = venta.pagos.first.metodo;
+                    }
+
+                    final chipColor = metodoPago == MetodoPago.efectivo
+                        ? context.colors.success
+                        : metodoPago == MetodoPago.transferencia
+                            ? context.colors.warning
+                            : context.colors.info;
+
+                    return Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: chipColor.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(AppRadii.sm),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            metodoPago.icon,
+                            size: 12,
+                            color: chipColor,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            metodoPago.label,
+                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              fontWeight: FontWeight.w500,
+                              color: chipColor,
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
             ],
           ),
           trailing: Text(

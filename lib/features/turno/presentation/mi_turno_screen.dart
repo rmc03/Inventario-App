@@ -962,8 +962,15 @@ class _VentaCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Obtener el método de pago del primer pago (si existe)
-    final metodoPago = venta.pagos.isNotEmpty ? venta.pagos.first.metodo : null;
+    // Detectar el método de pago (mixto si hay más de un tipo de pago)
+    MetodoPago? metodoPago;
+    if (venta.pagos.isNotEmpty) {
+      if (venta.pagos.length > 1) {
+        metodoPago = MetodoPago.mixto;
+      } else {
+        metodoPago = venta.pagos.first.metodo;
+      }
+    }
 
     return Container(
       decoration: BoxDecoration(
@@ -1005,7 +1012,15 @@ class _AnimatedVentaCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final metodoPago = venta.pagos.isNotEmpty ? venta.pagos.first.metodo : null;
+    // Detectar el método de pago (mixto si hay más de un tipo de pago)
+    MetodoPago? metodoPago;
+    if (venta.pagos.isNotEmpty) {
+      if (venta.pagos.length > 1) {
+        metodoPago = MetodoPago.mixto;
+      } else {
+        metodoPago = venta.pagos.first.metodo;
+      }
+    }
 
     return AnimatedBuilder(
       animation: Listenable.merge([scaleAnimation, glowAnimation, fadeAnimation, slideAnimation]),
@@ -1158,7 +1173,9 @@ class _VentaCardContent extends StatelessWidget {
                             decoration: BoxDecoration(
                               color: metodoPago == MetodoPago.efectivo
                                   ? context.colors.success.withValues(alpha: 0.08)
-                                  : context.colors.warning.withValues(alpha: 0.08),
+                                  : metodoPago == MetodoPago.transferencia
+                                      ? context.colors.warning.withValues(alpha: 0.08)
+                                      : context.colors.info.withValues(alpha: 0.08),
                               borderRadius: BorderRadius.circular(6),
                             ),
                             child: Row(
@@ -1167,24 +1184,32 @@ class _VentaCardContent extends StatelessWidget {
                                 Icon(
                                   metodoPago == MetodoPago.efectivo
                                       ? Icons.payments_rounded
-                                      : Icons.credit_card_rounded,
+                                      : metodoPago == MetodoPago.transferencia
+                                          ? Icons.credit_card_rounded
+                                          : Icons.sync_alt_rounded,
                                   size: 12,
                                   color: metodoPago == MetodoPago.efectivo
                                       ? context.colors.success
-                                      : context.colors.warning,
+                                      : metodoPago == MetodoPago.transferencia
+                                          ? context.colors.warning
+                                          : context.colors.info,
                                 ),
                                 const SizedBox(width: 4),
                                 Text(
                                   metodoPago == MetodoPago.efectivo
                                       ? 'Efectivo'
-                                      : 'Transferencia',
+                                      : metodoPago == MetodoPago.transferencia
+                                          ? 'Transferencia'
+                                          : 'Mixto',
                                   style: Theme.of(context)
                                       .textTheme
                                       .bodySmall
                                       ?.copyWith(
                                         color: metodoPago == MetodoPago.efectivo
                                             ? context.colors.success
-                                            : context.colors.warning,
+                                            : metodoPago == MetodoPago.transferencia
+                                                ? context.colors.warning
+                                                : context.colors.info,
                                         fontWeight: FontWeight.w600,
                                         fontSize: 11,
                                       ),

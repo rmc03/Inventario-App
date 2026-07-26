@@ -9,6 +9,7 @@ import '../../../core/theme/app_dimens.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../shared/models/movimiento.dart';
+import '../../../shared/models/pago.dart';
 import '../../../shared/models/venta.dart';
 import '../../../shared/widgets/movimiento_filter_sheet.dart';
 import '../../../shared/widgets/screen_popup_menu.dart';
@@ -1384,43 +1385,119 @@ class _VentaCardState extends ConsumerState<_VentaCard> with SingleTickerProvide
                             ],
                           ),
                           const SizedBox(height: 10),
-                          // Badge de unidades
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                colors: [
-                                  color.withValues(alpha: 0.14),
-                                  color.withValues(alpha: 0.10),
-                                ],
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                              ),
-                              borderRadius: BorderRadius.circular(10),
-                              border: Border.all(
-                                color: color.withValues(alpha: 0.25),
-                                width: 1,
-                              ),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  Icons.inventory_2_rounded,
-                                  size: 16,
-                                  color: color,
+                          // Chips de unidades y método de pago
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: [
+                              // Badge de unidades
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(
+                                    colors: [
+                                      color.withValues(alpha: 0.14),
+                                      color.withValues(alpha: 0.10),
+                                    ],
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                  ),
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(
+                                    color: color.withValues(alpha: 0.25),
+                                    width: 1,
+                                  ),
                                 ),
-                                const SizedBox(width: 7),
-                                Text(
-                                  '$totalUnits ${totalUnits == 1 ? 'ud' : 'uds'}',
-                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                        fontSize: 14,
-                                        color: color,
-                                        fontWeight: FontWeight.w700,
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      Icons.inventory_2_rounded,
+                                      size: 16,
+                                      color: color,
+                                    ),
+                                    const SizedBox(width: 7),
+                                    Text(
+                                      '$totalUnits ${totalUnits == 1 ? 'ud' : 'uds'}',
+                                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                            fontSize: 14,
+                                            color: color,
+                                            fontWeight: FontWeight.w700,
+                                          ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              // Chip de método de pago (si hay venta disponible)
+                              if (venta != null && venta.pagos.isNotEmpty)
+                                Builder(
+                                  builder: (context) {
+                                    // Detectar el método de pago (mixto si hay más de un tipo de pago)
+                                    final MetodoPago metodoPago;
+                                    if (venta.pagos.length > 1) {
+                                      metodoPago = MetodoPago.mixto;
+                                    } else {
+                                      metodoPago = venta.pagos.first.metodo;
+                                    }
+
+                                    final chipColor = metodoPago == MetodoPago.efectivo
+                                        ? context.colors.success
+                                        : metodoPago == MetodoPago.transferencia
+                                            ? context.colors.warning
+                                            : context.colors.info;
+
+                                    final chipIcon = metodoPago == MetodoPago.efectivo
+                                        ? Icons.payments_rounded
+                                        : metodoPago == MetodoPago.transferencia
+                                            ? Icons.credit_card_rounded
+                                            : Icons.sync_alt_rounded;
+
+                                    final chipLabel = metodoPago == MetodoPago.efectivo
+                                        ? 'Efectivo'
+                                        : metodoPago == MetodoPago.transferencia
+                                            ? 'Transferencia'
+                                            : 'Mixto';
+
+                                    return Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                                      decoration: BoxDecoration(
+                                        gradient: LinearGradient(
+                                          colors: [
+                                            chipColor.withValues(alpha: 0.14),
+                                            chipColor.withValues(alpha: 0.10),
+                                          ],
+                                          begin: Alignment.topLeft,
+                                          end: Alignment.bottomRight,
+                                        ),
+                                        borderRadius: BorderRadius.circular(10),
+                                        border: Border.all(
+                                          color: chipColor.withValues(alpha: 0.25),
+                                          width: 1,
+                                        ),
                                       ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(
+                                            chipIcon,
+                                            size: 16,
+                                            color: chipColor,
+                                          ),
+                                          const SizedBox(width: 7),
+                                          Text(
+                                            chipLabel,
+                                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                                  fontSize: 14,
+                                                  color: chipColor,
+                                                  fontWeight: FontWeight.w700,
+                                                ),
+                                          ),
+                                        ],
+                                      ),
+                                    );
+                                  },
                                 ),
-                              ],
-                            ),
+                            ],
                           ),
                         ],
                       ),
