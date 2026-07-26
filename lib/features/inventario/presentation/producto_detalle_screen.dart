@@ -465,6 +465,9 @@ class _AjustarStockSheet extends ConsumerStatefulWidget {
 class _AjustarStockSheetState extends ConsumerState<_AjustarStockSheet> {
   late int _ajuste;
   bool _isLoading = false;
+  bool _isEditing = false;
+  final _editingController = TextEditingController();
+  final _focusNode = FocusNode();
 
   @override
   void initState() {
@@ -474,6 +477,8 @@ class _AjustarStockSheetState extends ConsumerState<_AjustarStockSheet> {
 
   @override
   void dispose() {
+    _editingController.dispose();
+    _focusNode.dispose();
     super.dispose();
   }
 
@@ -672,36 +677,46 @@ class _AjustarStockSheetState extends ConsumerState<_AjustarStockSheet> {
                       ),
                     ],
                   ),
-                  if (!sinCambios) ...[
-                    Icon(
-                      Icons.arrow_forward_rounded,
-                      color: context.colors.muted,
-                    ),
-                    const SizedBox(width: 8),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        Text(
-                          'Nuevo stock',
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  AnimatedSize(
+                    duration: const Duration(milliseconds: 300),
+                    curve: Curves.easeOutCubic,
+                    alignment: Alignment.centerRight,
+                    child: sinCambios
+                        ? const SizedBox(width: 0)
+                        : Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.arrow_forward_rounded,
                                 color: context.colors.muted,
-                                fontWeight: FontWeight.w600,
-                                letterSpacing: 0.5,
                               ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          '$_nuevoStock ${_nuevoStock == 1 ? 'unidad' : 'unidades'}',
-                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                fontWeight: FontWeight.w700,
-                                color: estaAumentando
-                                    ? context.colors.primary
-                                    : context.colors.danger,
+                              const SizedBox(width: 8),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.end,
+                                children: [
+                                  Text(
+                                    'Nuevo stock',
+                                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                          color: context.colors.muted,
+                                          fontWeight: FontWeight.w600,
+                                          letterSpacing: 0.5,
+                                        ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    '$_nuevoStock ${_nuevoStock == 1 ? 'unidad' : 'unidades'}',
+                                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                          fontWeight: FontWeight.w700,
+                                          color: estaAumentando
+                                              ? context.colors.primary
+                                              : context.colors.danger,
+                                        ),
+                                  ),
+                                ],
                               ),
-                        ),
-                      ],
-                    ),
-                  ],
+                            ],
+                          ),
+                  ),
                 ],
               ),
             ),
@@ -757,7 +772,9 @@ class _AjustarStockSheetState extends ConsumerState<_AjustarStockSheet> {
             const SizedBox(height: AppSpacing.lg),
 
             // ── Contador principal ──
-            Container(
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 250),
+              curve: Curves.easeOutCubic,
               padding: const EdgeInsets.symmetric(
                 horizontal: AppSpacing.lg,
                 vertical: AppSpacing.md,
@@ -785,34 +802,73 @@ class _AjustarStockSheetState extends ConsumerState<_AjustarStockSheet> {
                     color: context.colors.danger,
                   ),
                   
-                  // Display del ajuste
+                  // Display del ajuste (tappable para editar libremente)
                   Expanded(
-                    child: Column(
-                      children: [
-                        Text(
-                          _ajuste == 0
-                              ? '0'
-                              : _ajuste > 0
-                                  ? '+$_ajuste'
-                                  : '$_ajuste',
-                          style: Theme.of(context).textTheme.displaySmall?.copyWith(
-                                fontWeight: FontWeight.w800,
-                                color: sinCambios
-                                    ? context.colors.muted
-                                    : (estaAumentando
-                                        ? context.colors.primary
-                                        : context.colors.danger),
-                                letterSpacing: -1,
-                              ),
-                          textAlign: TextAlign.center,
-                        ),
-                        Text(
-                          _ajuste.abs() == 1 ? 'unidad' : 'unidades',
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                color: context.colors.muted,
-                              ),
-                        ),
-                      ],
+                    child: GestureDetector(
+                      onTap: () {
+                        _editingController.text = _ajuste.toString();
+                        setState(() => _isEditing = true);
+                        _focusNode.requestFocus();
+                      },
+                      child: _isEditing
+                          ? _EditAmountField(
+                              controller: _editingController,
+                              focusNode: _focusNode,
+                              onSubmit: (value) {
+                                final parsed = int.tryParse(value);
+                                if (parsed != null) {
+                                  setState(() => _ajuste = parsed);
+                                }
+                                setState(() => _isEditing = false);
+                              },
+                              onCancel: () {
+                                setState(() => _isEditing = false);
+                              },
+                            )
+                          : Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                AnimatedSwitcher(
+                                  duration: const Duration(milliseconds: 250),
+                                  switchInCurve: Curves.easeOutCubic,
+                                  switchOutCurve: Curves.easeInCubic,
+                                  transitionBuilder: (child, animation) {
+                                    return ScaleTransition(
+                                      scale: animation,
+                                      child: FadeTransition(
+                                        opacity: animation,
+                                        child: child,
+                                      ),
+                                    );
+                                  },
+                                  child: Text(
+                                    key: ValueKey('ajuste-$_ajuste'),
+                                    _ajuste == 0
+                                        ? '0'
+                                        : _ajuste > 0
+                                            ? '+$_ajuste'
+                                            : '$_ajuste',
+                                    style: Theme.of(context).textTheme.displaySmall?.copyWith(
+                                          fontWeight: FontWeight.w800,
+                                          color: sinCambios
+                                              ? context.colors.muted
+                                              : (estaAumentando
+                                                  ? context.colors.primary
+                                                  : context.colors.danger),
+                                          letterSpacing: -1,
+                                        ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  _ajuste.abs() == 1 ? 'unidad' : 'unidades',
+                                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                        color: context.colors.muted,
+                                      ),
+                                ),
+                              ],
+                            ),
                     ),
                   ),
                   
@@ -878,6 +934,92 @@ class _AjustarStockSheetState extends ConsumerState<_AjustarStockSheet> {
 // ═══════════════════════════════════════════════════════════════════════════
 // Componentes auxiliares
 // ═══════════════════════════════════════════════════════════════════════════
+
+class _EditAmountField extends StatefulWidget {
+  const _EditAmountField({
+    required this.controller,
+    required this.focusNode,
+    required this.onSubmit,
+    required this.onCancel,
+  });
+
+  final TextEditingController controller;
+  final FocusNode focusNode;
+  final ValueChanged<String> onSubmit;
+  final VoidCallback onCancel;
+
+  @override
+  State<_EditAmountField> createState() => _EditAmountFieldState();
+}
+
+class _EditAmountFieldState extends State<_EditAmountField> {
+  @override
+  void initState() {
+    super.initState();
+    widget.controller.selection = TextSelection(
+      baseOffset: 0,
+      extentOffset: widget.controller.text.length,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 8),
+      child: SizedBox(
+        height: 52,
+        child: TextField(
+          controller: widget.controller,
+          focusNode: widget.focusNode,
+          keyboardType: const TextInputType.numberWithOptions(signed: true),
+          textAlign: TextAlign.center,
+          style: Theme.of(context).textTheme.displaySmall?.copyWith(
+                fontWeight: FontWeight.w800,
+                color: context.colors.ink,
+                letterSpacing: -1,
+              ),
+          decoration: InputDecoration(
+            isDense: true,
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 12,
+              vertical: 10,
+            ),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(
+                color: context.colors.primary,
+                width: 1.5,
+              ),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(
+                color: context.colors.primary.withValues(alpha: 0.6),
+                width: 1.5,
+              ),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(
+                color: context.colors.primary,
+                width: 2,
+              ),
+            ),
+          ),
+          onSubmitted: (value) => widget.onSubmit(value.trim()),
+          onTapOutside: (_) {
+            final text = widget.controller.text.trim();
+            if (text.isNotEmpty) {
+              widget.onSubmit(text);
+            } else {
+              widget.onCancel();
+            }
+          },
+        ),
+      ),
+    );
+  }
+}
 
 class _QuickAdjustButton extends StatelessWidget {
   const _QuickAdjustButton({
