@@ -50,7 +50,7 @@ class _ThemeCardState extends State<ThemeCard> {
           curve: Curves.easeOutCubic,
           decoration: BoxDecoration(
             color: colors.surface,
-            borderRadius: BorderRadius.circular(AppRadii.lg),
+            borderRadius: BorderRadius.circular(AppRadii.xl),
             border: Border.all(
               color: widget.isSelected
                   ? colors.primary

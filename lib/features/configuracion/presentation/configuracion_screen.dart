@@ -189,40 +189,45 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen>
                         label: 'Personalización',
                       ),
                       Card(
-                        child: ListTile(
-                          leading: const Icon(Icons.palette_rounded),
-                          title: const Text('Temas'),
-                          subtitle:
-                              const Text('Esquema de colores y modo de brillo'),
-                          trailing:
-                              const Icon(Icons.chevron_right_rounded),
-                          onTap: () => context.push(
-                            widget.isAdmin
-                                ? '/admin/configuracion/temas'
-                                : '/dependiente/configuracion/temas',
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Card(
-                        child: Consumer(
-                          builder: (context, ref, _) {
-                            return SwitchListTile(
-                              secondary:
-                                  const Icon(Icons.vibration_rounded),
-                              title: const Text('Vibración en botones'),
-                              subtitle: const Text(
-                                'Feedback táctil en acciones importantes',
+                        child: Column(
+                          children: [
+                            ListTile(
+                              leading: const Icon(Icons.palette_rounded),
+                              title: const Text('Temas'),
+                              subtitle:
+                                  const Text('Esquema de colores y modo de brillo'),
+                              trailing:
+                                  const Icon(Icons.chevron_right_rounded),
+                              onTap: () => context.push(
+                                widget.isAdmin
+                                    ? '/admin/configuracion/temas'
+                                    : '/dependiente/configuracion/temas',
                               ),
-                              value: ref.watch(hapticsEnabledProvider),
-                              onChanged: (v) {
-                                ref
-                                    .read(hapticsEnabledProvider.notifier)
-                                    .setEnabled(v);
-                                if (v) Haptics.tap(context);
+                            ),
+                            const Divider(
+                                height: 1,
+                                indent: 16,
+                                endIndent: 16),
+                            Consumer(
+                              builder: (context, ref, _) {
+                                return SwitchListTile(
+                                  secondary:
+                                      const Icon(Icons.vibration_rounded),
+                                  title: const Text('Vibración en botones'),
+                                  subtitle: const Text(
+                                    'Feedback táctil en acciones importantes',
+                                  ),
+                                  value: ref.watch(hapticsEnabledProvider),
+                                  onChanged: (v) {
+                                    ref
+                                        .read(hapticsEnabledProvider.notifier)
+                                        .setEnabled(v);
+                                    if (v) Haptics.tap(context);
+                                  },
+                                );
                               },
-                            );
-                          },
+                            ),
+                          ],
                         ),
                       ),
                     ],

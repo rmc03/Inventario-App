@@ -157,17 +157,27 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: '/admin/inventario/productos/nuevo',
-            builder: (context, state) => const ProductoFormScreen(),
+            pageBuilder: (context, state) => _buildPageWithFadeTransition(
+              context,
+              state,
+              const ProductoFormScreen(),
+            ),
           ),
           GoRoute(
             path: '/admin/inventario/productos/:id',
-            builder: (context, state) =>
-                ProductoDetalleScreen(productId: state.pathParameters['id']!),
+            pageBuilder: (context, state) => _buildPageWithFadeTransition(
+              context,
+              state,
+              ProductoDetalleScreen(productId: state.pathParameters['id']!),
+            ),
           ),
           GoRoute(
             path: '/admin/inventario/productos/:id/editar',
-            builder: (context, state) =>
-                ProductoFormScreen(productId: state.pathParameters['id']),
+            pageBuilder: (context, state) => _buildPageWithFadeTransition(
+              context,
+              state,
+              ProductoFormScreen(productId: state.pathParameters['id']),
+            ),
           ),
           GoRoute(
             path: '/admin/movimientos',
@@ -179,9 +189,13 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: '/admin/movimientos/ventas/:id',
-            builder: (context, state) {
+            pageBuilder: (context, state) {
               final venta = state.extra as Venta;
-              return VentaDetalleScreen(venta: venta);
+              return _buildPageWithFadeTransition(
+                context,
+                state,
+                VentaDetalleScreen(venta: venta),
+              );
             },
           ),
           GoRoute(
@@ -194,28 +208,51 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: '/admin/cuadres/:id',
-            builder: (context, state) =>
-                CuadreDetalleScreen(cuadreId: state.pathParameters['id']!),
+            pageBuilder: (context, state) => _buildPageWithFadeTransition(
+              context,
+              state,
+              CuadreDetalleScreen(cuadreId: state.pathParameters['id']!),
+            ),
           ),
           GoRoute(
             path: '/admin/configuracion',
-            builder: (context, state) => const ConfiguracionScreen(isAdmin: true),
+            pageBuilder: (context, state) => _buildPageWithFadeTransition(
+              context,
+              state,
+              const ConfiguracionScreen(isAdmin: true),
+            ),
           ),
           GoRoute(
             path: '/admin/configuracion/accesibilidad',
-            builder: (context, state) => const AccesibilidadScreen(),
+            pageBuilder: (context, state) => _buildPageWithFadeTransition(
+              context,
+              state,
+              const AccesibilidadScreen(),
+            ),
           ),
           GoRoute(
             path: '/admin/configuracion/equipo',
-            builder: (context, state) => const EquipoScreen(),
+            pageBuilder: (context, state) => _buildPageWithFadeTransition(
+              context,
+              state,
+              const EquipoScreen(),
+            ),
           ),
           GoRoute(
             path: '/admin/configuracion/categorias',
-            builder: (context, state) => const CategoriasScreen(),
+            pageBuilder: (context, state) => _buildPageWithFadeTransition(
+              context,
+              state,
+              const CategoriasScreen(),
+            ),
           ),
           GoRoute(
             path: '/admin/configuracion/temas',
-            builder: (context, state) => const TemasScreen(),
+            pageBuilder: (context, state) => _buildPageWithFadeTransition(
+              context,
+              state,
+              const TemasScreen(),
+            ),
           ),
         ],
       ),
@@ -236,49 +273,89 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: '/dependiente/inventario/productos/:id',
-            builder: (context, state) => ProductoDetalleScreen(
-              productId: state.pathParameters['id']!,
-              isAdmin: false,
+            pageBuilder: (context, state) => _buildPageWithFadeTransition(
+              context,
+              state,
+              ProductoDetalleScreen(
+                productId: state.pathParameters['id']!,
+                isAdmin: false,
+              ),
             ),
           ),
           GoRoute(
             path: '/dependiente/turno',
-            builder: (context, state) => const MiTurnoScreen(),
+            pageBuilder: (context, state) => _buildPageWithFadeTransition(
+              context,
+              state,
+              const MiTurnoScreen(),
+            ),
           ),
           GoRoute(
             path: '/dependiente/turno/resumen',
-            builder: (context, state) => const CuadreResumenScreen(),
+            pageBuilder: (context, state) => _buildPageWithFadeTransition(
+              context,
+              state,
+              const CuadreResumenScreen(),
+            ),
           ),
           GoRoute(
             path: '/dependiente/turno/nueva-venta',
-            builder: (context, state) => const NuevaVentaScreen(),
+            pageBuilder: (context, state) => _buildPageWithFadeTransition(
+              context,
+              state,
+              const NuevaVentaScreen(),
+            ),
           ),
           GoRoute(
             path: '/dependiente/turno/confirmar-pago',
-            builder: (context, state) => const ConfirmarPagoScreen(),
+            pageBuilder: (context, state) => _buildPageWithFadeTransition(
+              context,
+              state,
+              const ConfirmarPagoScreen(),
+            ),
           ),
           GoRoute(
             path: '/dependiente/turno/venta/:id',
-            builder: (context, state) {
+            pageBuilder: (context, state) {
               final venta = state.extra as Venta;
-              return VentaDetalleScreen(venta: venta);
+              return _buildPageWithFadeTransition(
+                context,
+                state,
+                VentaDetalleScreen(venta: venta),
+              );
             },
           ),
           GoRoute(
             path: '/dependiente/cuadres/historial',
-            builder: (context, state) => const CuadresHistorialScreen(),
+            pageBuilder: (context, state) => _buildPageWithFadeTransition(
+              context,
+              state,
+              const CuadresHistorialScreen(),
+            ),
           ),
           GoRoute(
             path: '/dependiente/configuracion',
-            builder: (context, state) => const ConfiguracionScreen(isAdmin: false),
+            pageBuilder: (context, state) => _buildPageWithFadeTransition(
+              context,
+              state,
+              const ConfiguracionScreen(isAdmin: false),
+            ),
           ),
           GoRoute(
             path: '/dependiente/configuracion/accesibilidad',
-            builder: (context, state) => const AccesibilidadScreen(),
+            pageBuilder: (context, state) => _buildPageWithFadeTransition(
+              context,
+              state,
+              const AccesibilidadScreen(),
+            ),
           ),
           GoRoute(
             path: '/dependiente/configuracion/temas',
-            builder: (context, state) => const TemasScreen(),
+            pageBuilder: (context, state) => _buildPageWithFadeTransition(
+              context,
+              state,
+              const TemasScreen(),
+            ),
           ),
         ],
       ),

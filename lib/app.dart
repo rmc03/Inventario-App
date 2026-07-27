@@ -79,7 +79,13 @@ class _SplashOverlayState extends State<_SplashOverlay> {
   @override
   Widget build(BuildContext context) {
     final child = widget.child;
-    final colors = Theme.of(context).extension<AppColorsExtension>() ?? AppColorsExtension.light;
+    // 🔥 FIX: Use MediaQuery brightness to determine background color
+    // BEFORE theme is fully resolved, preventing white flash in dark mode
+    final brightness = MediaQuery.platformBrightnessOf(context);
+    final isDark = brightness == Brightness.dark;
+    final backgroundColor = isDark 
+        ? const Color(0xFF0F172A)  // Slate 900 from dark theme
+        : const Color(0xFFFAFAFA); // Light background
     
     return Stack(
       children: [
@@ -91,7 +97,7 @@ class _SplashOverlayState extends State<_SplashOverlay> {
           child: IgnorePointer(
             ignoring: !_visible,
             child: Container(
-              color: colors.background,
+              color: backgroundColor,
               child: Center(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -100,7 +106,9 @@ class _SplashOverlayState extends State<_SplashOverlay> {
                     const SizedBox(height: 12),
                     Text(
                       AppBranding.appName,
-                      style: Theme.of(context).textTheme.headlineMedium,
+                      style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                        color: isDark ? Colors.white : Colors.black,
+                      ),
                     ),
                   ],
                 ),

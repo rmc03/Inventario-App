@@ -374,6 +374,8 @@ class _HeroStats extends StatelessWidget {
 }
 
 /// Tarjeta de estadística hero animada con conteo progresivo.
+/// 🔥 FIX: Optimized to prevent flickering in dark mode by reducing
+/// nested animations and unnecessary rebuilds.
 class _AnimatedHeroStatCard extends StatefulWidget {
   const _AnimatedHeroStatCard({
     required this.label,
@@ -402,6 +404,7 @@ class _AnimatedHeroStatCardState extends State<_AnimatedHeroStatCard>
   late AnimationController _controller;
   late Animation<double> _countAnimation;
   late Animation<double> _scaleAnimation;
+  bool _hasAnimated = false;
 
   @override
   void initState() {
@@ -433,7 +436,8 @@ class _AnimatedHeroStatCardState extends State<_AnimatedHeroStatCard>
 
     // Delay inicial antes de iniciar
     Future.delayed(widget.delay, () {
-      if (mounted) {
+      if (mounted && !_hasAnimated) {
+        _hasAnimated = true;
         _controller.forward();
       }
     });
@@ -442,8 +446,8 @@ class _AnimatedHeroStatCardState extends State<_AnimatedHeroStatCard>
   @override
   void didUpdateWidget(_AnimatedHeroStatCard oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.value != widget.value) {
-      // Animar cambio de valor
+    // 🔥 FIX: Only animate if value significantly changed (avoid micro-rebuilds)
+    if ((oldWidget.value - widget.value).abs() > 0.01) {
       _countAnimation = Tween<double>(
         begin: oldWidget.value,
         end: widget.value,
@@ -477,10 +481,10 @@ class _AnimatedHeroStatCardState extends State<_AnimatedHeroStatCard>
             color: context.colors.surface,
             borderRadius: AppRadii.mdBorder,
             border: isDark ? Border.all(
-              color: context.colors.line,  // Border gris simple, sin color
+              color: context.colors.line,
               width: 1,
             ) : null,
-            boxShadow: AppShadows.subtle,  // Sombra sutil estándar, sin glows
+            boxShadow: AppShadows.subtle,
           ),
           child: Padding(
             padding: EdgeInsets.symmetric(
@@ -489,19 +493,12 @@ class _AnimatedHeroStatCardState extends State<_AnimatedHeroStatCard>
             ),
             child: Column(
               children: [
-                TweenAnimationBuilder<double>(
+                // 🔥 FIX: Simplified icon animation - removed TweenAnimationBuilder
+                // to reduce animation layers causing flicker
+                AnimatedOpacity(
                   duration: const Duration(milliseconds: 400),
                   curve: Curves.easeOutCubic,
-                  tween: Tween(begin: 0.0, end: 1.0),
-                  builder: (context, value, child) {
-                    return Transform.scale(
-                      scale: 0.8 + (0.2 * value),
-                      child: Opacity(
-                        opacity: value,
-                        child: child,
-                      ),
-                    );
-                  },
+                  opacity: _hasAnimated ? 1.0 : 0.0,
                   child: Container(
                     padding: EdgeInsets.all(AppSpacing.sm),
                     decoration: BoxDecoration(
@@ -524,36 +521,31 @@ class _AnimatedHeroStatCardState extends State<_AnimatedHeroStatCard>
                   overflow: TextOverflow.ellipsis,
                 ),
                 SizedBox(height: AppSpacing.md),
-                AnimatedBuilder(
-                  animation: _countAnimation,
-                  builder: (context, child) {
-                    return Text(
-                      widget.formatter(_countAnimation.value),
-                      style: Theme.of(context).textTheme.headlineLarge?.copyWith(
-                            color: widget.color,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: -1.2,
-                            height: 1,
-                          ),
-                      textAlign: TextAlign.center,
-                    );
-                  },
+                // 🔥 FIX: Use RepaintBoundary to isolate repaints
+                RepaintBoundary(
+                  child: AnimatedBuilder(
+                    animation: _countAnimation,
+                    builder: (context, child) {
+                      return Text(
+                        widget.formatter(_countAnimation.value),
+                        style: Theme.of(context).textTheme.headlineLarge?.copyWith(
+                              color: widget.color,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: -1.2,
+                              height: 1,
+                            ),
+                        textAlign: TextAlign.center,
+                      );
+                    },
+                  ),
                 ),
                 if (widget.delta != null) ...[
                   SizedBox(height: AppSpacing.xs),
-                  TweenAnimationBuilder<double>(
+                  // 🔥 FIX: Simplified delta animation
+                  AnimatedOpacity(
                     duration: const Duration(milliseconds: 500),
                     curve: Curves.easeOutCubic,
-                    tween: Tween(begin: 0.0, end: 1.0),
-                    builder: (context, value, child) {
-                      return Transform.translate(
-                        offset: Offset(0, 8 * (1 - value)),
-                        child: Opacity(
-                          opacity: value,
-                          child: child,
-                        ),
-                      );
-                    },
+                    opacity: _hasAnimated ? 1.0 : 0.0,
                     child: _DeltaIndicator(delta: widget.delta!),
                   ),
                 ],
