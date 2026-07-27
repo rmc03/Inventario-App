@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'app_color_schemes.dart';
 import 'app_dimens.dart';
 
 class AppColorsExtension extends ThemeExtension<AppColorsExtension> {
@@ -136,11 +137,23 @@ extension ColorContext on BuildContext {
 
 
 class AppTheme {
-  static ThemeData light({double textScaleFactor = 1.0, bool boldText = false}) => 
-      _buildTheme(Brightness.light, AppColorsExtension.light, textScaleFactor, boldText);
-  
-  static ThemeData dark({double textScaleFactor = 1.0, bool boldText = false}) => 
-      _buildTheme(Brightness.dark, AppColorsExtension.dark, textScaleFactor, boldText);
+  static ThemeData light({
+    double textScaleFactor = 1.0,
+    bool boldText = false,
+    AppColorScheme? colorScheme,
+  }) {
+    final ext = colorScheme != null ? colorScheme.light : AppColorsExtension.light;
+    return _buildTheme(Brightness.light, ext, textScaleFactor, boldText);
+  }
+
+  static ThemeData dark({
+    double textScaleFactor = 1.0,
+    bool boldText = false,
+    AppColorScheme? colorScheme,
+  }) {
+    final ext = colorScheme != null ? colorScheme.dark : AppColorsExtension.dark;
+    return _buildTheme(Brightness.dark, ext, textScaleFactor, boldText);
+  }
 
   static ThemeData _buildTheme(
     Brightness brightness, 

@@ -123,6 +123,7 @@ class InventarioApp extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final router = ref.watch(appRouterProvider);
     final themeMode = ref.watch(themeModeProvider);
+    final colorScheme = ref.watch(colorSchemeProvider);
     final accessibility = ref.watch(accessibilityProvider);
 
     return MaterialApp.router(
@@ -131,10 +132,12 @@ class InventarioApp extends ConsumerWidget {
       theme: AppTheme.light(
         textScaleFactor: accessibility.textSizeLevel.scale,
         boldText: accessibility.boldText,
+        colorScheme: colorScheme,
       ),
       darkTheme: AppTheme.dark(
         textScaleFactor: accessibility.textSizeLevel.scale,
         boldText: accessibility.boldText,
+        colorScheme: colorScheme,
       ),
       themeMode: themeMode,
       routerConfig: router,

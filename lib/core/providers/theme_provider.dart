@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../theme/app_color_schemes.dart';
+
 const String _themeModeKey = 'theme_mode_preference';
+const String _colorSchemeKey = 'color_scheme_preference';
 
 final themeModeProvider = NotifierProvider<ThemeModeNotifier, ThemeMode>(() {
   return ThemeModeNotifier();
@@ -37,5 +40,32 @@ class ThemeModeNotifier extends Notifier<ThemeMode> {
     } else {
       await prefs.setString(_themeModeKey, 'system');
     }
+  }
+}
+
+final colorSchemeProvider =
+    NotifierProvider<ColorSchemeNotifier, AppColorScheme>(() {
+  return ColorSchemeNotifier();
+});
+
+class ColorSchemeNotifier extends Notifier<AppColorScheme> {
+  @override
+  AppColorScheme build() {
+    _loadColorScheme();
+    return AppColorScheme.indigo;
+  }
+
+  Future<void> _loadColorScheme() async {
+    final prefs = await SharedPreferences.getInstance();
+    final saved = prefs.getString(_colorSchemeKey);
+    if (saved != null) {
+      state = AppColorScheme.fromString(saved);
+    }
+  }
+
+  Future<void> setColorScheme(AppColorScheme scheme) async {
+    state = scheme;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_colorSchemeKey, scheme.name);
   }
 }
