@@ -8,8 +8,6 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../core/utils/haptics.dart';
 import '../../../shared/models/pago.dart';
-import '../../qr_pagos/presentation/qr_display_modal.dart';
-import '../../qr_pagos/providers/qr_pago_provider.dart';
 import '../providers/venta_provider.dart';
 
 class ConfirmarPagoScreen extends ConsumerStatefulWidget {
@@ -49,6 +47,11 @@ class _ConfirmarPagoScreenState extends ConsumerState<ConfirmarPagoScreen>
 
   bool _isConfirming = false;
 
+  // ScrollController para el panel de pago
+  final _scrollController = ScrollController();
+  // GlobalKey para la calculadora de cambio
+  final _calculadoraKey = GlobalKey();
+
   @override
   void initState() {
     super.initState();
@@ -68,6 +71,7 @@ class _ConfirmarPagoScreenState extends ConsumerState<ConfirmarPagoScreen>
     _efectivoRecibidoController.dispose();
     _efectivoMixtoController.dispose();
     _transferenciaMixtoController.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 
@@ -86,6 +90,27 @@ class _ConfirmarPagoScreenState extends ConsumerState<ConfirmarPagoScreen>
       return true;
     }
     return _montoAsignado == _totalVenta;
+  }
+
+  // Hace scroll automático para mantener visible un widget cuando el teclado aparece
+  void _scrollToWidget(GlobalKey key) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final keyContext = key.currentContext;
+      if (keyContext != null && _scrollController.hasClients && mounted) {
+        // Esperar a que el teclado termine de animarse
+        Future.delayed(const Duration(milliseconds: 350), () {
+          if (!mounted) return;
+          
+          // Usar Scrollable.ensureVisible que maneja automáticamente el teclado
+          Scrollable.ensureVisible(
+            keyContext,
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeOutCubic,
+            alignment: 0.2, // 20% desde arriba de la vista visible
+          );
+        });
+      }
+    });
   }
 
   void _actualizarModoEfectivo() {
@@ -151,74 +176,58 @@ class _ConfirmarPagoScreenState extends ConsumerState<ConfirmarPagoScreen>
       case ModoPago.efectivo:
         return KeyedSubtree(
           key: const ValueKey('efectivo'),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              InkWell(
-                onTap: () => setState(() => _mostrarCalculadoraEfectivo = !_mostrarCalculadoraEfectivo),
-                borderRadius: BorderRadius.circular(12),
-                child: Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                  decoration: BoxDecoration(
-                    color: context.colors.surfaceSecondary,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: context.colors.line.withValues(alpha: 0.2), width: 1),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.calculate_outlined,
-                        size: 20,
-                        color: context.colors.ink,
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Text(
-                          'Calcular vuelto',
-                          style: TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w600,
-                            color: context.colors.ink,
-                            letterSpacing: -0.2,
-                          ),
-                        ),
-                      ),
-                      Icon(
-                        _mostrarCalculadoraEfectivo ? Icons.keyboard_arrow_up_rounded : Icons.keyboard_arrow_down_rounded,
-                        size: 20,
-                        color: context.colors.muted,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              AnimatedCrossFade(
-                firstChild: const SizedBox.shrink(),
-                secondChild: Padding(
-                  padding: const EdgeInsets.only(top: 12),
-                  child: _CalculadoraCambio(
-                    controller: _efectivoRecibidoController,
-                    montoEfectivo: _montoEfectivo,
-                    onChanged: (valor) => setState(() => _efectivoRecibido = valor),
-                  ),
-                ),
-                crossFadeState: _mostrarCalculadoraEfectivo
-                    ? CrossFadeState.showSecond
-                    : CrossFadeState.showFirst,
-                duration: const Duration(milliseconds: 300),
-                sizeCurve: Curves.easeOutCubic,
-              ),
-            ],
+          child: _CalculadoraCambio(
+            key: _calculadoraKey,
+            controller: _efectivoRecibidoController,
+            montoEfectivo: _montoEfectivo,
+            onChanged: (valor) => setState(() => _efectivoRecibido = valor),
+            onFocused: () => _scrollToWidget(_calculadoraKey),
           ),
         );
 
       case ModoPago.transferencia:
         return KeyedSubtree(
           key: const ValueKey('transferencia'),
-          child: _BotonMostrarQr(
-            montoTransferencia: _totalVenta,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                decoration: BoxDecoration(
+                  color: context.colors.surfaceSecondary,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: context.colors.line.withValues(alpha: 0.2), width: 1),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.account_balance_outlined,
+                      size: 20,
+                      color: context.colors.ink,
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        'Pago por transferencia',
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                          color: context.colors.ink,
+                          letterSpacing: -0.2,
+                        ),
+                      ),
+                    ),
+                    Icon(
+                      Icons.check_circle_outline,
+                      size: 20,
+                      color: context.colors.success,
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
         );
 
@@ -254,13 +263,6 @@ class _ConfirmarPagoScreenState extends ConsumerState<ConfirmarPagoScreen>
                   setState(() => _montoTransferencia = resto > 0 ? resto : 0.0);
                 },
               ),
-              // Botón mostrar QR si hay monto de transferencia
-              if (_montoTransferencia > 0) ...[
-                const SizedBox(height: 16),
-                _BotonMostrarQr(
-                  montoTransferencia: _montoTransferencia,
-                ),
-              ],
               const SizedBox(height: 16),
               AnimatedContainer(
                 duration: const Duration(milliseconds: 300),
@@ -315,62 +317,15 @@ class _ConfirmarPagoScreenState extends ConsumerState<ConfirmarPagoScreen>
                     textAlign: TextAlign.center,
                   ),
                 ),
+              // Calculadora de cambio: mostrar directamente cuando hay monto en efectivo
               if (_montoEfectivo > 0) ...[
                 const SizedBox(height: 16),
-                InkWell(
-                  onTap: () => setState(() => _mostrarCalculadoraEfectivo = !_mostrarCalculadoraEfectivo),
-                  borderRadius: BorderRadius.circular(12),
-                  child: Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                    decoration: BoxDecoration(
-                      color: context.colors.surfaceSecondary,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: context.colors.line.withValues(alpha: 0.2), width: 1),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.calculate_outlined,
-                          size: 20,
-                          color: context.colors.ink,
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Text(
-                            'Calcular vuelto',
-                            style: TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w600,
-                              color: context.colors.ink,
-                              letterSpacing: -0.2,
-                            ),
-                          ),
-                        ),
-                        Icon(
-                          _mostrarCalculadoraEfectivo ? Icons.keyboard_arrow_up_rounded : Icons.keyboard_arrow_down_rounded,
-                          size: 20,
-                          color: context.colors.muted,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                AnimatedCrossFade(
-                  firstChild: const SizedBox.shrink(),
-                  secondChild: Padding(
-                    padding: const EdgeInsets.only(top: 12),
-                    child: _CalculadoraCambio(
-                      controller: _efectivoRecibidoController,
-                      montoEfectivo: _montoEfectivo,
-                      onChanged: (valor) => setState(() => _efectivoRecibido = valor),
-                    ),
-                  ),
-                  crossFadeState: _mostrarCalculadoraEfectivo
-                      ? CrossFadeState.showSecond
-                      : CrossFadeState.showFirst,
-                  duration: const Duration(milliseconds: 300),
-                  sizeCurve: Curves.easeOutCubic,
+                _CalculadoraCambio(
+                  key: _calculadoraKey,
+                  controller: _efectivoRecibidoController,
+                  montoEfectivo: _montoEfectivo,
+                  onChanged: (valor) => setState(() => _efectivoRecibido = valor),
+                  onFocused: () => _scrollToWidget(_calculadoraKey),
                 ),
               ],
             ],
@@ -511,9 +466,10 @@ class _ConfirmarPagoScreenState extends ConsumerState<ConfirmarPagoScreen>
                 ),
               ),
               child: Column(
+                mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Total de la venta
+                  // Total de la venta (fijo, no hace scroll)
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
                     decoration: BoxDecoration(
@@ -553,7 +509,9 @@ class _ConfirmarPagoScreenState extends ConsumerState<ConfirmarPagoScreen>
                     ),
                   ),
 
-                  Padding(
+                  // Contenido scrolleable: métodos de pago y calculadora
+                  SingleChildScrollView(
+                    controller: _scrollController,
                     padding: const EdgeInsets.all(16),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -927,14 +885,17 @@ class _CampoMontoMixto extends StatelessWidget {
 /// Calculadora de cambio (opcional, para efectivo)
 class _CalculadoraCambio extends StatelessWidget {
   const _CalculadoraCambio({
+    super.key,
     required this.controller,
     required this.montoEfectivo,
     required this.onChanged,
+    required this.onFocused,
   });
 
   final TextEditingController controller;
   final double montoEfectivo;
   final ValueChanged<double> onChanged;
+  final VoidCallback onFocused;
 
   @override
   Widget build(BuildContext context) {
@@ -1002,6 +963,7 @@ class _CalculadoraCambio extends StatelessWidget {
                 ),
               ),
             ),
+            onTap: onFocused,
             onChanged: (valor) {
               onChanged(double.tryParse(valor) ?? 0.0);
             },
@@ -1065,216 +1027,3 @@ class _CalculadoraCambio extends StatelessWidget {
   }
 }
 
-// ════════════════════════════════════════════════════════════════════════════
-// Widget botón mostrar QR
-// ════════════════════════════════════════════════════════════════════════════
-
-/// Botón que abre el modal fullscreen con el QR para pago por transferencia
-class _BotonMostrarQr extends ConsumerWidget {
-  final double montoTransferencia;
-
-  const _BotonMostrarQr({
-    required this.montoTransferencia,
-  });
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final qrsAsync = ref.watch(qrsPagosAccesiblesProvider);
-
-    return qrsAsync.when(
-      data: (qrs) {
-        if (qrs.isEmpty) {
-          // Sin QRs configurados
-          return Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: context.colors.warning.withValues(alpha: 0.08),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: context.colors.warning.withValues(alpha: 0.3),
-                width: 1.5,
-              ),
-            ),
-            child: Row(
-              children: [
-                Icon(
-                  Icons.qr_code_2_rounded,
-                  size: 24,
-                  color: context.colors.warning,
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Sin QRs configurados',
-                        style: TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
-                          color: context.colors.ink,
-                          letterSpacing: -0.2,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Configura tus QRs en Ajustes',
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w500,
-                          color: context.colors.muted,
-                          letterSpacing: -0.1,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          );
-        }
-
-        // Con QRs disponibles
-        return InkWell(
-          onTap: () {
-            Haptics.tap(context);
-            showDialog(
-              context: context,
-              barrierDismissible: true,
-              barrierColor: Colors.black.withValues(alpha: 0.85),
-              useSafeArea: false,
-              builder: (context) => QrDisplayModal(
-                qrsDisponibles: qrs,
-                montoTransferencia: montoTransferencia,
-              ),
-            );
-          },
-          borderRadius: BorderRadius.circular(14),
-          child: Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  context.colors.primary.withValues(alpha: 0.12),
-                  context.colors.primary.withValues(alpha: 0.06),
-                ],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(
-                color: context.colors.primary.withValues(alpha: 0.3),
-                width: 1.5,
-              ),
-            ),
-            child: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: context.colors.primary.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Icon(
-                    Icons.qr_code_2_rounded,
-                    size: 24,
-                    color: context.colors.primary,
-                  ),
-                ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Mostrar QR para pago',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: context.colors.ink,
-                          letterSpacing: -0.3,
-                          height: 1.2,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        qrs.length == 1
-                            ? qrs.first.nombre
-                            : '${qrs.length} cuentas disponibles',
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w500,
-                          color: context.colors.muted,
-                          letterSpacing: -0.1,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Icon(
-                  Icons.chevron_right_rounded,
-                  size: 24,
-                  color: context.colors.primary,
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-      loading: () => Container(
-        width: double.infinity,
-        height: 64,
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: context.colors.surfaceSecondary,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Center(
-          child: SizedBox(
-            height: 20,
-            width: 20,
-            child: CircularProgressIndicator(
-              strokeWidth: 2,
-              color: context.colors.primary,
-            ),
-          ),
-        ),
-      ),
-      error: (error, stack) => Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: context.colors.danger.withValues(alpha: 0.08),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: context.colors.danger.withValues(alpha: 0.3),
-            width: 1,
-          ),
-        ),
-        child: Row(
-          children: [
-            Icon(
-              Icons.error_outline_rounded,
-              size: 20,
-              color: context.colors.danger,
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                'Error al cargar QRs',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                  color: context.colors.danger,
-                  letterSpacing: -0.1,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}

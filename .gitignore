@@ -3,6 +3,7 @@
 *.kiro
 *.class
 *.kimchi
+*.codex
 *.log
 *.pyc
 *.swp

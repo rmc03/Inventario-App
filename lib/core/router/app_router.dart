@@ -58,6 +58,42 @@ Page<void> _buildPageWithFadeTransition(
   );
 }
 
+/// Transición para Mi Turno: fade + slide sutil hacia arriba.
+/// Se diferencia del fade genérico para dar continuidad visual
+/// cuando se regresa desde Confirmar Pago (context.go).
+Page<void> _buildTurnoTransition(
+  BuildContext context,
+  GoRouterState state,
+  Widget child,
+) {
+  return CustomTransitionPage<void>(
+    key: state.pageKey,
+    child: child,
+    transitionsBuilder: (context, animation, secondaryAnimation, child) {
+      final curved = CurvedAnimation(
+        parent: animation,
+        curve: Curves.easeOutCubic,
+        reverseCurve: Curves.easeInCubic,
+      );
+
+      final slide = Tween<Offset>(
+        begin: const Offset(0, 0.03),
+        end: Offset.zero,
+      ).animate(curved);
+
+      return FadeTransition(
+        opacity: curved,
+        child: SlideTransition(
+          position: slide,
+          child: child,
+        ),
+      );
+    },
+    transitionDuration: const Duration(milliseconds: 250),
+    reverseTransitionDuration: const Duration(milliseconds: 200),
+  );
+}
+
 /// Notifica a GoRouter cuando el estado de autenticación cambia,
 /// sin necesidad de recrear la instancia del router.
 class _AuthNotifier extends ChangeNotifier {
@@ -284,7 +320,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: '/dependiente/turno',
-            pageBuilder: (context, state) => _buildPageWithFadeTransition(
+            pageBuilder: (context, state) => _buildTurnoTransition(
               context,
               state,
               const MiTurnoScreen(),

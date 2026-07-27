@@ -13,10 +13,11 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/haptics.dart';
 import '../../../shared/models/usuario.dart';
 import '../../auth/providers/auth_provider.dart';
+import '../../qr_pagos/presentation/gestionar_qrs_screen.dart';
 
 const _kEntranceDuration = Duration(milliseconds: 400);
 const _kStaggerInterval = Duration(milliseconds: 80);
-const _kSectionCount = 4;
+const _kSectionCount = 5; // Incrementado para incluir sección de QRs
 const _kSlideOffset = Offset(0, 0.02);
 
 class ConfiguracionScreen extends ConsumerStatefulWidget {
@@ -260,10 +261,41 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen>
                 ),
                 const SizedBox(height: 18),
 
+                // ── QRS DE PAGO (admin y dependiente) ──
+                _staggeredSection(
+                  3,
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const _SectionHeader(
+                        icon: Icons.qr_code_2_rounded,
+                        label: 'Pagos',
+                      ),
+                      Card(
+                        child: ListTile(
+                          leading: const Icon(Icons.qr_code_scanner_rounded),
+                          title: const Text('Mis QRs de pago'),
+                          subtitle: const Text('Gestiona tus códigos QR para transferencias'),
+                          trailing: const Icon(Icons.chevron_right_rounded),
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const GestionarQrsScreen(),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 18),
+
                 // ── CUADRES (solo dependiente) ──
                 if (!widget.isAdmin)
                   _staggeredSection(
-                    3,
+                    4,
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -290,7 +322,7 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen>
                 // ── GESTIÓN (solo admin) ──
                 if (widget.isAdmin)
                   _staggeredSection(
-                    3,
+                    4,
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
