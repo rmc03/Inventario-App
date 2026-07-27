@@ -96,36 +96,11 @@ class _GestionarQrsScreenState extends ConsumerState<GestionarQrsScreen>
           builder: (context) {
             // Manejar estados de error
             if (hasError) {
-              final error = misQrsAsync.error ?? qrsAccesiblesAsync.error;
-              return Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.error_outline_rounded,
-                      size: 64,
-                      color: context.colors.danger.withValues(alpha: 0.6),
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      'Error al cargar QRs',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w600,
-                        color: context.colors.ink,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      '$error',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: context.colors.muted,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ],
-                ),
+              return _ErrorState(
+                onRetry: () {
+                  ref.invalidate(misQrsPagosProvider);
+                  ref.invalidate(qrsPagosAccesiblesProvider);
+                },
               );
             }
 
@@ -396,12 +371,14 @@ class _GestionarQrsScreenState extends ConsumerState<GestionarQrsScreen>
         ),
       );
     } catch (e) {
-      if (!context.mounted) return;
-      
+      if (!mounted) return;
       Haptics.warning(context);
+      final mensaje = e.toString().contains('permisos')
+          ? 'No tienes permisos para eliminar este QR'
+          : 'Error al eliminar el QR. Intenta de nuevo';
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Error al eliminar: $e'),
+          content: Text(mensaje),
           backgroundColor: context.colors.danger,
         ),
       );
@@ -427,7 +404,10 @@ class _QrCardEditable extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return Semantics(
+      label: 'QR de pago: ${qr.nombre}${qr.esCompartido ? ', compartido' : ''}',
+      button: true,
+      child: Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: context.colors.surface,
@@ -568,6 +548,7 @@ class _QrCardEditable extends StatelessWidget {
           ),
         ],
       ),
+      ),
     );
   }
 
@@ -595,7 +576,9 @@ class _QrCardReadOnly extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return Semantics(
+      label: 'QR compartido: ${qr.nombre}',
+      child: Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: context.colors.surface,
@@ -671,6 +654,7 @@ class _QrCardReadOnly extends StatelessWidget {
           ),
         ],
       ),
+      ),
     );
   }
 }
@@ -734,7 +718,9 @@ class _EmptyStateState extends State<_EmptyState>
     final primaryColor = context.colors.primary;
     final primaryAlpha = isDark ? 0.55 : 0.35;
 
-    return Center(
+    return Semantics(
+      label: 'No tienes QRs de pago configurados',
+      child: Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
         child: Column(
@@ -837,6 +823,76 @@ class _EmptyStateState extends State<_EmptyState>
                 ),
               ),
             ],
+          ],
+        ),
+      ),
+      ),
+    );
+  }
+}
+
+/// Estado de error con retry — el usuario nunca debe quedarse atrapado.
+class _ErrorState extends StatelessWidget {
+  final VoidCallback onRetry;
+
+  const _ErrorState({required this.onRetry});
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.wifi_off_rounded,
+              size: 56,
+              color: context.colors.danger.withValues(alpha: 0.5),
+            ),
+            const SizedBox(height: 20),
+            Text(
+              'No se pudieron cargar los QRs',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+                color: context.colors.ink,
+                letterSpacing: -0.4,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Verifica tu conexión a internet y vuelve a intentar',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                color: context.colors.muted,
+                letterSpacing: -0.1,
+                height: 1.4,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 24),
+            FilledButton.icon(
+              onPressed: onRetry,
+              icon: const Icon(Icons.refresh_rounded, size: 20),
+              label: const Text(
+                'Reintentar',
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: -0.2,
+                ),
+              ),
+              style: FilledButton.styleFrom(
+                backgroundColor: context.colors.primary,
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+              ),
+            ),
           ],
         ),
       ),
@@ -979,9 +1035,12 @@ class _FormularioQrState extends ConsumerState<_FormularioQr> {
     } catch (e) {
       if (!mounted) return;
       Haptics.warning(context);
+      final mensaje = e.toString().contains('permisos')
+          ? 'No tienes permisos para modificar este QR'
+          : 'No se pudo guardar. Verifica tu conexión e intenta de nuevo';
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Error: $e'),
+          content: Text(mensaje),
           backgroundColor: context.colors.danger,
         ),
       );
@@ -1035,10 +1094,12 @@ class _FormularioQrState extends ConsumerState<_FormularioQr> {
                 // Campo nombre
                 TextFormField(
                   controller: _nombreController,
+                  maxLength: 40,
                   decoration: InputDecoration(
                     labelText: 'Nombre del QR',
                     hintText: 'Ej: Cuenta BPA, MLC, etc.',
                     prefixIcon: const Icon(Icons.label_outline_rounded),
+                    counterText: '',
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
@@ -1081,6 +1142,34 @@ class _FormularioQrState extends ConsumerState<_FormularioQr> {
                                   _imagenSeleccionada!,
                                   height: 200,
                                   fit: BoxFit.contain,
+                                  errorBuilder: (context, error, stackTrace) {
+                                    return Container(
+                                      height: 200,
+                                      decoration: BoxDecoration(
+                                        color: context.colors.surfaceSecondary,
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      child: Column(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          Icon(
+                                            Icons.broken_image_outlined,
+                                            size: 48,
+                                            color: context.colors.muted.withValues(alpha: 0.5),
+                                          ),
+                                          const SizedBox(height: 8),
+                                          Text(
+                                            'No se pudo cargar la imagen',
+                                            style: TextStyle(
+                                              fontSize: 13,
+                                              fontWeight: FontWeight.w500,
+                                              color: context.colors.muted,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    );
+                                  },
                                 ),
                               ),
                               const SizedBox(height: 12),
@@ -1104,6 +1193,34 @@ class _FormularioQrState extends ConsumerState<_FormularioQr> {
                                       File(widget.qrExistente!.imagenPath),
                                       height: 200,
                                       fit: BoxFit.contain,
+                                      errorBuilder: (context, error, stackTrace) {
+                                        return Container(
+                                          height: 200,
+                                          decoration: BoxDecoration(
+                                            color: context.colors.surfaceSecondary,
+                                            borderRadius: BorderRadius.circular(12),
+                                          ),
+                                          child: Column(
+                                            mainAxisAlignment: MainAxisAlignment.center,
+                                            children: [
+                                              Icon(
+                                                Icons.broken_image_outlined,
+                                                size: 48,
+                                                color: context.colors.muted.withValues(alpha: 0.5),
+                                              ),
+                                              const SizedBox(height: 8),
+                                              Text(
+                                                'Imagen no disponible',
+                                                style: TextStyle(
+                                                  fontSize: 13,
+                                                  fontWeight: FontWeight.w500,
+                                                  color: context.colors.muted,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        );
+                                      },
                                     ),
                                   ),
                                   const SizedBox(height: 12),

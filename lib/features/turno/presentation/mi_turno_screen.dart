@@ -710,10 +710,11 @@ class _TurnoActivoViewState extends ConsumerState<_TurnoActivoView>
                               2,
                               Padding(
                                 padding: const EdgeInsets.only(bottom: AppSpacing.md),
-                                child: i == 0 
+                                child: i == 0
                                   ? _AnimatedVentaCard(
                                       key: ValueKey('animated_${venta.id}'),
                                       venta: venta,
+                                      controller: _newVentaCtrl,
                                       scaleAnimation: _newVentaScale,
                                       glowAnimation: _newVentaGlow,
                                       fadeAnimation: _newVentaFade,
@@ -998,6 +999,7 @@ class _AnimatedVentaCard extends StatelessWidget {
   const _AnimatedVentaCard({
     super.key,
     required this.venta,
+    required this.controller,
     required this.scaleAnimation,
     required this.glowAnimation,
     required this.fadeAnimation,
@@ -1005,6 +1007,7 @@ class _AnimatedVentaCard extends StatelessWidget {
   });
 
   final Venta venta;
+  final AnimationController controller;
   final Animation<double> scaleAnimation;
   final Animation<double> glowAnimation;
   final Animation<double> fadeAnimation;
@@ -1012,7 +1015,6 @@ class _AnimatedVentaCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Detectar el método de pago (mixto si hay más de un tipo de pago)
     MetodoPago? metodoPago;
     if (venta.pagos.isNotEmpty) {
       if (venta.pagos.length > 1) {
@@ -1023,14 +1025,19 @@ class _AnimatedVentaCard extends StatelessWidget {
     }
 
     return AnimatedBuilder(
-      animation: Listenable.merge([scaleAnimation, glowAnimation, fadeAnimation, slideAnimation]),
+      animation: controller,
       builder: (context, child) {
+        final scale = scaleAnimation.value.clamp(0.5, 1.5);
+        final fade = fadeAnimation.value.clamp(0.0, 1.0);
+        final glow = glowAnimation.value;
+        final slideDy = slideAnimation.value.dy * 30;
+
         return Opacity(
-          opacity: fadeAnimation.value.clamp(0.0, 1.0),
+          opacity: fade,
           child: Transform.translate(
-            offset: Offset(0, slideAnimation.value.dy * 30),
+            offset: Offset(0, slideDy),
             child: Transform.scale(
-              scale: scaleAnimation.value.clamp(0.5, 1.5),
+              scale: scale,
               child: Container(
                 decoration: BoxDecoration(
                   color: context.colors.surface,
@@ -1039,9 +1046,9 @@ class _AnimatedVentaCard extends StatelessWidget {
                     color: Color.lerp(
                       context.colors.line,
                       context.colors.ink.withValues(alpha: 0.15),
-                      (glowAnimation.value * 0.8).clamp(0.0, 1.0),
+                      (glow * 0.8).clamp(0.0, 1.0),
                     )!,
-                    width: (1 + (glowAnimation.value * 1.0).clamp(0.0, 1.5)),
+                    width: (1 + (glow * 1.0).clamp(0.0, 1.5)),
                   ),
                   boxShadow: [
                     BoxShadow(
@@ -1049,23 +1056,23 @@ class _AnimatedVentaCard extends StatelessWidget {
                       blurRadius: 8,
                       offset: const Offset(0, 2),
                     ),
-                    // Sombra sutil para destacar
-                    if (glowAnimation.value > 0.1)
+                    if (glow > 0.1)
                       BoxShadow(
                         color: context.colors.ink.withValues(
-                          alpha: (glowAnimation.value * 0.08).clamp(0.0, 1.0),
+                          alpha: (glow * 0.08).clamp(0.0, 1.0),
                         ),
-                        blurRadius: 16 * glowAnimation.value.clamp(0.0, 1.0),
-                        spreadRadius: 1 * glowAnimation.value.clamp(0.0, 1.0),
+                        blurRadius: 16 * glow.clamp(0.0, 1.0),
+                        spreadRadius: 1 * glow.clamp(0.0, 1.0),
                       ),
                   ],
                 ),
-                child: _VentaCardContent(venta: venta, metodoPago: metodoPago),
+                child: child,
               ),
             ),
           ),
         );
       },
+      child: _VentaCardContent(venta: venta, metodoPago: metodoPago),
     );
   }
 }
@@ -1127,7 +1134,9 @@ class _VentaCardContent extends StatelessWidget {
                           ),
                     ),
                     const SizedBox(height: 4),
-                    Row(
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 4,
                       children: [
                         // Badge de artículos
                         Container(
@@ -1150,6 +1159,7 @@ class _VentaCardContent extends StatelessWidget {
                               SizedBox(width: 4),
                               Text(
                                 articulosLabel(venta.totalUnidades),
+                                overflow: TextOverflow.ellipsis,
                                 style: Theme.of(context)
                                     .textTheme
                                     .bodySmall
@@ -1162,62 +1172,59 @@ class _VentaCardContent extends StatelessWidget {
                             ],
                           ),
                         ),
-                        const SizedBox(width: 6),
                         // Badge de método de pago (si aplica)
                         if (metodoPago != null)
-                          Flexible(
-                            child: Container(
-                              padding: EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 3,
-                              ),
-                              decoration: BoxDecoration(
-                                color: metodoPago == MetodoPago.efectivo
-                                    ? context.colors.success.withValues(alpha: 0.08)
-                                    : metodoPago == MetodoPago.transferencia
-                                        ? context.colors.warning.withValues(alpha: 0.08)
-                                        : context.colors.info.withValues(alpha: 0.08),
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(
-                                    metodoPago == MetodoPago.efectivo
-                                        ? Icons.payments_rounded
-                                        : metodoPago == MetodoPago.transferencia
-                                            ? Icons.credit_card_rounded
-                                            : Icons.sync_alt_rounded,
-                                    size: 12,
-                                    color: metodoPago == MetodoPago.efectivo
-                                        ? context.colors.success
-                                        : metodoPago == MetodoPago.transferencia
-                                            ? context.colors.warning
-                                            : context.colors.info,
-                                  ),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    metodoPago == MetodoPago.efectivo
-                                        ? 'Efectivo'
-                                        : metodoPago == MetodoPago.transferencia
-                                            ? 'Transferencia'
-                                            : 'Mixto',
-                                    overflow: TextOverflow.ellipsis,
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .bodySmall
-                                        ?.copyWith(
-                                          color: metodoPago == MetodoPago.efectivo
-                                              ? context.colors.success
-                                              : metodoPago == MetodoPago.transferencia
-                                                  ? context.colors.warning
-                                                  : context.colors.info,
-                                          fontWeight: FontWeight.w600,
-                                          fontSize: 11,
-                                        ),
-                                  ),
-                                ],
-                              ),
+                          Container(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 3,
+                            ),
+                            decoration: BoxDecoration(
+                              color: metodoPago == MetodoPago.efectivo
+                                  ? context.colors.success.withValues(alpha: 0.08)
+                                  : metodoPago == MetodoPago.transferencia
+                                      ? context.colors.warning.withValues(alpha: 0.08)
+                                      : context.colors.info.withValues(alpha: 0.08),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  metodoPago == MetodoPago.efectivo
+                                      ? Icons.payments_rounded
+                                      : metodoPago == MetodoPago.transferencia
+                                          ? Icons.credit_card_rounded
+                                          : Icons.sync_alt_rounded,
+                                  size: 12,
+                                  color: metodoPago == MetodoPago.efectivo
+                                      ? context.colors.success
+                                      : metodoPago == MetodoPago.transferencia
+                                          ? context.colors.warning
+                                          : context.colors.info,
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  metodoPago == MetodoPago.efectivo
+                                      ? 'Efectivo'
+                                      : metodoPago == MetodoPago.transferencia
+                                          ? 'Transferencia'
+                                          : 'Mixto',
+                                  overflow: TextOverflow.ellipsis,
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .bodySmall
+                                      ?.copyWith(
+                                        color: metodoPago == MetodoPago.efectivo
+                                            ? context.colors.success
+                                            : metodoPago == MetodoPago.transferencia
+                                                ? context.colors.warning
+                                                : context.colors.info,
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: 11,
+                                      ),
+                                ),
+                              ],
                             ),
                           ),
                       ],

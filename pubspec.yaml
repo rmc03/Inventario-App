@@ -63,6 +63,7 @@ dev_dependencies:
   # rules and activating additional ones.
   flutter_lints: ^6.0.0
   flutter_native_splash: ^2.2.15
+  flutter_launcher_icons: ^0.14.3
   sqflite_common_ffi: ^2.3.0
 
 # For information on the generic Dart part of this file, see the
@@ -103,3 +104,12 @@ flutter_native_splash:
   web: false
   android_gravity: center
   ios_content_mode: center
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "AppIcon.png"
+  adaptive_icon_background: "#FAFAFA"
+  adaptive_icon_foreground: "AppIcon.png"
+  remove_alpha_ios: true
+  min_sdk_android: 21

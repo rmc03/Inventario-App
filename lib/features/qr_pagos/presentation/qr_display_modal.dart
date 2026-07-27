@@ -240,7 +240,11 @@ class _QrDisplayModalState extends ConsumerState<QrDisplayModal>
                         runSpacing: 8,
                         children: widget.qrsDisponibles.map((qr) {
                           final isSelected = qr.id == _qrSeleccionado.id;
-                          return InkWell(
+                          return Semantics(
+                            label: '${qr.nombre}${isSelected ? ', seleccionado' : ''}',
+                            button: true,
+                            selected: isSelected,
+                            child: InkWell(
                             onTap: () => _cambiarQr(qr),
                             borderRadius: BorderRadius.circular(12),
                             child: AnimatedContainer(
@@ -294,6 +298,7 @@ class _QrDisplayModalState extends ConsumerState<QrDisplayModal>
                                 ],
                               ),
                             ),
+                          ),
                           );
                         }).toList(),
                       ),

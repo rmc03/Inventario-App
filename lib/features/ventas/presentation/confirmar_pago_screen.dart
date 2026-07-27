@@ -3,7 +3,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../core/providers/accessibility_provider.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../core/utils/haptics.dart';
@@ -29,7 +28,6 @@ class _ConfirmarPagoScreenState extends ConsumerState<ConfirmarPagoScreen>
     with TickerProviderStateMixin {
   // Modo de pago seleccionado
   ModoPago _modo = ModoPago.efectivo;
-  ModoPago? _modoAnterior;
 
   late final AnimationController _entranceController;
   List<Animation<double>> _itemAnimations = [];
@@ -41,7 +39,6 @@ class _ConfirmarPagoScreenState extends ConsumerState<ConfirmarPagoScreen>
   // Calculadora de cambio (opcional)
   final _efectivoRecibidoController = TextEditingController();
   double _efectivoRecibido = 0.0;
-  bool _mostrarCalculadoraEfectivo = false;
   
   // Controllers para modo mixto
   final _efectivoMixtoController = TextEditingController();
@@ -54,6 +51,12 @@ class _ConfirmarPagoScreenState extends ConsumerState<ConfirmarPagoScreen>
   // GlobalKey para la calculadora de cambio
   final _calculadoraKey = GlobalKey();
 
+  // FocusNode para la calculadora de cambio - detecta foco para scroll
+  final _calculadoraFocusNode = FocusNode();
+
+  // Track if keyboard is visible to add bottom padding
+  bool _keyboardVisible = false;
+
   @override
   void initState() {
     super.initState();
@@ -65,6 +68,9 @@ class _ConfirmarPagoScreenState extends ConsumerState<ConfirmarPagoScreen>
       _actualizarModoEfectivo();
     });
     _entranceController.forward();
+
+    // Listen for focus changes on calculadora field to scroll into view
+    _calculadoraFocusNode.addListener(_onCalculadoraFocusChange);
   }
 
   @override
@@ -74,7 +80,53 @@ class _ConfirmarPagoScreenState extends ConsumerState<ConfirmarPagoScreen>
     _efectivoMixtoController.dispose();
     _transferenciaMixtoController.dispose();
     _scrollController.dispose();
+    _calculadoraFocusNode.removeListener(_onCalculadoraFocusChange);
+    _calculadoraFocusNode.dispose();
     super.dispose();
+  }
+
+  // Called when calculadora field gains/loses focus
+  void _onCalculadoraFocusChange() {
+    if (_calculadoraFocusNode.hasFocus) {
+      // Keyboard will appear - scroll to make field visible
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _scrollToCalculadora();
+        }
+      });
+    }
+  }
+
+// Scroll to make calculadora visible when keyboard appears
+  // ignore: use_build_context_synchronously
+  void _scrollToCalculadora() {
+    if (_scrollController.hasClients && mounted) {
+      // Use a small delay to let keyboard animation start
+      Future.delayed(const Duration(milliseconds: 100), () {
+        if (!mounted) return;
+        // Get fresh context from key after async gap - this is safe pattern
+        final currentContext = _calculadoraKey.currentContext;
+        if (currentContext != null && mounted) {
+          Scrollable.ensureVisible(
+            currentContext,
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeOutCubic,
+            alignment: 0.1, // 10% from top of viewport
+          );
+        }
+      });
+    }
+  }
+
+  // Update keyboard visibility state based on MediaQuery viewInsets
+  void _updateKeyboardVisibility(BuildContext context) {
+    final viewInsets = MediaQuery.of(context).viewInsets.bottom;
+    final isVisible = viewInsets > 0;
+    if (isVisible != _keyboardVisible) {
+      setState(() {
+        _keyboardVisible = isVisible;
+      });
+    }
   }
 
   double get _totalVenta {
@@ -94,63 +146,36 @@ class _ConfirmarPagoScreenState extends ConsumerState<ConfirmarPagoScreen>
     return _montoAsignado == _totalVenta;
   }
 
-  // Hace scroll automático para mantener visible un widget cuando el teclado aparece
-  void _scrollToWidget(GlobalKey key) {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final keyContext = key.currentContext;
-      if (keyContext != null && _scrollController.hasClients && mounted) {
-        // Esperar a que el teclado termine de animarse
-        Future.delayed(const Duration(milliseconds: 350), () {
-          if (!mounted) return;
-          
-          // Usar Scrollable.ensureVisible que maneja automáticamente el teclado
-          Scrollable.ensureVisible(
-            keyContext,
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeOutCubic,
-            alignment: 0.2, // 20% desde arriba de la vista visible
-          );
-        });
-      }
-    });
-  }
-
   void _actualizarModoEfectivo() {
     setState(() {
-      _modoAnterior = _modo;
       _montoEfectivo = _totalVenta;
       _montoTransferencia = 0.0;
       _efectivoMixtoController.clear();
       _transferenciaMixtoController.clear();
       _efectivoRecibidoController.clear();
       _efectivoRecibido = 0.0;
-      _mostrarCalculadoraEfectivo = false;
     });
   }
 
   void _actualizarModoTransferencia() {
     setState(() {
-      _modoAnterior = _modo;
       _montoEfectivo = 0.0;
       _montoTransferencia = _totalVenta;
       _efectivoMixtoController.clear();
       _transferenciaMixtoController.clear();
       _efectivoRecibidoController.clear();
       _efectivoRecibido = 0.0;
-      _mostrarCalculadoraEfectivo = false;
     });
   }
 
   void _actualizarModoMixto() {
     setState(() {
-      _modoAnterior = _modo;
       _montoEfectivo = 0.0;
       _montoTransferencia = 0.0;
       _efectivoMixtoController.clear();
       _transferenciaMixtoController.clear();
       _efectivoRecibidoController.clear();
       _efectivoRecibido = 0.0;
-      _mostrarCalculadoraEfectivo = false;
     });
   }
 
@@ -162,7 +187,7 @@ class _ConfirmarPagoScreenState extends ConsumerState<ConfirmarPagoScreen>
       transitionBuilder: (child, animation) {
         return SizeTransition(
           sizeFactor: animation,
-          axisAlignment: -1.0,
+          alignment: Alignment.topCenter,
           child: FadeTransition(
             opacity: animation,
             child: child,
@@ -183,7 +208,7 @@ class _ConfirmarPagoScreenState extends ConsumerState<ConfirmarPagoScreen>
             controller: _efectivoRecibidoController,
             montoEfectivo: _montoEfectivo,
             onChanged: (valor) => setState(() => _efectivoRecibido = valor),
-            onFocused: () => _scrollToWidget(_calculadoraKey),
+            focusNode: _calculadoraFocusNode,
           ),
         );
 
@@ -300,111 +325,184 @@ class _ConfirmarPagoScreenState extends ConsumerState<ConfirmarPagoScreen>
           ),
         );
 
-      case ModoPago.mixto:
-        return KeyedSubtree(
-          key: const ValueKey('mixto'),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _CampoMontoMixto(
-                label: 'Efectivo', icon: Icons.payments_outlined,
-                controller: _efectivoMixtoController,
-                monto: _montoEfectivo, otroMonto: _montoTransferencia,
-                totalVenta: _totalVenta,
-                onChanged: (valor) => setState(() => _montoEfectivo = valor),
-                onCompletarResto: () {
-                  final resto = _totalVenta - _montoTransferencia;
-                  _efectivoMixtoController.text = resto > 0 ? resto.toInt().toString() : '0';
-                  setState(() => _montoEfectivo = resto > 0 ? resto : 0.0);
-                },
-              ),
-              const SizedBox(height: 12),
-              _CampoMontoMixto(
-                label: 'Transferencia', icon: Icons.account_balance_outlined,
-                controller: _transferenciaMixtoController,
-                monto: _montoTransferencia, otroMonto: _montoEfectivo,
-                totalVenta: _totalVenta,
-                onChanged: (valor) => setState(() => _montoTransferencia = valor),
-                onCompletarResto: () {
-                  final resto = _totalVenta - _montoEfectivo;
-                  _transferenciaMixtoController.text = resto > 0 ? resto.toInt().toString() : '0';
-                  setState(() => _montoTransferencia = resto > 0 ? resto : 0.0);
-                },
-              ),
-              const SizedBox(height: 16),
-              AnimatedContainer(
-                duration: const Duration(milliseconds: 300),
-                curve: Curves.easeOutCubic,
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: _montoPendiente == 0
-                      ? context.colors.success.withValues(alpha: 0.08)
-                      : context.colors.warning.withValues(alpha: 0.08),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: _montoPendiente == 0
-                        ? context.colors.success.withValues(alpha: 0.3)
-                        : context.colors.warning.withValues(alpha: 0.3),
-                    width: 1,
-                  ),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      _montoPendiente == 0 ? 'Pagado' : 'Pendiente',
-                      style: TextStyle(
-                        fontSize: 14, fontWeight: FontWeight.w600,
-                        color: _montoPendiente == 0 ? context.colors.success : context.colors.warning,
-                        letterSpacing: -0.2,
+case ModoPago.mixto:
+                return KeyedSubtree(
+                  key: const ValueKey('mixto'),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _CampoMontoMixto(
+                        label: 'Efectivo', icon: Icons.payments_outlined,
+                        controller: _efectivoMixtoController,
+                        monto: _montoEfectivo, otroMonto: _montoTransferencia,
+                        totalVenta: _totalVenta,
+                        onChanged: (valor) => setState(() => _montoEfectivo = valor),
+                        onCompletarResto: () {
+                          final resto = _totalVenta - _montoTransferencia;
+                          _efectivoMixtoController.text = resto > 0 ? resto.toInt().toString() : '0';
+                          setState(() => _montoEfectivo = resto > 0 ? resto : 0.0);
+                        },
                       ),
-                    ),
-                    Text(
-                      formatCurrency(_montoPendiente == 0 ? _totalVenta : _montoPendiente.abs()),
-                      style: TextStyle(
-                        fontSize: 18, fontWeight: FontWeight.w700,
-                        color: _montoPendiente == 0 ? context.colors.success : context.colors.warning,
-                        letterSpacing: -0.4,
-                        fontFeatures: const [FontFeature.tabularFigures()],
+                      const SizedBox(height: 12),
+                      _CampoMontoMixto(
+                        label: 'Transferencia', icon: Icons.account_balance_outlined,
+                        controller: _transferenciaMixtoController,
+                        monto: _montoTransferencia, otroMonto: _montoEfectivo,
+                        totalVenta: _totalVenta,
+                        onChanged: (valor) => setState(() => _montoTransferencia = valor),
+                        onCompletarResto: () {
+                          final resto = _totalVenta - _montoEfectivo;
+                          _transferenciaMixtoController.text = resto > 0 ? resto.toInt().toString() : '0';
+                          setState(() => _montoTransferencia = resto > 0 ? resto : 0.0);
+                        },
                       ),
-                    ),
-                  ],
-                ),
-              ),
-              if (!_esValido && (_montoEfectivo > 0 || _montoTransferencia > 0))
-                Padding(
-                  padding: const EdgeInsets.only(top: 12),
-                  child: Text(
-                    _montoPendiente > 0
-                        ? 'Falta ${formatCurrency(_montoPendiente)} por asignar'
-                        : 'Sobra ${formatCurrency(_montoPendiente.abs())}',
-                    style: TextStyle(
-                      fontSize: 13, fontWeight: FontWeight.w500,
-                      color: context.colors.warning, letterSpacing: -0.1,
-                    ),
-                    textAlign: TextAlign.center,
+                      // Botón para mostrar QR de transferencia (solo si hay monto en transferencia)
+                      if (_montoTransferencia > 0) ...[
+                        const SizedBox(height: 16),
+                        Consumer(
+                          builder: (context, ref, _) {
+                            final qrs = ref.watch(qrsPagosAccesiblesProvider).value ?? [];
+
+                            if (qrs.isEmpty) {
+                              return Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.all(16),
+                                decoration: BoxDecoration(
+                                  color: context.colors.warning.withValues(alpha: 0.08),
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: context.colors.warning.withValues(alpha: 0.2),
+                                  ),
+                                ),
+                                child: Column(
+                                  children: [
+                                    Icon(Icons.qr_code_2_rounded, size: 28, color: context.colors.warning),
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      'No hay QRs configurados',
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w600,
+                                        color: context.colors.warning,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      'Agrega códigos QR desde Configuración',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: context.colors.muted,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            }
+
+                            return SizedBox(
+                              width: double.infinity,
+                              child: OutlinedButton.icon(
+                                onPressed: () {
+                                  Navigator.of(context, rootNavigator: true).push(
+                                    MaterialPageRoute(
+                                      fullscreenDialog: true,
+                                      builder: (_) => QrDisplayModal(
+                                        qrsDisponibles: qrs,
+                                        montoTransferencia: _montoTransferencia,
+                                      ),
+                                    ),
+                                  );
+                                },
+                                icon: const Icon(Icons.qr_code_2_rounded),
+                                label: const Text('Mostrar QR para cobrar transferencia'),
+                                style: OutlinedButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(vertical: 14),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ],
+                      const SizedBox(height: 16),
+                      AnimatedContainer(
+                        duration: const Duration(milliseconds: 300),
+                        curve: Curves.easeOutCubic,
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: _montoPendiente == 0
+                              ? context.colors.success.withValues(alpha: 0.08)
+                              : context.colors.warning.withValues(alpha: 0.08),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: _montoPendiente == 0
+                                ? context.colors.success.withValues(alpha: 0.3)
+                                : context.colors.warning.withValues(alpha: 0.3),
+                            width: 1,
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              _montoPendiente == 0 ? 'Pagado' : 'Pendiente',
+                              style: TextStyle(
+                                fontSize: 14, fontWeight: FontWeight.w600,
+                                color: _montoPendiente == 0 ? context.colors.success : context.colors.warning,
+                                letterSpacing: -0.2,
+                              ),
+                            ),
+                            Text(
+                              formatCurrency(_montoPendiente == 0 ? _totalVenta : _montoPendiente.abs()),
+                              style: TextStyle(
+                                fontSize: 18, fontWeight: FontWeight.w700,
+                                color: _montoPendiente == 0 ? context.colors.success : context.colors.warning,
+                                letterSpacing: -0.4,
+                                fontFeatures: const [FontFeature.tabularFigures()],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      if (!_esValido && (_montoEfectivo > 0 || _montoTransferencia > 0))
+                        Padding(
+                          padding: const EdgeInsets.only(top: 12),
+                          child: Text(
+                            _montoPendiente > 0
+                                ? 'Falta ${formatCurrency(_montoPendiente)} por asignar'
+                                : 'Sobra ${formatCurrency(_montoPendiente.abs())}',
+                            style: TextStyle(
+                              fontSize: 13, fontWeight: FontWeight.w500,
+                              color: context.colors.warning, letterSpacing: -0.1,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                      // Calculadora de cambio: mostrar directamente cuando hay monto en efectivo
+                      if (_montoEfectivo > 0) ...[
+                        const SizedBox(height: 16),
+                        _CalculadoraCambio(
+                          key: _calculadoraKey,
+                          controller: _efectivoRecibidoController,
+                          montoEfectivo: _montoEfectivo,
+                          onChanged: (valor) => setState(() => _efectivoRecibido = valor),
+                          focusNode: _calculadoraFocusNode,
+                        ),
+                      ],
+                    ],
                   ),
-                ),
-              // Calculadora de cambio: mostrar directamente cuando hay monto en efectivo
-              if (_montoEfectivo > 0) ...[
-                const SizedBox(height: 16),
-                _CalculadoraCambio(
-                  key: _calculadoraKey,
-                  controller: _efectivoRecibidoController,
-                  montoEfectivo: _montoEfectivo,
-                  onChanged: (valor) => setState(() => _efectivoRecibido = valor),
-                  onFocused: () => _scrollToWidget(_calculadoraKey),
-                ),
-              ],
-            ],
-          ),
-        );
+                );
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    // Update keyboard visibility for bottom padding
+    _updateKeyboardVisibility(context);
+
     final venta = ref.watch(ventaEnCursoProvider);
     if (venta == null) return const SizedBox.shrink();
 
@@ -420,6 +518,7 @@ class _ConfirmarPagoScreenState extends ConsumerState<ConfirmarPagoScreen>
     }
 
     return Scaffold(
+      resizeToAvoidBottomInset: true,
       appBar: AppBar(
         title: const Text(
           'Confirmar pago',
@@ -581,7 +680,12 @@ class _ConfirmarPagoScreenState extends ConsumerState<ConfirmarPagoScreen>
                   // Contenido scrolleable: métodos de pago y calculadora
                   SingleChildScrollView(
                     controller: _scrollController,
-                    padding: const EdgeInsets.all(16),
+                    padding: EdgeInsets.fromLTRB(
+                      16,
+                      16,
+                      16,
+                      16 + (_keyboardVisible ? MediaQuery.of(context).viewInsets.bottom : 0),
+                    ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -958,13 +1062,13 @@ class _CalculadoraCambio extends StatelessWidget {
     required this.controller,
     required this.montoEfectivo,
     required this.onChanged,
-    required this.onFocused,
+    required this.focusNode,
   });
 
   final TextEditingController controller;
   final double montoEfectivo;
   final ValueChanged<double> onChanged;
-  final VoidCallback onFocused;
+  final FocusNode focusNode;
 
   @override
   Widget build(BuildContext context) {
@@ -986,6 +1090,7 @@ class _CalculadoraCambio extends StatelessWidget {
         children: [
           TextFormField(
             controller: controller,
+            focusNode: focusNode,
             keyboardType: TextInputType.number,
             inputFormatters: [
               FilteringTextInputFormatter.digitsOnly,
@@ -1001,6 +1106,14 @@ class _CalculadoraCambio extends StatelessWidget {
               labelStyle: TextStyle(
                 fontSize: 14,
                 color: context.colors.muted,
+              ),
+              floatingLabelBehavior: FloatingLabelBehavior.auto,
+              hintText: montoEfectivo > 0 ? formatCurrency(montoEfectivo) : '0',
+              hintStyle: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w400,
+                color: context.colors.muted.withValues(alpha: 0.5),
+                fontFeatures: const [FontFeature.tabularFigures()],
               ),
               prefixText: '\$',
               prefixStyle: TextStyle(
@@ -1031,8 +1144,34 @@ class _CalculadoraCambio extends StatelessWidget {
                   width: 2,
                 ),
               ),
+              errorBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+                borderSide: BorderSide(
+                  color: context.colors.danger,
+                  width: 1,
+                ),
+              ),
+              focusedErrorBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+                borderSide: BorderSide(
+                  color: context.colors.danger,
+                  width: 2,
+                ),
+              ),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+              helperText: efectivoRecibido == 0
+                  ? 'Ingrese el monto recibido del cliente'
+                  : (cambio >= 0
+                      ? 'Cambio a devolver: ${formatCurrency(cambio)}'
+                      : '⚠️ Falta ${formatCurrency(cambio.abs())} para completar el pago'),
+              helperStyle: TextStyle(
+                fontSize: 12,
+                color: efectivoRecibido == 0
+                    ? context.colors.muted
+                    : (cambio >= 0 ? context.colors.success : context.colors.danger),
+                fontWeight: FontWeight.w500,
+              ),
             ),
-            onTap: onFocused,
             onChanged: (valor) {
               onChanged(double.tryParse(valor) ?? 0.0);
             },
