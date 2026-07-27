@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/providers/accessibility_provider.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../core/utils/haptics.dart';
 import '../../../shared/models/pago.dart';
+import '../../qr_pagos/presentation/qr_display_modal.dart';
+import '../../qr_pagos/providers/qr_pago_provider.dart';
 import '../providers/venta_provider.dart';
 
 class ConfirmarPagoScreen extends ConsumerStatefulWidget {
@@ -214,46 +217,8 @@ class _ConfirmarPagoScreenState extends ConsumerState<ConfirmarPagoScreen>
       case ModoPago.transferencia:
         return KeyedSubtree(
           key: const ValueKey('transferencia'),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                decoration: BoxDecoration(
-                  color: context.colors.surfaceSecondary,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: context.colors.line.withValues(alpha: 0.2), width: 1),
-                ),
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.account_balance_outlined,
-                      size: 20,
-                      color: context.colors.ink,
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        'Pago por transferencia',
-                        style: TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
-                          color: context.colors.ink,
-                          letterSpacing: -0.2,
-                        ),
-                      ),
-                    ),
-                    Icon(
-                      Icons.check_circle_outline,
-                      size: 20,
-                      color: context.colors.success,
-                    ),
-                  ],
-                ),
-              ),
-            ],
+          child: _BotonMostrarQr(
+            montoTransferencia: _totalVenta,
           ),
         );
 
@@ -289,6 +254,13 @@ class _ConfirmarPagoScreenState extends ConsumerState<ConfirmarPagoScreen>
                   setState(() => _montoTransferencia = resto > 0 ? resto : 0.0);
                 },
               ),
+              // Botón mostrar QR si hay monto de transferencia
+              if (_montoTransferencia > 0) ...[
+                const SizedBox(height: 16),
+                _BotonMostrarQr(
+                  montoTransferencia: _montoTransferencia,
+                ),
+              ],
               const SizedBox(height: 16),
               AnimatedContainer(
                 duration: const Duration(milliseconds: 300),
@@ -728,9 +700,8 @@ class _ConfirmarPagoScreenState extends ConsumerState<ConfirmarPagoScreen>
     ref.read(ventaEnCursoProvider.notifier).completarVentaConPagos(pagos);
     Haptics.confirm(context);
     
-    // Hacer 2 pops para saltar Nueva Venta y regresar directo a Mi Turno
-    Navigator.of(context).pop(true);
-    Navigator.of(context).pop();
+    // Reemplazar todo el stack con una sola transición limpia hacia Mi Turno
+    context.go('/dependiente/turno');
   }
 }
 
@@ -1094,3 +1065,216 @@ class _CalculadoraCambio extends StatelessWidget {
   }
 }
 
+// ════════════════════════════════════════════════════════════════════════════
+// Widget botón mostrar QR
+// ════════════════════════════════════════════════════════════════════════════
+
+/// Botón que abre el modal fullscreen con el QR para pago por transferencia
+class _BotonMostrarQr extends ConsumerWidget {
+  final double montoTransferencia;
+
+  const _BotonMostrarQr({
+    required this.montoTransferencia,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final qrsAsync = ref.watch(qrsPagosAccesiblesProvider);
+
+    return qrsAsync.when(
+      data: (qrs) {
+        if (qrs.isEmpty) {
+          // Sin QRs configurados
+          return Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: context.colors.warning.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: context.colors.warning.withValues(alpha: 0.3),
+                width: 1.5,
+              ),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.qr_code_2_rounded,
+                  size: 24,
+                  color: context.colors.warning,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Sin QRs configurados',
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                          color: context.colors.ink,
+                          letterSpacing: -0.2,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Configura tus QRs en Ajustes',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                          color: context.colors.muted,
+                          letterSpacing: -0.1,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
+
+        // Con QRs disponibles
+        return InkWell(
+          onTap: () {
+            Haptics.tap(context);
+            showDialog(
+              context: context,
+              barrierDismissible: true,
+              barrierColor: Colors.black.withValues(alpha: 0.85),
+              useSafeArea: false,
+              builder: (context) => QrDisplayModal(
+                qrsDisponibles: qrs,
+                montoTransferencia: montoTransferencia,
+              ),
+            );
+          },
+          borderRadius: BorderRadius.circular(14),
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  context.colors.primary.withValues(alpha: 0.12),
+                  context.colors.primary.withValues(alpha: 0.06),
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color: context.colors.primary.withValues(alpha: 0.3),
+                width: 1.5,
+              ),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: context.colors.primary.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(
+                    Icons.qr_code_2_rounded,
+                    size: 24,
+                    color: context.colors.primary,
+                  ),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Mostrar QR para pago',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: context.colors.ink,
+                          letterSpacing: -0.3,
+                          height: 1.2,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        qrs.length == 1
+                            ? qrs.first.nombre
+                            : '${qrs.length} cuentas disponibles',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                          color: context.colors.muted,
+                          letterSpacing: -0.1,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(
+                  Icons.chevron_right_rounded,
+                  size: 24,
+                  color: context.colors.primary,
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+      loading: () => Container(
+        width: double.infinity,
+        height: 64,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: context.colors.surfaceSecondary,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Center(
+          child: SizedBox(
+            height: 20,
+            width: 20,
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              color: context.colors.primary,
+            ),
+          ),
+        ),
+      ),
+      error: (error, stack) => Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: context.colors.danger.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: context.colors.danger.withValues(alpha: 0.3),
+            width: 1,
+          ),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              Icons.error_outline_rounded,
+              size: 20,
+              color: context.colors.danger,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                'Error al cargar QRs',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  color: context.colors.danger,
+                  letterSpacing: -0.1,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}

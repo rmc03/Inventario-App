@@ -99,7 +99,7 @@ class _NuevaVentaScreenState extends ConsumerState<NuevaVentaScreen> {
           await context.push<bool>(
             '/dependiente/turno/confirmar-pago',
           );
-          // No hacer nada aquí - ConfirmarPago hace ambos pops
+          // ConfirmarPago usa context.go() para reemplazar el stack directamente
         },
       ),
       body: SafeArea(
