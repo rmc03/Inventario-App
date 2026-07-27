@@ -8,6 +8,7 @@ import '../../features/configuracion/presentation/accesibilidad_screen.dart';
 import '../../features/configuracion/presentation/categorias_screen.dart';
 import '../../features/configuracion/presentation/configuracion_screen.dart';
 import '../../features/configuracion/presentation/equipo_screen.dart';
+import '../../features/configuracion/presentation/temas_screen.dart';
 import '../../features/cuadres/presentation/cuadre_detalle_screen.dart';
 import '../../features/cuadres/presentation/cuadres_screen.dart';
 import '../../features/cuadres/presentation/cuadres_historial_screen.dart';
@@ -186,6 +187,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             path: '/admin/configuracion/categorias',
             builder: (context, state) => const CategoriasScreen(),
           ),
+          GoRoute(
+            path: '/admin/configuracion/temas',
+            builder: (context, state) => const TemasScreen(),
+          ),
         ],
       ),
       ShellRoute(
@@ -244,6 +249,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/dependiente/configuracion/accesibilidad',
             builder: (context, state) => const AccesibilidadScreen(),
+          ),
+          GoRoute(
+            path: '/dependiente/configuracion/temas',
+            builder: (context, state) => const TemasScreen(),
           ),
         ],
       ),

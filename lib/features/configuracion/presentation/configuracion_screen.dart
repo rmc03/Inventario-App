@@ -9,7 +9,6 @@ import 'package:path/path.dart' as p;
 import 'package:uuid/uuid.dart';
 
 import '../../../core/local_db/local_database.dart';
-import '../../../core/providers/theme_provider.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/haptics.dart';
 import '../../../shared/models/usuario.dart';
@@ -187,9 +186,45 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen>
                     children: [
                       const _SectionHeader(
                         icon: Icons.brightness_6_rounded,
-                        label: 'Apariencia',
+                        label: 'Personalización',
                       ),
-                      const _AparienciaExpandable(),
+                      Card(
+                        child: ListTile(
+                          leading: const Icon(Icons.palette_rounded),
+                          title: const Text('Temas'),
+                          subtitle:
+                              const Text('Esquema de colores y modo de brillo'),
+                          trailing:
+                              const Icon(Icons.chevron_right_rounded),
+                          onTap: () => context.push(
+                            widget.isAdmin
+                                ? '/admin/configuracion/temas'
+                                : '/dependiente/configuracion/temas',
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Card(
+                        child: Consumer(
+                          builder: (context, ref, _) {
+                            return SwitchListTile(
+                              secondary:
+                                  const Icon(Icons.vibration_rounded),
+                              title: const Text('Vibración en botones'),
+                              subtitle: const Text(
+                                'Feedback táctil en acciones importantes',
+                              ),
+                              value: ref.watch(hapticsEnabledProvider),
+                              onChanged: (v) {
+                                ref
+                                    .read(hapticsEnabledProvider.notifier)
+                                    .setEnabled(v);
+                                if (v) Haptics.tap(context);
+                              },
+                            );
+                          },
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -417,150 +452,6 @@ class _SectionHeader extends StatelessWidget {
   }
 }
 
-// ─── Apariencia Expandable ──────────────────────────────────────────────────
-
-class _AparienciaExpandable extends StatefulWidget {
-  const _AparienciaExpandable();
-
-  @override
-  State<_AparienciaExpandable> createState() => _AparienciaExpandableState();
-}
-
-class _AparienciaExpandableState extends State<_AparienciaExpandable>
-    with SingleTickerProviderStateMixin {
-  bool _isExpanded = false;
-  late final AnimationController _tapCtrl;
-  late final Animation<double> _tapScale;
-
-  @override
-  void initState() {
-    super.initState();
-    _tapCtrl = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 200),
-    );
-    _tapScale = TweenSequence<double>([
-      TweenSequenceItem(tween: Tween(begin: 1, end: 0.98), weight: 50),
-      TweenSequenceItem(tween: Tween(begin: 0.98, end: 1), weight: 50),
-    ]).animate(CurvedAnimation(parent: _tapCtrl, curve: Curves.easeInOut));
-  }
-
-  @override
-  void dispose() {
-    _tapCtrl.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return ScaleTransition(
-      scale: _tapScale,
-      child: Card(
-        clipBehavior: Clip.antiAlias,
-        child: Column(
-          children: [
-            InkWell(
-              onTap: () {
-                _tapCtrl.forward(from: 0);
-                setState(() => _isExpanded = !_isExpanded);
-              },
-            child: Padding(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              child: Row(
-                children: [
-                  const Icon(Icons.brightness_6_rounded),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Apariencia',
-                          style: Theme.of(context).textTheme.bodyLarge,
-                        ),
-                        Consumer(
-                          builder: (context, ref, _) {
-                            final mode = ref.watch(themeModeProvider);
-                            return Text(
-                              _getThemeModeLabel(mode),
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .bodySmall
-                                  ?.copyWith(
-                                      color: context.colors.muted),
-                            );
-                          },
-                        ),
-                      ],
-                    ),
-                  ),
-                  AnimatedRotation(
-                    turns: _isExpanded ? 0.5 : 0,
-                    duration: const Duration(milliseconds: 200),
-                    child: Icon(
-                      Icons.expand_more_rounded,
-                      color: context.colors.muted,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          AnimatedCrossFade(
-            firstChild: const SizedBox.shrink(),
-            secondChild: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-              child: Column(
-                children: [
-                  const Divider(),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      const Icon(Icons.palette_rounded),
-                      const SizedBox(width: 16),
-                      const Expanded(
-                        child: Text('Tema de apariencia'),
-                      ),
-                      const _ThemeModeSelector(),
-                    ],
-                  ),
-                  const Divider(height: 1),
-                  Consumer(
-                    builder: (context, ref, _) {
-                      return SwitchListTile(
-                        contentPadding: EdgeInsets.zero,
-                        secondary: const Icon(Icons.vibration_rounded),
-                        title: const Text('Vibración en botones'),
-                        subtitle: const Text(
-                          'Feedback táctil en acciones importantes',
-                        ),
-                        value: ref.watch(hapticsEnabledProvider),
-                        onChanged: (v) {
-                          ref
-                              .read(hapticsEnabledProvider.notifier)
-                              .setEnabled(v);
-                          if (v) Haptics.tap(context);
-                        },
-                      );
-                    },
-                  ),
-                ],
-              ),
-            ),
-            crossFadeState: _isExpanded
-                ? CrossFadeState.showSecond
-                : CrossFadeState.showFirst,
-            duration: const Duration(milliseconds: 250),
-            sizeCurve: Curves.easeInOut,
-          ),
-        ],
-      ),
-      ),
-    );
-  }
-}
-
 // ─── Profile Avatar ─────────────────────────────────────────────────────────
 
 class _ProfileAvatar extends ConsumerStatefulWidget {
@@ -657,156 +548,6 @@ class _ProfileAvatarState extends ConsumerState<_ProfileAvatar>
           ),
         ],
       ),
-      ),
-    );
-  }
-}
-
-// ─── Theme Mode Helpers ─────────────────────────────────────────────────────
-
-String _getThemeModeLabel(ThemeMode mode) {
-  switch (mode) {
-    case ThemeMode.light:
-      return 'Modo claro';
-    case ThemeMode.dark:
-      return 'Modo oscuro';
-    case ThemeMode.system:
-      return 'Automático (sistema)';
-  }
-}
-
-// ─── Theme Mode Selector ────────────────────────────────────────────────────
-
-class _ThemeModeSelector extends ConsumerWidget {
-  const _ThemeModeSelector();
-
-  static const _kButtonSize = 32.0;
-  static const _kButtonGap = 2.0;
-  static const _kPadding = 3.0;
-  static const _kIndicatorRadius = 6.0;
-
-  int _index(ThemeMode mode) {
-    switch (mode) {
-      case ThemeMode.light:
-        return 0;
-      case ThemeMode.dark:
-        return 1;
-      case ThemeMode.system:
-        return 2;
-    }
-  }
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final currentMode = ref.watch(themeModeProvider);
-    final currentIndex = _index(currentMode);
-
-    final indicatorLeft =
-        _kPadding + currentIndex * (_kButtonSize + _kButtonGap);
-
-    return Container(
-      padding: const EdgeInsets.all(_kPadding),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Stack(
-        children: [
-          AnimatedPositioned(
-            duration: const Duration(milliseconds: 250),
-            curve: Curves.easeOutCubic,
-            left: indicatorLeft,
-            top: 0,
-            width: _kButtonSize,
-            height: _kButtonSize,
-            child: Material(
-              color: Theme.of(context).colorScheme.primaryContainer,
-              borderRadius:
-                  BorderRadius.circular(_kIndicatorRadius),
-            ),
-          ),
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _ThemeModeButton(
-                icon: Icons.light_mode_rounded,
-                isSelected: currentMode == ThemeMode.light,
-                onTap: () {
-                  ref
-                      .read(themeModeProvider.notifier)
-                      .setThemeMode(ThemeMode.light);
-                  Haptics.tap(context);
-                },
-                tooltip: 'Claro',
-              ),
-              const SizedBox(width: _kButtonGap),
-              _ThemeModeButton(
-                icon: Icons.dark_mode_rounded,
-                isSelected: currentMode == ThemeMode.dark,
-                onTap: () {
-                  ref
-                      .read(themeModeProvider.notifier)
-                      .setThemeMode(ThemeMode.dark);
-                  Haptics.tap(context);
-                },
-                tooltip: 'Oscuro',
-              ),
-              const SizedBox(width: _kButtonGap),
-              _ThemeModeButton(
-                icon: Icons.brightness_auto_rounded,
-                isSelected: currentMode == ThemeMode.system,
-                onTap: () {
-                  ref
-                      .read(themeModeProvider.notifier)
-                      .setThemeMode(ThemeMode.system);
-                  Haptics.tap(context);
-                },
-                tooltip: 'Auto',
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ThemeModeButton extends StatelessWidget {
-  const _ThemeModeButton({
-    required this.icon,
-    required this.isSelected,
-    required this.onTap,
-    required this.tooltip,
-  });
-
-  final IconData icon;
-  final bool isSelected;
-  final VoidCallback onTap;
-  final String tooltip;
-
-  @override
-  Widget build(BuildContext context) {
-    return Tooltip(
-      message: tooltip,
-      child: Material(
-        color: Colors.transparent,
-        borderRadius: BorderRadius.circular(6),
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(6),
-          child: Container(
-            width: 32,
-            height: 32,
-            alignment: Alignment.center,
-            child: Icon(
-              icon,
-              size: 18,
-              color: isSelected
-                  ? Theme.of(context).colorScheme.onPrimaryContainer
-                  : Theme.of(context).colorScheme.onSurfaceVariant,
-            ),
-          ),
-        ),
       ),
     );
   }

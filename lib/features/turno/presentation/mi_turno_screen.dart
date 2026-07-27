@@ -1165,56 +1165,59 @@ class _VentaCardContent extends StatelessWidget {
                         const SizedBox(width: 6),
                         // Badge de método de pago (si aplica)
                         if (metodoPago != null)
-                          Container(
-                            padding: EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 3,
-                            ),
-                            decoration: BoxDecoration(
-                              color: metodoPago == MetodoPago.efectivo
-                                  ? context.colors.success.withValues(alpha: 0.08)
-                                  : metodoPago == MetodoPago.transferencia
-                                      ? context.colors.warning.withValues(alpha: 0.08)
-                                      : context.colors.info.withValues(alpha: 0.08),
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  metodoPago == MetodoPago.efectivo
-                                      ? Icons.payments_rounded
-                                      : metodoPago == MetodoPago.transferencia
-                                          ? Icons.credit_card_rounded
-                                          : Icons.sync_alt_rounded,
-                                  size: 12,
-                                  color: metodoPago == MetodoPago.efectivo
-                                      ? context.colors.success
-                                      : metodoPago == MetodoPago.transferencia
-                                          ? context.colors.warning
-                                          : context.colors.info,
-                                ),
-                                const SizedBox(width: 4),
-                                Text(
-                                  metodoPago == MetodoPago.efectivo
-                                      ? 'Efectivo'
-                                      : metodoPago == MetodoPago.transferencia
-                                          ? 'Transferencia'
-                                          : 'Mixto',
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .bodySmall
-                                      ?.copyWith(
-                                        color: metodoPago == MetodoPago.efectivo
-                                            ? context.colors.success
-                                            : metodoPago == MetodoPago.transferencia
-                                                ? context.colors.warning
-                                                : context.colors.info,
-                                        fontWeight: FontWeight.w600,
-                                        fontSize: 11,
-                                      ),
-                                ),
-                              ],
+                          Flexible(
+                            child: Container(
+                              padding: EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 3,
+                              ),
+                              decoration: BoxDecoration(
+                                color: metodoPago == MetodoPago.efectivo
+                                    ? context.colors.success.withValues(alpha: 0.08)
+                                    : metodoPago == MetodoPago.transferencia
+                                        ? context.colors.warning.withValues(alpha: 0.08)
+                                        : context.colors.info.withValues(alpha: 0.08),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    metodoPago == MetodoPago.efectivo
+                                        ? Icons.payments_rounded
+                                        : metodoPago == MetodoPago.transferencia
+                                            ? Icons.credit_card_rounded
+                                            : Icons.sync_alt_rounded,
+                                    size: 12,
+                                    color: metodoPago == MetodoPago.efectivo
+                                        ? context.colors.success
+                                        : metodoPago == MetodoPago.transferencia
+                                            ? context.colors.warning
+                                            : context.colors.info,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    metodoPago == MetodoPago.efectivo
+                                        ? 'Efectivo'
+                                        : metodoPago == MetodoPago.transferencia
+                                            ? 'Transferencia'
+                                            : 'Mixto',
+                                    overflow: TextOverflow.ellipsis,
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .bodySmall
+                                        ?.copyWith(
+                                          color: metodoPago == MetodoPago.efectivo
+                                              ? context.colors.success
+                                              : metodoPago == MetodoPago.transferencia
+                                                  ? context.colors.warning
+                                                  : context.colors.info,
+                                          fontWeight: FontWeight.w600,
+                                          fontSize: 11,
+                                        ),
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
                       ],

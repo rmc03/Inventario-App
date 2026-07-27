@@ -56,6 +56,19 @@ class _CuadreResumenScreenState extends ConsumerState<CuadreResumenScreen> {
     final total = ventas.fold(0.0, (sum, v) => sum + v.total);
     final totalUnidades = ventas.fold(0, (sum, v) => sum + v.totalUnidades);
 
+    // ── Totales por método de pago ──
+    double totalEfectivo = 0;
+    double totalTransferencia = 0;
+    for (final venta in ventas) {
+      for (final pago in venta.pagos) {
+        if (pago.metodo == MetodoPago.efectivo) {
+          totalEfectivo += pago.monto;
+        } else if (pago.metodo == MetodoPago.transferencia) {
+          totalTransferencia += pago.monto;
+        }
+      }
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Resumen del turno'),
@@ -74,24 +87,36 @@ class _CuadreResumenScreenState extends ConsumerState<CuadreResumenScreen> {
               children: [
                 // ── Hero KPIs ──
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.lg,
+                    AppSpacing.md,
+                    AppSpacing.lg,
+                    0,
+                  ),
                   child: _HeroKPIs(
                     total: total,
                     ventasCount: ventas.length,
                     unidades: totalUnidades,
+                    totalEfectivo: totalEfectivo,
+                    totalTransferencia: totalTransferencia,
                   ),
                 ),
 
                 // ── Header info ──
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.lg,
+                    AppSpacing.md,
+                    AppSpacing.lg,
+                    0,
+                  ),
                   child: _ResumenHeader(turno: turno),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: AppSpacing.md),
 
                 // ── Toggle ──
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
                   child: Row(
                     children: [
                       Expanded(
@@ -103,7 +128,7 @@ class _CuadreResumenScreenState extends ConsumerState<CuadreResumenScreen> {
                               setState(() => _mostrarProductos = false),
                         ),
                       ),
-                      const SizedBox(width: 8),
+                      const SizedBox(width: AppSpacing.sm),
                       Expanded(
                         child: _ToggleOption(
                           label: 'Productos',
@@ -116,19 +141,30 @@ class _CuadreResumenScreenState extends ConsumerState<CuadreResumenScreen> {
                     ],
                   ),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: AppSpacing.md),
 
                 // ── Contenido scrolleable ──
                 Expanded(
                   child: ventas.isEmpty
                       ? const _EmptyResumen()
                       : ListView(
-                          padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+                          padding: const EdgeInsets.fromLTRB(
+                            AppSpacing.lg,
+                            0,
+                            AppSpacing.lg,
+                            AppSpacing.md,
+                          ),
                           children: _mostrarProductos
                               ? _buildProductosView(
                                   context, ventas, total, totalUnidades)
                               : _buildResumenView(
-                                  context, ventas, total, totalUnidades),
+                                  context,
+                                  ventas,
+                                  total,
+                                  totalUnidades,
+                                  totalEfectivo,
+                                  totalTransferencia,
+                                ),
                         ),
                 ),
 
@@ -152,15 +188,17 @@ class _CuadreResumenScreenState extends ConsumerState<CuadreResumenScreen> {
     List<Venta> ventas,
     double total,
     int totalUnidades,
+    double totalEfectivo,
+    double totalTransferencia,
   ) {
     return [
       for (final venta in ventas) ...[
         _ResumenVentaCard(venta: venta),
-        const SizedBox(height: 10),
+        const SizedBox(height: AppSpacing.sm),
       ],
-      const SizedBox(height: 6),
-      const Divider(),
-      const SizedBox(height: 12),
+      const SizedBox(height: AppSpacing.xs),
+      const _SlimDivider(),
+      const SizedBox(height: AppSpacing.md),
       _buildTotal(
         context,
         '${ventas.length} ${ventas.length == 1 ? 'venta' : 'ventas'}',
@@ -183,13 +221,13 @@ class _CuadreResumenScreenState extends ConsumerState<CuadreResumenScreen> {
     return [
       ...sorted.map(
         (p) => Padding(
-          padding: const EdgeInsets.only(bottom: 10),
+          padding: const EdgeInsets.only(bottom: AppSpacing.sm),
           child: _ProductoCard(producto: p),
         ),
       ),
-      const SizedBox(height: 6),
-      const Divider(),
-      const SizedBox(height: 12),
+      const SizedBox(height: AppSpacing.xs),
+      const _SlimDivider(),
+      const SizedBox(height: AppSpacing.md),
       _buildTotal(
         context,
         '${productos.length} ${productos.length == 1 ? 'producto' : 'productos'}',
@@ -205,6 +243,9 @@ class _CuadreResumenScreenState extends ConsumerState<CuadreResumenScreen> {
     int unidades,
     double total,
   ) {
+    final ext = context.colors;
+    final tt = Theme.of(context).textTheme;
+
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -212,22 +253,22 @@ class _CuadreResumenScreenState extends ConsumerState<CuadreResumenScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              '$label \u00b7 $unidades ${unidades == 1 ? 'unidad' : 'unidades'}',
-              style: Theme.of(context).textTheme.bodyMedium,
+              '$label · $unidades ${unidades == 1 ? 'ud.' : 'uds.'}',
+              style: tt.bodySmall?.copyWith(color: ext.muted),
             ),
             const SizedBox(height: 2),
             Text(
               'Total de ventas',
-              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                fontWeight: FontWeight.w700,
-              ),
+              style: tt.titleMedium?.copyWith(fontWeight: FontWeight.w700),
             ),
           ],
         ),
         Text(
           formatCurrency(total),
-          style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-            color: context.colors.primary,
+          style: tt.headlineMedium?.copyWith(
+            color: ext.primary,
+            fontWeight: FontWeight.w800,
+            fontFeatures: const [FontFeature.tabularFigures()],
           ),
         ),
       ],
@@ -310,55 +351,108 @@ class _HeroKPIs extends StatelessWidget {
     required this.total,
     required this.ventasCount,
     required this.unidades,
+    required this.totalEfectivo,
+    required this.totalTransferencia,
   });
 
   final double total;
   final int ventasCount;
   final int unidades;
+  final double totalEfectivo;
+  final double totalTransferencia;
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        // Total hero
-        Text(
-          formatCurrency(total),
-          style: Theme.of(context).textTheme.headlineLarge?.copyWith(
-            color: context.colors.primary,
-            fontWeight: FontWeight.w800,
-            fontFeatures: const [FontFeature.tabularFigures()],
+    final ext = context.colors;
+    final tt = Theme.of(context).textTheme;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.xl),
+      decoration: BoxDecoration(
+        color: ext.primary.withValues(alpha: 0.04),
+        borderRadius: BorderRadius.circular(AppRadii.xl),
+      ),
+      child: Column(
+        children: [
+          // ── Total hero ──
+          Text(
+            formatCurrency(total),
+            style: tt.displayMedium?.copyWith(
+              color: ext.primary,
+              fontWeight: FontWeight.w900,
+              fontFeatures: const [FontFeature.tabularFigures()],
+            ),
+            textAlign: TextAlign.center,
           ),
-          textAlign: TextAlign.center,
-        ),
-        const SizedBox(height: 2),
-        Text(
-          'Total de ventas del turno',
-          style: Theme.of(context).textTheme.bodyMedium,
-        ),
-        const SizedBox(height: 16),
-        // Métricas secundarias
-        Row(
-          children: [
-            Expanded(
-              child: _MetricCard(
-                icon: Icons.receipt_long_rounded,
-                value: '$ventasCount',
-                label: ventasCount == 1 ? 'venta' : 'ventas',
-                color: context.colors.primary,
+          const SizedBox(height: AppSpacing.xs),
+          Text(
+            'Total de ventas del turno',
+            style: tt.bodyMedium?.copyWith(color: ext.muted),
+          ),
+
+          const SizedBox(height: AppSpacing.lg),
+
+          // ── Chips de método de pago ──
+          if (totalEfectivo > 0 || totalTransferencia > 0)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+              child: Row(
+                children: [
+                  if (totalEfectivo > 0)
+                    Expanded(
+                      child: _PagoChip(
+                        icon: Icons.payments_outlined,
+                        label: 'Efectivo',
+                        amount: totalEfectivo,
+                        color: ext.success,
+                      ),
+                    ),
+                  if (totalEfectivo > 0 && totalTransferencia > 0)
+                    const SizedBox(width: AppSpacing.sm),
+                  if (totalTransferencia > 0)
+                    Expanded(
+                      child: _PagoChip(
+                        icon: Icons.account_balance_outlined,
+                        label: 'Transferencia',
+                        amount: totalTransferencia,
+                        color: ext.warning,
+                      ),
+                    ),
+                ],
               ),
             ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _MetricCard(
-                icon: Icons.inventory_2_rounded,
-                value: '$unidades',
-                label: unidades == 1 ? 'unidad' : 'unidades',
-                color: context.colors.success,
-              ),
+
+          if (totalEfectivo > 0 || totalTransferencia > 0)
+            const SizedBox(height: AppSpacing.sm + 2),
+
+          // ── Métricas secundarias ──
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+            child: Row(
+              children: [
+                Expanded(
+                  child: _MetricCard(
+                    icon: Icons.receipt_long_rounded,
+                    value: '$ventasCount',
+                    label: ventasCount == 1 ? 'venta' : 'ventas',
+                    color: ext.primary,
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: _MetricCard(
+                    icon: Icons.inventory_2_rounded,
+                    value: '$unidades',
+                    label: unidades == 1 ? 'ud.' : 'uds.',
+                    color: ext.success,
+                  ),
+                ),
+              ],
             ),
-          ],
-        ),
-      ],
+          ),
+        ],
+      ),
     );
   }
 }
@@ -378,38 +472,45 @@ class _MetricCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final ext = context.colors;
+    final tt = Theme.of(context).textTheme;
+
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.md,
+        vertical: AppSpacing.md,
+      ),
       decoration: BoxDecoration(
-        color: context.colors.surface,
-        borderRadius: BorderRadius.circular(AppRadii.md),
-        border: Border.all(color: context.colors.line.withValues(alpha: 0.5)),
+        color: ext.surface,
+        borderRadius: BorderRadius.circular(AppRadii.lg),
+        border: Border.all(color: ext.line),
       ),
       child: Row(
         children: [
           Container(
-            width: 36,
-            height: 36,
+            width: 40,
+            height: 40,
             decoration: BoxDecoration(
               color: color.withValues(alpha: AppAlphas.fill),
               borderRadius: BorderRadius.circular(AppRadii.sm),
             ),
             child: Icon(icon, color: color, size: 20),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: AppSpacing.md),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
                 value,
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w700,
+                style: tt.headlineMedium?.copyWith(
+                  fontWeight: FontWeight.w800,
+                  color: ext.ink,
                   fontFeatures: const [FontFeature.tabularFigures()],
                 ),
               ),
               Text(
                 label,
-                style: Theme.of(context).textTheme.bodyMedium,
+                style: tt.bodySmall?.copyWith(color: ext.muted),
               ),
             ],
           ),
@@ -426,18 +527,24 @@ class _ResumenHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final ext = context.colors;
+    final tt = Theme.of(context).textTheme;
+
     return Row(
       children: [
         Text(
           compactDateFormatter.format(DateTime.now()),
-          style: Theme.of(context).textTheme.titleLarge,
+          style: tt.titleLarge,
         ),
         if (turno.horaInicio != null) ...[
-          const SizedBox(width: 10),
+          const SizedBox(width: AppSpacing.sm),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.sm + 2,
+              vertical: AppSpacing.xs + 1,
+            ),
             decoration: BoxDecoration(
-              color: context.colors.surfaceSecondary,
+              color: ext.surfaceSecondary,
               borderRadius: BorderRadius.circular(AppRadii.sm),
             ),
             child: Row(
@@ -446,14 +553,14 @@ class _ResumenHeader extends StatelessWidget {
                 Icon(
                   Icons.access_time_rounded,
                   size: 14,
-                  color: context.colors.muted,
+                  color: ext.muted,
                 ),
-                const SizedBox(width: 4),
+                const SizedBox(width: AppSpacing.xs),
                 Text(
                   'Desde ${timeFormatter.format(turno.horaInicio!)}',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: context.colors.muted,
-                    fontWeight: FontWeight.w500,
+                  style: tt.bodySmall?.copyWith(
+                    color: ext.muted,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
               ],
@@ -480,18 +587,24 @@ class _ToggleOption extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final ext = context.colors;
+    final tt = Theme.of(context).textTheme;
+
     return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(vertical: 10),
+        curve: Curves.easeInOut,
+        padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm + 2),
         decoration: BoxDecoration(
           color: selected
-              ? context.colors.primary.withValues(alpha: AppAlphas.fill)
-              : context.colors.surfaceSecondary,
+              ? ext.primary.withValues(alpha: AppAlphas.fillStrong)
+              : ext.surfaceSecondary,
           borderRadius: BorderRadius.circular(AppRadii.md),
           border: Border.all(
-            color: selected ? context.colors.primary : context.colors.line,
+            color: selected
+                ? ext.primary.withValues(alpha: 0.3)
+                : ext.line,
             width: selected ? 1.5 : 1,
           ),
         ),
@@ -501,13 +614,13 @@ class _ToggleOption extends StatelessWidget {
             Icon(
               icon,
               size: 18,
-              color: selected ? context.colors.primary : context.colors.muted,
+              color: selected ? ext.primary : ext.muted,
             ),
-            const SizedBox(width: 6),
+            const SizedBox(width: AppSpacing.sm),
             Text(
               label,
-              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                color: selected ? context.colors.primary : context.colors.ink,
+              style: tt.labelLarge?.copyWith(
+                color: selected ? ext.primary : ext.muted,
                 fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
               ),
             ),
@@ -525,104 +638,133 @@ class _ResumenVentaCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final ext = context.colors;
+    final tt = Theme.of(context).textTheme;
+
+    // Detectar método de pago
+    final MetodoPago metodoPago;
+    if (venta.pagos.length > 1) {
+      metodoPago = MetodoPago.mixto;
+    } else if (venta.pagos.isNotEmpty) {
+      metodoPago = venta.pagos.first.metodo;
+    } else {
+      metodoPago = MetodoPago.efectivo;
+    }
+
+    final chipColor = metodoPago == MetodoPago.efectivo
+        ? ext.success
+        : metodoPago == MetodoPago.transferencia
+            ? ext.warning
+            : ext.info;
+
     return Card(
       child: Theme(
         data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
         child: ExpansionTile(
-          tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-          childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+          tilePadding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.md,
+            vertical: AppSpacing.xs,
+          ),
+          childrenPadding: const EdgeInsets.fromLTRB(
+            AppSpacing.md,
+            0,
+            AppSpacing.md,
+            AppSpacing.md,
+          ),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppRadii.lg),
+          ),
           title: Text(
             'Venta a las ${timeFormatter.format(venta.fecha)}',
-            style: Theme.of(context).textTheme.titleMedium,
+            style: tt.titleMedium,
           ),
-          subtitle: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(
-                  color: context.colors.surfaceSecondary,
-                  borderRadius: BorderRadius.circular(AppRadii.sm),
-                ),
-                child: Text(
-                  '${venta.items.length} ${venta.items.length == 1 ? 'art\u00edculo' : 'art\u00edculos'}',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    fontWeight: FontWeight.w500,
+          subtitle: Padding(
+            padding: const EdgeInsets.only(top: AppSpacing.xs),
+            child: Row(
+              children: [
+                // Chip de artículos
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.sm,
+                    vertical: 3,
+                  ),
+                  decoration: BoxDecoration(
+                    color: ext.surfaceSecondary,
+                    borderRadius: BorderRadius.circular(AppRadii.sm),
+                  ),
+                  child: Text(
+                    '${venta.items.length} ${venta.items.length == 1 ? 'artículo' : 'artículos'}',
+                    style: tt.bodySmall?.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: ext.ink,
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(width: 6),
-              // Badge de método de pago
-              if (venta.pagos.isNotEmpty)
-                Builder(
-                  builder: (context) {
-                    // Detectar el método de pago (mixto si hay más de un tipo de pago)
-                    final MetodoPago metodoPago;
-                    if (venta.pagos.length > 1) {
-                      metodoPago = MetodoPago.mixto;
-                    } else {
-                      metodoPago = venta.pagos.first.metodo;
-                    }
-
-                    final chipColor = metodoPago == MetodoPago.efectivo
-                        ? context.colors.success
-                        : metodoPago == MetodoPago.transferencia
-                            ? context.colors.warning
-                            : context.colors.info;
-
-                    return Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: chipColor.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(AppRadii.sm),
+                const SizedBox(width: AppSpacing.sm),
+                // Chip de método de pago
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.sm,
+                    vertical: 3,
+                  ),
+                  decoration: BoxDecoration(
+                    color: chipColor.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(AppRadii.sm),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(metodoPago.icon, size: 12, color: chipColor),
+                      const SizedBox(width: 4),
+                      Text(
+                        metodoPago.label,
+                        style: tt.bodySmall?.copyWith(
+                          fontWeight: FontWeight.w600,
+                          color: chipColor,
+                        ),
                       ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            metodoPago.icon,
-                            size: 12,
-                            color: chipColor,
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            metodoPago.label,
-                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              fontWeight: FontWeight.w500,
-                              color: chipColor,
-                            ),
-                          ),
-                        ],
-                      ),
-                    );
-                  },
+                    ],
+                  ),
                 ),
-            ],
+              ],
+            ),
           ),
           trailing: Text(
             formatCurrency(venta.total),
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              color: context.colors.primary,
-              fontWeight: FontWeight.w700,
+            style: tt.titleMedium?.copyWith(
+              color: ext.primary,
+              fontWeight: FontWeight.w800,
               fontFeatures: const [FontFeature.tabularFigures()],
             ),
           ),
           children: [
-            const Divider(height: 1),
-            const SizedBox(height: 12),
+            const _SlimDivider(),
+            const SizedBox(height: AppSpacing.sm),
             for (final item in venta.items)
               Padding(
-                padding: const EdgeInsets.only(bottom: 8),
+                padding: const EdgeInsets.only(bottom: AppSpacing.xs),
                 child: Row(
                   children: [
+                    Text(
+                      '${item.cantidad}x',
+                      style: tt.bodySmall?.copyWith(
+                        fontWeight: FontWeight.w700,
+                        color: ext.muted,
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.sm),
                     Expanded(
                       child: Text(
-                        '${item.cantidad}x ${item.productoNombre}',
-                        style: Theme.of(context).textTheme.bodyMedium,
+                        item.productoNombre,
+                        style: tt.bodyMedium?.copyWith(color: ext.ink),
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                     Text(
                       formatCurrency(item.subtotal),
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      style: tt.bodyMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: ext.ink,
                         fontFeatures: const [FontFeature.tabularFigures()],
                       ),
                     ),
@@ -643,46 +785,53 @@ class _ProductoCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final ext = context.colors;
+    final tt = Theme.of(context).textTheme;
+
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.all(AppSpacing.md),
         child: Row(
           children: [
             Container(
-              width: 40,
-              height: 40,
+              width: 42,
+              height: 42,
               decoration: BoxDecoration(
-                color: context.colors.primary.withValues(alpha: AppAlphas.fill),
+                color: ext.primary.withValues(alpha: AppAlphas.fill),
                 borderRadius: BorderRadius.circular(AppRadii.sm),
               ),
               child: Icon(
                 Icons.inventory_2_rounded,
-                color: context.colors.primary,
+                color: ext.primary,
                 size: 20,
               ),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: AppSpacing.md),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     producto.nombre,
-                    style: Theme.of(context).textTheme.bodyLarge,
+                    style: tt.bodyLarge?.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: ext.ink,
+                    ),
+                    overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    '${producto.cantidad} ${producto.cantidad == 1 ? 'unidad' : 'unidades'} vendidas',
-                    style: Theme.of(context).textTheme.bodyMedium,
+                    '${producto.cantidad} ${producto.cantidad == 1 ? 'ud.' : 'uds.'} vendidas',
+                    style: tt.bodySmall?.copyWith(color: ext.muted),
                   ),
                 ],
               ),
             ),
             Text(
               formatCurrency(producto.subtotal),
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                color: context.colors.primary,
-                fontWeight: FontWeight.w700,
+              style: tt.titleMedium?.copyWith(
+                color: ext.primary,
+                fontWeight: FontWeight.w800,
                 fontFeatures: const [FontFeature.tabularFigures()],
               ),
             ),
@@ -698,34 +847,37 @@ class _EmptyResumen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final ext = context.colors;
+    final tt = Theme.of(context).textTheme;
+
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(32),
+        padding: const EdgeInsets.all(AppSpacing.xxl),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              width: 72,
-              height: 72,
+              width: 80,
+              height: 80,
               decoration: BoxDecoration(
-                color: context.colors.surfaceSecondary,
+                color: ext.surfaceSecondary,
                 shape: BoxShape.circle,
               ),
               child: Icon(
                 Icons.receipt_long_rounded,
-                size: 36,
-                color: context.colors.muted,
+                size: 40,
+                color: ext.muted,
               ),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: AppSpacing.lg),
             Text(
-              'Sin ventas a\u00fan',
-              style: Theme.of(context).textTheme.titleMedium,
+              'Sin ventas aún',
+              style: tt.titleMedium?.copyWith(fontWeight: FontWeight.w700),
             ),
-            const SizedBox(height: 6),
+            const SizedBox(height: AppSpacing.xs),
             Text(
-              'Las ventas realizadas en este turno\naparecer\u00e1n aqu\u00ed.',
-              style: Theme.of(context).textTheme.bodyMedium,
+              'Las ventas realizadas en este turno\naparecerán aquí.',
+              style: tt.bodyMedium?.copyWith(color: ext.muted),
               textAlign: TextAlign.center,
             ),
           ],
@@ -750,35 +902,43 @@ class _ConfirmBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final ext = context.colors;
+    final tt = Theme.of(context).textTheme;
+
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: context.colors.surface,
+        color: ext.surface,
         border: Border(
-          top: BorderSide(color: context.colors.line.withValues(alpha: 0.5)),
+          top: BorderSide(color: ext.line.withValues(alpha: 0.5)),
         ),
       ),
       child: SafeArea(
         top: false,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.lg,
+            AppSpacing.md,
+            AppSpacing.lg,
+            AppSpacing.md,
+          ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               if (total > 0)
                 Padding(
-                  padding: const EdgeInsets.only(bottom: 10),
+                  padding: const EdgeInsets.only(bottom: AppSpacing.sm + 2),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Text(
-                        'Se enviar\u00e1 ',
-                        style: Theme.of(context).textTheme.bodyMedium,
+                        'Se enviará ',
+                        style: tt.bodyMedium?.copyWith(color: ext.muted),
                       ),
                       Text(
                         formatCurrency(total),
-                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                          fontWeight: FontWeight.w700,
-                          color: context.colors.primary,
+                        style: tt.bodyLarge?.copyWith(
+                          fontWeight: FontWeight.w800,
+                          color: ext.primary,
                           fontFeatures: const [FontFeature.tabularFigures()],
                         ),
                       ),
@@ -786,7 +946,7 @@ class _ConfirmBar extends StatelessWidget {
                   ),
                 ),
               SizedBox(
-                height: 54,
+                height: 56,
                 width: double.infinity,
                 child: ElevatedButton.icon(
                   onPressed: enabled
@@ -804,23 +964,86 @@ class _ConfirmBar extends StatelessWidget {
                             color: Colors.white,
                           ),
                         )
-                      : const Icon(Icons.send_rounded),
+                      : const Icon(Icons.send_rounded, size: 20),
                   label: Text(isLoading ? 'Enviando...' : 'Confirmar y enviar'),
-                  style: ElevatedButton.styleFrom(
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(AppRadii.md),
-                    ),
-                    textStyle: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 0,
-                    ),
-                  ),
                 ),
               ),
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+// ─── Slim divider helper ─────────────────────────────────────────────────────
+
+class _SlimDivider extends StatelessWidget {
+  const _SlimDivider();
+
+  @override
+  Widget build(BuildContext context) {
+    return Divider(
+      height: 1,
+      thickness: 0.5,
+      color: context.colors.line.withValues(alpha: 0.6),
+    );
+  }
+}
+
+class _PagoChip extends StatelessWidget {
+  const _PagoChip({
+    required this.icon,
+    required this.label,
+    required this.amount,
+    required this.color,
+  });
+
+  final IconData icon;
+  final String label;
+  final double amount;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    final tt = Theme.of(context).textTheme;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.sm + 2,
+        vertical: AppSpacing.xs + 2,
+      ),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.06),
+        borderRadius: BorderRadius.circular(AppRadii.sm),
+        border: Border.all(color: color.withValues(alpha: 0.15)),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: color),
+          const SizedBox(width: AppSpacing.xs),
+          Flexible(
+            child: Text(
+              label,
+              style: tt.bodySmall?.copyWith(
+                color: color,
+                fontWeight: FontWeight.w600,
+              ),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          const SizedBox(width: AppSpacing.xs),
+          Text(
+            formatCurrency(amount),
+            style: tt.bodyMedium?.copyWith(
+              color: color,
+              fontWeight: FontWeight.w800,
+              fontFeatures: const [FontFeature.tabularFigures()],
+            ),
+          ),
+        ],
       ),
     );
   }
