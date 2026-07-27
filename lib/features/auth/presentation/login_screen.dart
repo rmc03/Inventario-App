@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/config/app_branding.dart';
 import '../../../core/theme/app_dimens.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/haptics.dart';
@@ -95,10 +96,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                     // App identity
                     Row(
                       children: [
-                        _AppIcon(colors: colors),
+                        AppBranding.buildAppIcon(context, size: 56),
                         const SizedBox(width: AppSpacing.md),
                         Text(
-                          'Gestión de\nInventario',
+                          AppBranding.appName,
                           style: Theme.of(context)
                               .textTheme
                               .headlineMedium

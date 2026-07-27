@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 
 import '../../features/auth/presentation/login_screen.dart';
 import '../../features/auth/providers/auth_provider.dart';
+import '../../features/onboarding/presentation/onboarding_screen.dart';
+import '../../features/onboarding/providers/onboarding_provider.dart';
 import '../../features/configuracion/presentation/accesibilidad_screen.dart';
 import '../../features/configuracion/presentation/categorias_screen.dart';
 import '../../features/configuracion/presentation/configuracion_screen.dart';
@@ -74,19 +76,35 @@ final appRouterProvider = Provider<GoRouter>((ref) {
   ref.onDispose(notifier.dispose);
 
   return GoRouter(
-    initialLocation: '/login',
+    initialLocation: '/',
     refreshListenable: notifier,
-    redirect: (context, state) {
+    redirect: (context, state) async {
       // Leer (no watch) el estado actual en cada evaluación de redirect.
       final user = ref.read(authControllerProvider).user;
       final path = state.uri.path;
+      final isOnboarding = path == '/onboarding';
       final isLogin = path == '/login';
+      final isRoot = path == '/';
+
+      // Check if onboarding is completed
+      if (isRoot) {
+        final shouldShowOnboarding = await ref.read(shouldShowOnboardingProvider.future);
+        if (shouldShowOnboarding) {
+          return '/onboarding';
+        }
+        return user == null ? '/login' : user.rol.homePath;
+      }
+
+      // Allow onboarding route
+      if (isOnboarding) {
+        return null;
+      }
 
       if (user == null) {
         return isLogin ? null : '/login';
       }
 
-      if (isLogin || path == '/') {
+      if (isLogin) {
         return user.rol.homePath;
       }
 
@@ -101,6 +119,14 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       return null;
     },
     routes: [
+      GoRoute(
+        path: '/onboarding',
+        pageBuilder: (context, state) => _buildPageWithFadeTransition(
+          context,
+          state,
+          const OnboardingScreen(),
+        ),
+      ),
       GoRoute(
         path: '/login',
         pageBuilder: (context, state) => _buildPageWithFadeTransition(

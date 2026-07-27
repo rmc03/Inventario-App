@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
+import 'core/config/app_branding.dart';
 import 'core/router/app_router.dart';
 import 'core/theme/app_theme.dart';
 import 'core/app_startup.dart';
@@ -95,14 +96,10 @@ class _SplashOverlayState extends State<_SplashOverlay> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(
-                      Icons.inventory_2,
-                      size: 92,
-                      color: colors.primary,
-                    ),
+                    AppBranding.buildAppIcon(context),
                     const SizedBox(height: 12),
                     Text(
-                      'Inventario',
+                      AppBranding.appName,
                       style: Theme.of(context).textTheme.headlineMedium,
                     ),
                   ],
