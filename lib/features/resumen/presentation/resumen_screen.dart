@@ -374,9 +374,13 @@ class _HeroStats extends StatelessWidget {
 }
 
 /// Tarjeta de estadística hero animada con conteo progresivo.
-/// 🔥 FIX: Optimized to prevent flickering in dark mode by reducing
-/// nested animations and unnecessary rebuilds.
-class _AnimatedHeroStatCard extends StatefulWidget {
+///
+/// Separate implicit animations for entrance scale and count transition.
+/// The entrance scale (0.92→1.0) is a one-shot [TweenAnimationBuilder] that
+/// never replays. The count value animates via [_CountDisplay] which only
+/// restarts its own animation on [didUpdateWidget] — the card size stays
+/// stable, eliminating the flicker caused by restarting a shared controller.
+class _AnimatedHeroStatCard extends StatelessWidget {
   const _AnimatedHeroStatCard({
     required this.label,
     required this.value,
@@ -396,14 +400,127 @@ class _AnimatedHeroStatCard extends StatefulWidget {
   final Duration delay;
 
   @override
-  State<_AnimatedHeroStatCard> createState() => _AnimatedHeroStatCardState();
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return TweenAnimationBuilder<double>(
+      duration: const Duration(milliseconds: 800),
+      curve: Curves.easeOutBack,
+      tween: Tween(begin: 0.92, end: 1.0),
+      child: Semantics(
+        label: '$label: ${formatter(value)}'
+            '${delta != null ? ', cambio ${_formatDelta(delta!)}' : ''}',
+        child: Container(
+          decoration: BoxDecoration(
+            color: context.colors.surface,
+            borderRadius: AppRadii.mdBorder,
+            border: isDark
+                ? Border.all(color: context.colors.line, width: 1)
+                : null,
+            boxShadow: AppShadows.subtle,
+          ),
+          child: Padding(
+            padding: EdgeInsets.symmetric(
+              horizontal: AppSpacing.lg,
+              vertical: AppSpacing.lg + 4,
+            ),
+            child: Column(
+              children: [
+                TweenAnimationBuilder<double>(
+                  duration: _kEntranceDuration,
+                  curve: _kEntranceCurve,
+                  tween: Tween(begin: 0.0, end: 1.0),
+                  builder: (context, opacity, child) {
+                    return Opacity(
+                      opacity: opacity,
+                      child: child,
+                    );
+                  },
+                  child: Container(
+                    padding: EdgeInsets.all(AppSpacing.sm),
+                    decoration: BoxDecoration(
+                      color: color.withValues(alpha: AppAlphas.fill),
+                      borderRadius: BorderRadius.circular(AppRadii.md),
+                    ),
+                    child: Icon(icon, size: 40, color: color),
+                  ),
+                ),
+                SizedBox(height: AppSpacing.sm),
+                Text(
+                  label,
+                  style: Theme.of(context).textTheme.bodyMedium,
+                  textAlign: TextAlign.center,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                SizedBox(height: AppSpacing.md),
+                _CountDisplay(
+                  value: value,
+                  color: color,
+                  formatter: formatter,
+                  delay: delay,
+                ),
+                if (delta != null) ...[
+                  SizedBox(height: AppSpacing.xs),
+                  TweenAnimationBuilder<double>(
+                    duration: const Duration(milliseconds: 500),
+                    curve: Curves.easeOutCubic,
+                    tween: Tween(begin: 0.0, end: 1.0),
+                    builder: (context, opacity, child) {
+                      return Opacity(
+                        opacity: opacity,
+                        child: child,
+                      );
+                    },
+                    child: _DeltaIndicator(delta: delta!),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
+      ),
+      builder: (context, scale, child) {
+        return Transform.scale(
+          scale: scale,
+          child: child,
+        );
+      },
+    );
+  }
+
+  static String _formatDelta(double value) {
+    final pct = (value * 100).round();
+    return value >= 0 ? '+$pct%' : '$pct%';
+  }
 }
 
-class _AnimatedHeroStatCardState extends State<_AnimatedHeroStatCard>
+/// Animated count display with independent transition.
+///
+/// Uses its own [AnimationController] solely for the count number. On data
+/// updates only this widget's animation restarts — the parent card size
+/// and scale remain untouched, preventing the resize flicker.
+class _CountDisplay extends StatefulWidget {
+  const _CountDisplay({
+    required this.value,
+    required this.color,
+    required this.formatter,
+    required this.delay,
+  });
+
+  final double value;
+  final Color color;
+  final String Function(double) formatter;
+  final Duration delay;
+
+  @override
+  State<_CountDisplay> createState() => _CountDisplayState();
+}
+
+class _CountDisplayState extends State<_CountDisplay>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
-  late Animation<double> _countAnimation;
-  late Animation<double> _scaleAnimation;
+  late Animation<double> _anim;
   bool _hasAnimated = false;
 
   @override
@@ -413,28 +530,13 @@ class _AnimatedHeroStatCardState extends State<_AnimatedHeroStatCard>
       vsync: this,
       duration: const Duration(milliseconds: 800),
     );
-
-    _countAnimation = Tween<double>(
-      begin: 0.0,
-      end: widget.value,
-    ).animate(
+    _anim = Tween<double>(begin: 0.0, end: widget.value).animate(
       CurvedAnimation(
         parent: _controller,
         curve: const Interval(0.0, 0.85, curve: Curves.easeOutCubic),
       ),
     );
 
-    _scaleAnimation = Tween<double>(
-      begin: 0.92,
-      end: 1.0,
-    ).animate(
-      CurvedAnimation(
-        parent: _controller,
-        curve: Curves.easeOutBack,
-      ),
-    );
-
-    // Delay inicial antes de iniciar
     Future.delayed(widget.delay, () {
       if (mounted && !_hasAnimated) {
         _hasAnimated = true;
@@ -444,14 +546,10 @@ class _AnimatedHeroStatCardState extends State<_AnimatedHeroStatCard>
   }
 
   @override
-  void didUpdateWidget(_AnimatedHeroStatCard oldWidget) {
+  void didUpdateWidget(_CountDisplay oldWidget) {
     super.didUpdateWidget(oldWidget);
-    // 🔥 FIX: Only animate if value significantly changed (avoid micro-rebuilds)
     if ((oldWidget.value - widget.value).abs() > 0.01) {
-      _countAnimation = Tween<double>(
-        begin: oldWidget.value,
-        end: widget.value,
-      ).animate(
+      _anim = Tween<double>(begin: oldWidget.value, end: widget.value).animate(
         CurvedAnimation(
           parent: _controller,
           curve: const Interval(0.0, 0.85, curve: Curves.easeOutCubic),
@@ -469,97 +567,23 @@ class _AnimatedHeroStatCardState extends State<_AnimatedHeroStatCard>
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    
-    return ScaleTransition(
-      scale: _scaleAnimation,
-      child: Semantics(
-        label: '${widget.label}: ${widget.formatter(widget.value)}'
-            '${widget.delta != null ? ', cambio ${_formatDelta(widget.delta!)}' : ''}',
-        child: Container(
-          decoration: BoxDecoration(
-            color: context.colors.surface,
-            borderRadius: AppRadii.mdBorder,
-            border: isDark ? Border.all(
-              color: context.colors.line,
-              width: 1,
-            ) : null,
-            boxShadow: AppShadows.subtle,
-          ),
-          child: Padding(
-            padding: EdgeInsets.symmetric(
-              horizontal: AppSpacing.lg,
-              vertical: AppSpacing.lg + 4,
-            ),
-            child: Column(
-              children: [
-                // 🔥 FIX: Simplified icon animation - removed TweenAnimationBuilder
-                // to reduce animation layers causing flicker
-                AnimatedOpacity(
-                  duration: const Duration(milliseconds: 400),
-                  curve: Curves.easeOutCubic,
-                  opacity: _hasAnimated ? 1.0 : 0.0,
-                  child: Container(
-                    padding: EdgeInsets.all(AppSpacing.sm),
-                    decoration: BoxDecoration(
-                      color: widget.color.withValues(alpha: AppAlphas.fill),
-                      borderRadius: BorderRadius.circular(AppRadii.md),
-                    ),
-                    child: Icon(
-                      widget.icon,
-                      size: 40,
-                      color: widget.color,
-                    ),
-                  ),
+    return RepaintBoundary(
+      child: AnimatedBuilder(
+        animation: _anim,
+        builder: (context, _) {
+          return Text(
+            widget.formatter(_anim.value),
+            style: Theme.of(context).textTheme.headlineLarge?.copyWith(
+                  color: widget.color,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: -1.2,
+                  height: 1,
                 ),
-                SizedBox(height: AppSpacing.sm),
-                Text(
-                  widget.label,
-                  style: Theme.of(context).textTheme.bodyMedium,
-                  textAlign: TextAlign.center,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                SizedBox(height: AppSpacing.md),
-                // 🔥 FIX: Use RepaintBoundary to isolate repaints
-                RepaintBoundary(
-                  child: AnimatedBuilder(
-                    animation: _countAnimation,
-                    builder: (context, child) {
-                      return Text(
-                        widget.formatter(_countAnimation.value),
-                        style: Theme.of(context).textTheme.headlineLarge?.copyWith(
-                              color: widget.color,
-                              fontWeight: FontWeight.w700,
-                              letterSpacing: -1.2,
-                              height: 1,
-                            ),
-                        textAlign: TextAlign.center,
-                      );
-                    },
-                  ),
-                ),
-                if (widget.delta != null) ...[
-                  SizedBox(height: AppSpacing.xs),
-                  // 🔥 FIX: Simplified delta animation
-                  AnimatedOpacity(
-                    duration: const Duration(milliseconds: 500),
-                    curve: Curves.easeOutCubic,
-                    opacity: _hasAnimated ? 1.0 : 0.0,
-                    child: _DeltaIndicator(delta: widget.delta!),
-                  ),
-                ],
-              ],
-            ),
-          ),
-        ),
+            textAlign: TextAlign.center,
+          );
+        },
       ),
     );
-  }
-
-  String _formatDelta(double value) {
-    final pct = (value * 100).round();
-    return value >= 0 ? '+$pct%' : '$pct%';
   }
 }
 

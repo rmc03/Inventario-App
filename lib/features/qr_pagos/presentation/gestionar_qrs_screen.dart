@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:image_cropper/image_cropper.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/haptics.dart';
@@ -888,9 +889,34 @@ class _FormularioQrState extends ConsumerState<_FormularioQr> {
       imageQuality: 90,
     );
 
-    if (imagen != null) {
+    if (imagen == null) return;
+
+    final croppedFile = await ImageCropper().cropImage(
+      sourcePath: imagen.path,
+      aspectRatio: const CropAspectRatio(ratioX: 1, ratioY: 1),
+      maxWidth: 1024,
+      maxHeight: 1024,
+      uiSettings: [
+        AndroidUiSettings(
+          toolbarTitle: 'Recortar QR',
+          toolbarColor: context.colors.primary,
+          toolbarWidgetColor: Colors.white,
+          activeControlsWidgetColor: context.colors.primary,
+          initAspectRatio: CropAspectRatioPreset.square,
+          lockAspectRatio: true,
+        ),
+        IOSUiSettings(
+          title: 'Recortar QR',
+          aspectRatioLockEnabled: true,
+          resetAspectRatioEnabled: false,
+          aspectRatioPickerButtonHidden: true,
+        ),
+      ],
+    );
+
+    if (croppedFile != null) {
       setState(() {
-        _imagenSeleccionada = File(imagen.path);
+        _imagenSeleccionada = File(croppedFile.path);
       });
     }
   }

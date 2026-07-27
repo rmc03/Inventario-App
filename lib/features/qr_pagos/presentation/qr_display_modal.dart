@@ -76,7 +76,7 @@ class _QrDisplayModalState extends ConsumerState<QrDisplayModal>
             children: [
               // ── Header con botón cerrar ──
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -110,19 +110,12 @@ class _QrDisplayModalState extends ConsumerState<QrDisplayModal>
               // ── Monto si está disponible ──
               if (widget.montoTransferencia != null)
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 0),
                   child: Container(
                     width: double.infinity,
                     padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
                     decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [
-                          context.colors.primary.withValues(alpha: 0.12),
-                          context.colors.primary.withValues(alpha: 0.06),
-                        ],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
+                      color: context.colors.primary.withValues(alpha: 0.08),
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(
                         color: context.colors.primary.withValues(alpha: 0.2),
@@ -156,7 +149,7 @@ class _QrDisplayModalState extends ConsumerState<QrDisplayModal>
                   ),
                 ),
 
-              const SizedBox(height: 20),
+              const SizedBox(height: 24),
 
               // ── QR grande ──
               Expanded(
@@ -164,9 +157,12 @@ class _QrDisplayModalState extends ConsumerState<QrDisplayModal>
                   child: ScaleTransition(
                     scale: _scaleAnimation,
                     child: Container(
-                      constraints: const BoxConstraints(maxWidth: 400, maxHeight: 400),
+                      constraints: const BoxConstraints(
+                        minWidth: 280,
+                        minHeight: 280,
+                      ),
                       margin: const EdgeInsets.symmetric(horizontal: 24),
-                      padding: const EdgeInsets.all(24),
+                      padding: const EdgeInsets.all(20),
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(24),
@@ -187,6 +183,8 @@ class _QrDisplayModalState extends ConsumerState<QrDisplayModal>
                         borderRadius: BorderRadius.circular(16),
                         child: Image.file(
                           File(_qrSeleccionado.imagenPath),
+                          width: double.infinity,
+                          height: double.infinity,
                           fit: BoxFit.contain,
                           errorBuilder: (context, error, stackTrace) {
                             return Center(
@@ -218,7 +216,7 @@ class _QrDisplayModalState extends ConsumerState<QrDisplayModal>
                 ),
               ),
 
-              const SizedBox(height: 20),
+              const SizedBox(height: 16),
 
               // ── Selector de QR si hay múltiples ──
               if (widget.qrsDisponibles.length > 1)

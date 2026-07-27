@@ -9,6 +9,8 @@ import '../../../core/utils/formatters.dart';
 import '../../../core/utils/haptics.dart';
 import '../../../shared/models/pago.dart';
 import '../providers/venta_provider.dart';
+import '../../qr_pagos/presentation/qr_display_modal.dart';
+import '../../qr_pagos/providers/qr_pago_provider.dart';
 
 class ConfirmarPagoScreen extends ConsumerStatefulWidget {
   const ConfirmarPagoScreen({super.key});
@@ -226,6 +228,73 @@ class _ConfirmarPagoScreenState extends ConsumerState<ConfirmarPagoScreen>
                     ),
                   ],
                 ),
+              ),
+              const SizedBox(height: 16),
+              Consumer(
+                builder: (context, ref, _) {
+                  final qrs = ref.watch(qrsPagosAccesiblesProvider).value ?? [];
+
+                  if (qrs.isEmpty) {
+                    return Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: context.colors.warning.withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: context.colors.warning.withValues(alpha: 0.2),
+                        ),
+                      ),
+                      child: Column(
+                        children: [
+                          Icon(Icons.qr_code_2_rounded, size: 28, color: context.colors.warning),
+                          const SizedBox(height: 8),
+                          Text(
+                            'No hay QRs configurados',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: context.colors.warning,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Agrega códigos QR desde Configuración',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: context.colors.muted,
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }
+
+                  return SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: () {
+                        Navigator.of(context, rootNavigator: true).push(
+                          MaterialPageRoute(
+                            fullscreenDialog: true,
+                            builder: (_) => QrDisplayModal(
+                              qrsDisponibles: qrs,
+                              montoTransferencia: _montoTransferencia > 0 ? _montoTransferencia : null,
+                            ),
+                          ),
+                        );
+                      },
+                      icon: const Icon(Icons.qr_code_2_rounded),
+                      label: const Text('Mostrar QR para cobrar'),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
+                  );
+                },
               ),
             ],
           ),
