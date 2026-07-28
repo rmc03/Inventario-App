@@ -356,18 +356,20 @@ class _SinTurnoViewState extends ConsumerState<_SinTurnoView>
                   const SizedBox(height: 8),
                   AnimatedSwitcher(
                     duration: const Duration(milliseconds: 200),
-                    child: Text(
-                      _isStarting
-                          ? 'Iniciando turno...'
-                          : 'Aún no has iniciado tu turno',
-                      key: ValueKey(_isStarting),
-                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                            color: context.colors.muted,
-                            fontWeight:
-                                _isStarting ? FontWeight.w600 : FontWeight.w400,
-                          ),
-                      textAlign: TextAlign.center,
-                    ),
+                      child: Text(
+                        _isStarting
+                            ? 'Iniciando turno...'
+                            : 'Aún no has iniciado tu turno',
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        key: ValueKey(_isStarting),
+                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                              color: context.colors.muted,
+                              fontWeight:
+                                  _isStarting ? FontWeight.w600 : FontWeight.w400,
+                            ),
+                        textAlign: TextAlign.center,
+                      ),
                   ),
                   const Spacer(),
                   FadeTransition(
@@ -938,6 +940,8 @@ class _EmptyItems extends StatelessWidget {
             const SizedBox(height: 10),
             Text(
               'Sin ventas aún',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
               style: Theme.of(context)
                   .textTheme
                   .titleMedium
@@ -946,6 +950,8 @@ class _EmptyItems extends StatelessWidget {
             const SizedBox(height: 4),
             Text(
               'Toca en "Nueva venta" para atender a un cliente.',
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
               style: Theme.of(context).textTheme.bodyMedium,
               textAlign: TextAlign.center,
             ),
@@ -1129,6 +1135,8 @@ class _VentaCardContent extends StatelessWidget {
                   children: [
                     Text(
                       'Venta a las ${timeFormatter.format(venta.fecha)}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                             fontWeight: FontWeight.w600,
                           ),
@@ -1239,6 +1247,8 @@ class _VentaCardContent extends StatelessWidget {
                 children: [
                   Text(
                     formatCurrency(venta.total),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: Theme.of(
                       context,
                     ).textTheme.titleLarge?.copyWith(
@@ -1441,6 +1451,8 @@ class _CuadreEnviadoViewState extends ConsumerState<_CuadreEnviadoView>
                                 Expanded(
                                   child: Text(
                                     'Puedes seguir vendiendo. El cuadre se actualizará automáticamente.',
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
                                     style: Theme.of(context)
                                         .textTheme
                                         .bodySmall
@@ -1497,6 +1509,8 @@ class _CuadreEnviadoViewState extends ConsumerState<_CuadreEnviadoView>
                                 const SizedBox(height: 16),
                                 Text(
                                   'Cuadre enviado sin ventas',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
                                   style: Theme.of(context)
                                       .textTheme
                                       .titleMedium,
@@ -1504,6 +1518,8 @@ class _CuadreEnviadoViewState extends ConsumerState<_CuadreEnviadoView>
                                 const SizedBox(height: 6),
                                 Text(
                                   'Toca "Continuar vendiendo" para\natender más clientes.',
+                                  maxLines: 3,
+                                  overflow: TextOverflow.ellipsis,
                                   style: Theme.of(context)
                                       .textTheme
                                       .bodyMedium,
@@ -1602,6 +1618,8 @@ class _CuadreEnviadoViewState extends ConsumerState<_CuadreEnviadoView>
                       const SizedBox(height: 10),
                       Text(
                         'El cuadre se actualizará con las nuevas ventas',
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                         style:
                             Theme.of(context).textTheme.bodySmall?.copyWith(
                                   color: context.colors.muted,
@@ -1672,12 +1690,16 @@ class _CuadreEnviadoViewState extends ConsumerState<_CuadreEnviadoView>
                           children: [
                             Text(
                               'Todas las ventas',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                               style: Theme.of(context).textTheme.titleLarge?.copyWith(
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
                             Text(
                               '${ventas.length} ${ventas.length == 1 ? 'venta' : 'ventas'}',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                 color: context.colors.muted,
                               ),
@@ -1863,6 +1885,8 @@ class _CuadreAprobadoViewState extends ConsumerState<_CuadreAprobadoView>
                     position: _textSlide,
                     child: Text(
                       '¡Buen trabajo, ${cuadre.dependienteNombre.split(' ').first}!',
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                       style: Theme.of(context).textTheme.titleLarge?.copyWith(
                             fontWeight: FontWeight.bold,
                           ),
@@ -1870,6 +1894,7 @@ class _CuadreAprobadoViewState extends ConsumerState<_CuadreAprobadoView>
                     ),
                   ),
                 ),
+
                 const SizedBox(height: 8),
                 FadeTransition(
                   opacity: _textFade,
@@ -1877,6 +1902,8 @@ class _CuadreAprobadoViewState extends ConsumerState<_CuadreAprobadoView>
                     position: _textSlide,
                     child: Text(
                       'Tu cuadre fue aprobado',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                             color: context.colors.success,
                             fontWeight: FontWeight.w600,
@@ -1885,7 +1912,6 @@ class _CuadreAprobadoViewState extends ConsumerState<_CuadreAprobadoView>
                     ),
                   ),
                 ),
-
                 const SizedBox(height: 4),
                 FadeTransition(
                   opacity: _textFade,
@@ -2016,6 +2042,8 @@ class _StatItem extends StatelessWidget {
         const SizedBox(height: 6),
         Text(
           value,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
           style: Theme.of(context).textTheme.titleMedium?.copyWith(
             fontWeight: FontWeight.w800,
           ),
@@ -2023,6 +2051,8 @@ class _StatItem extends StatelessWidget {
         const SizedBox(height: 2),
         Text(
           label,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
           style: Theme.of(context).textTheme.bodySmall?.copyWith(
             color: context.colors.muted,
           ),

@@ -58,14 +58,21 @@ class AuthController extends Notifier<AuthState> {
       return;
     }
 
-    final repository = ref.read(authRepositoryProvider);
-    final user = await repository.signIn(
-      email: email,
-      password: password,
-      preferredRole: preferredRole,
-    );
+    try {
+      final repository = ref.read(authRepositoryProvider);
+      final user = await repository.signIn(
+        email: email,
+        password: password,
+        preferredRole: preferredRole,
+      );
 
-    state = AuthState(user: user);
+      state = AuthState(user: user);
+    } catch (e) {
+      state = state.copyWith(
+        isLoading: false,
+        error: 'Error al iniciar sesión. Verifica tu conexión e intenta de nuevo.',
+      );
+    }
   }
 
   /// Update user in state and persist to local DB.

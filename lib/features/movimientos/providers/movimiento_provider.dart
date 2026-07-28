@@ -90,31 +90,36 @@ class MovimientoController extends Notifier<List<Movimiento>> {
     return _repository.fetchMovimientos();
   }
 
-  void registrarMovimiento({
+  String? registrarMovimiento({
     required Producto producto,
     required Usuario usuario,
     required MovimientoTipo tipo,
     required int cantidad,
     String? nota,
   }) {
-    final now = DateTime.now();
-    final movimiento = Movimiento(
-      id: const Uuid().v4(),
-      productoId: producto.id,
-      productoNombre: producto.nombre,
-      usuarioId: usuario.id,
-      usuarioNombre: usuario.nombre,
-      usuarioFotoUrl: usuario.fotoUrl,
-      tipo: tipo,
-      cantidad: cantidad,
-      nota: nota == null || nota.trim().isEmpty ? null : nota.trim(),
-      fecha: now,
-      synced: false,
-      createdAt: now,
-    );
+    try {
+      final now = DateTime.now();
+      final movimiento = Movimiento(
+        id: const Uuid().v4(),
+        productoId: producto.id,
+        productoNombre: producto.nombre,
+        usuarioId: usuario.id,
+        usuarioNombre: usuario.nombre,
+        usuarioFotoUrl: usuario.fotoUrl,
+        tipo: tipo,
+        cantidad: cantidad,
+        nota: nota == null || nota.trim().isEmpty ? null : nota.trim(),
+        fecha: now,
+        synced: false,
+        createdAt: now,
+      );
 
-    _repository.addMovimiento(movimiento);
-    state = _repository.fetchMovimientos();
+      _repository.addMovimiento(movimiento);
+      state = _repository.fetchMovimientos();
+      return null;
+    } catch (e) {
+      return 'Error al registrar movimiento: ${e.toString()}';
+    }
   }
 
   /// Registra el inicio de turno de un dependiente

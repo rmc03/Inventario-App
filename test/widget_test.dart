@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:inventario_app/app.dart';
+import 'package:mypiutil_app/app.dart';
 
 void main() {
   testWidgets('shows login screen on cold start', (tester) async {

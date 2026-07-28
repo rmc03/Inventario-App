@@ -78,57 +78,63 @@ class _CategoriasScreenState extends ConsumerState<CategoriasScreen>
   }
 
   Widget _buildCategoryList(List<Categoria> categorias, BuildContext context) {
-    return ListView(
+    return ListView.builder(
       key: const ValueKey('list'),
       padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(4, 0, 4, 8),
-          child: Row(
-            children: [
-              Icon(
-                Icons.category_rounded,
-                size: 20,
-                color: context.colors.primary,
-              ),
-              const SizedBox(width: 8),
-              AnimatedSwitcher(
-                duration: const Duration(milliseconds: 200),
-                child: Text(
-                  '${categorias.length} ${categorias.length == 1 ? 'categoría' : 'categorías'}',
-                  key: ValueKey('count-${categorias.length}'),
-                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        color: context.colors.muted,
-                        fontWeight: FontWeight.w600,
-                        letterSpacing: 0.5,
-                      ),
+      itemCount: categorias.length + 1,
+      itemBuilder: (context, index) {
+        if (index == 0) {
+          return Padding(
+            padding: const EdgeInsets.fromLTRB(4, 0, 4, 8),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.category_rounded,
+                  size: 20,
+                  color: context.colors.primary,
+                ),
+                const SizedBox(width: 8),
+                AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 200),
+                  child: Text(
+                    '${categorias.length} ${categorias.length == 1 ? 'categoría' : 'categorías'}',
+                    key: ValueKey('count-${categorias.length}'),
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          color: context.colors.muted,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: 0.5,
+                        ),
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
+        final i = index - 1;
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (i > 0) const SizedBox(height: AppSpacing.sm),
+            _AnimatedCategoryCard(
+              index: i,
+              controller: _entranceCtrl,
+              child: _CategoryCard(
+                key: ValueKey(categorias[i].id),
+                categoria: categorias[i],
+                index: i + 1,
+                onEdit: () => _showCategoryDialog(
+                  context,
+                  categoria: categorias[i],
+                ),
+                onDelete: () => _confirmDeleteCategoria(
+                  context,
+                  categorias[i],
                 ),
               ),
-            ],
-          ),
-        ),
-        for (int i = 0; i < categorias.length; i++) ...[
-          _AnimatedCategoryCard(
-            index: i,
-            controller: _entranceCtrl,
-            child: _CategoryCard(
-              key: ValueKey(categorias[i].id),
-              categoria: categorias[i],
-              index: i + 1,
-              onEdit: () => _showCategoryDialog(
-                context,
-                categoria: categorias[i],
-              ),
-              onDelete: () => _confirmDeleteCategoria(
-                context,
-                categorias[i],
-              ),
             ),
-          ),
-          if (i < categorias.length - 1)
-            const SizedBox(height: AppSpacing.sm),
-        ],
-      ],
+          ],
+        );
+      },
     );
   }
 

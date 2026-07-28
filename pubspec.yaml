@@ -1,5 +1,5 @@
-name: inventario_app
-description: "A new Flutter project."
+name: mypiutil_app
+description: "MypiUtil - Gestión de utilidades para MiPymes"
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
@@ -109,7 +109,7 @@ flutter_launcher_icons:
   android: true
   ios: true
   image_path: "AppIcon.png"
-  adaptive_icon_background: "#FAFAFA"
-  adaptive_icon_foreground: "AppIcon.png"
+  adaptive_icon_background: "#6B46C1"  # Morado del icono para mejor contraste
+  adaptive_icon_foreground: "AppIconForeground.png"  # Nueva versión con padding
   remove_alpha_ios: true
   min_sdk_android: 21

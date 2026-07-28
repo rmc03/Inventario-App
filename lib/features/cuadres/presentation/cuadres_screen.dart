@@ -58,7 +58,38 @@ class _CuadresScreenState extends ConsumerState<CuadresScreen> {
         child: Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 800),
-            child: ListView.builder(
+            child: cuadres.isEmpty
+                ? Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(32),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.receipt_long_outlined,
+                            size: 64,
+                            color: context.colors.muted.withValues(alpha: 0.4),
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            'No hay cuadres',
+                            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                              color: context.colors.ink,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Los cuadres del día aparecerán aquí cuando los dependientes cierren su turno.',
+                            textAlign: TextAlign.center,
+                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              color: context.colors.muted,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  )
+                : ListView.builder(
               padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
               itemCount: cuadres.length,
               itemBuilder: (context, index) {
@@ -153,9 +184,15 @@ class _AnimatedCuadreCardState extends State<_AnimatedCuadreCard>
               contentPadding: const EdgeInsets.all(14),
               title: Text(
                 compactDateFormatter.format(widget.cuadre.fechaTurno),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
                 style: Theme.of(context).textTheme.titleMedium,
               ),
-              subtitle: Text(widget.cuadre.dependienteNombre),
+              subtitle: Text(
+                widget.cuadre.dependienteNombre,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
               trailing: _AnimatedEstadoBadge(
                 estado: widget.cuadre.estado,
                 animationDelay: widget.delay + const Duration(milliseconds: 200),

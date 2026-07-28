@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_dimens.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/haptics.dart';
+import '../../../core/utils/validators.dart';
 import '../../../shared/models/usuario.dart';
 import '../../usuarios/providers/usuario_provider.dart';
 
@@ -77,57 +78,63 @@ class _EquipoScreenState extends ConsumerState<EquipoScreen>
   }
 
   Widget _buildUserList(List<Usuario> usuarios, BuildContext context) {
-    return ListView(
+    return ListView.builder(
       key: const ValueKey('list'),
       padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(4, 0, 4, 8),
-          child: Row(
-            children: [
-              Icon(
-                Icons.people_rounded,
-                size: 20,
-                color: context.colors.primary,
-              ),
-              const SizedBox(width: 8),
-              AnimatedSwitcher(
-                duration: const Duration(milliseconds: 200),
-                child: Text(
-                  '${usuarios.length} ${usuarios.length == 1 ? 'miembro' : 'miembros'}',
-                  key: ValueKey('count-${usuarios.length}'),
-                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        color: context.colors.muted,
-                        fontWeight: FontWeight.w600,
-                        letterSpacing: 0.5,
-                      ),
+      itemCount: usuarios.length + 1,
+      itemBuilder: (context, index) {
+        if (index == 0) {
+          return Padding(
+            padding: const EdgeInsets.fromLTRB(4, 0, 4, 8),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.people_rounded,
+                  size: 20,
+                  color: context.colors.primary,
+                ),
+                const SizedBox(width: 8),
+                AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 200),
+                  child: Text(
+                    '${usuarios.length} ${usuarios.length == 1 ? 'miembro' : 'miembros'}',
+                    key: ValueKey('count-${usuarios.length}'),
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          color: context.colors.muted,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: 0.5,
+                        ),
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
+        final i = index - 1;
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (i > 0) const SizedBox(height: AppSpacing.sm),
+            _AnimatedCard(
+              index: i,
+              controller: _entranceCtrl,
+              child: _UserCard(
+                key: ValueKey(usuarios[i].id),
+                usuario: usuarios[i],
+                index: i + 1,
+                onEdit: () => _showUserDialog(
+                  context,
+                  usuario: usuarios[i],
+                ),
+                onDelete: () => _confirmDeleteUser(
+                  context,
+                  usuarios[i],
                 ),
               ),
-            ],
-          ),
-        ),
-        for (int i = 0; i < usuarios.length; i++) ...[
-          _AnimatedCard(
-            index: i,
-            controller: _entranceCtrl,
-            child: _UserCard(
-              key: ValueKey(usuarios[i].id),
-              usuario: usuarios[i],
-              index: i + 1,
-              onEdit: () => _showUserDialog(
-                context,
-                usuario: usuarios[i],
-              ),
-              onDelete: () => _confirmDeleteUser(
-                context,
-                usuarios[i],
-              ),
             ),
-          ),
-          if (i < usuarios.length - 1)
-            const SizedBox(height: AppSpacing.sm),
-        ],
-      ],
+          ],
+        );
+      },
     );
   }
 
@@ -584,8 +591,8 @@ class _UserDialogState extends State<_UserDialog> {
   }
 
   void _validateForm() {
-    final nombre = _nombreCtrl.text.trim();
-    final email = _emailCtrl.text.trim();
+    final nombre = sanitizeName(_nombreCtrl.text);
+    final email = sanitizeText(_emailCtrl.text);
 
     setState(() {
       if (nombre.isEmpty) {

@@ -88,14 +88,16 @@ class CuadreController extends Notifier<List<Cuadre>> {
   // ─── Acciones del jefe ─────────────────────────────────────────────────────
 
   /// Aprueba el cuadre. El stock ya fue ajustado por el dependiente durante las ventas.
-  Future<void> confirmarCuadre(String id) async {
+  Future<String?> confirmarCuadre(String id) async {
     final cuadre = findCuadre(id);
-    if (cuadre == null) return;
+    if (cuadre == null) return 'Cuadre no encontrado.';
 
     if (_repo is SqliteCuadreRepository) {
       try {
         await (_repo as dynamic).approveCuadre(id);
-      } catch (_) {}
+      } catch (e) {
+        return 'Error al aprobar en la base de datos: ${e.toString()}';
+      }
     }
 
     // mark as aprobado in local cache
@@ -126,7 +128,10 @@ class CuadreController extends Notifier<List<Cuadre>> {
           movRepo.updateMovimiento(updated);
         }
       }
-    } catch (_) {}
+    } catch (e) {
+      return 'Cuadre aprobado, pero hubo un error al sincronizar movimientos: ${e.toString()}';
+    }
+    return null;
   }
 
   /// Rechaza el cuadre y restaura todo el stock de las ventas.

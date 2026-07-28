@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:inventario_app/features/inventario/presentation/producto_form_screen.dart';
+import 'package:mypiutil_app/features/inventario/presentation/producto_form_screen.dart';
 
 void main() {
   testWidgets(

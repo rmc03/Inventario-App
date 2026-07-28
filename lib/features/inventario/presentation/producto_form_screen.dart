@@ -68,6 +68,7 @@ class _ProductoFormScreenState extends ConsumerState<ProductoFormScreen> {
   String? _categoriaError;
   String? _precioError;
   String? _stockError;
+  bool _isSaving = false;
   Producto? _producto;
   int _categoriaDropdownVersion = 0;
 
@@ -398,6 +399,7 @@ class _ProductoFormScreenState extends ConsumerState<ProductoFormScreen> {
             ),
             _StickyActionBar(
               isEditing: _isEditing,
+              isSaving: _isSaving,
               onPressed: () => _save(context),
             ),
           ],
@@ -409,6 +411,7 @@ class _ProductoFormScreenState extends ConsumerState<ProductoFormScreen> {
   }
 
   void _save(BuildContext context) {
+    if (_isSaving) return;
     _clearErrors();
     final now = DateTime.now();
     final categoriaId = _categoriaId;
@@ -461,7 +464,13 @@ class _ProductoFormScreenState extends ConsumerState<ProductoFormScreen> {
       updatedAt: now,
     );
 
-    ref.read(inventarioControllerProvider.notifier).upsertProducto(producto);
+    setState(() => _isSaving = true);
+    final error = ref.read(inventarioControllerProvider.notifier).upsertProducto(producto);
+    if (error != null) {
+      setState(() => _isSaving = false);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error)));
+      return;
+    }
 
     // Registrar un movimiento de entrada por el incremento de stock.
     // Para productos nuevos el stock previo es 0, así que cuenta todo el
@@ -471,27 +480,30 @@ class _ProductoFormScreenState extends ConsumerState<ProductoFormScreen> {
     if (delta > 0) {
       final user = ref.read(authControllerProvider).user;
       if (user != null) {
-        ref.read(movimientoControllerProvider.notifier).registrarMovimiento(
+        final movError = ref.read(movimientoControllerProvider.notifier).registrarMovimiento(
           producto: producto,
           usuario: user,
           tipo: MovimientoTipo.entrada,
           cantidad: delta,
           nota: _isEditing ? 'Ajuste de stock (entrada)' : 'Alta de producto',
         );
+        if (movError != null && context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(movError)));
+        }
       }
     }
+
+    setState(() => _isSaving = false);
 
     // Si estamos editando (venimos desde la pantalla de detalle), simplemente
     // hacemos pop para volver a la pantalla de detalle que ya existe en la
     // pila y se actualizará por el provider. Si es un nuevo producto,
     // reemplazamos la ruta actual por la del detalle para mantener
     // `/admin/inventario` en el historial (evitando perder la pila).
-    if (_isEditing) {
-      if (context.mounted) {
+    if (context.mounted) {
+      if (_isEditing) {
         context.pop();
-      }
-    } else {
-      if (context.mounted) {
+      } else {
         context.replace('/admin/inventario/productos/${producto.id}');
       }
     }
@@ -868,10 +880,11 @@ class _CardSeparator extends StatelessWidget {
 }
 
 class _StickyActionBar extends StatelessWidget {
-  const _StickyActionBar({required this.isEditing, required this.onPressed});
+  const _StickyActionBar({required this.isEditing, required this.onPressed, this.isSaving = false});
 
   final bool isEditing;
   final VoidCallback onPressed;
+  final bool isSaving;
 
   @override
   Widget build(BuildContext context) {
@@ -891,14 +904,19 @@ class _StickyActionBar extends StatelessWidget {
             AppSpacing.sm + MediaQuery.of(context).padding.bottom,
           ),
           child: ElevatedButton.icon(
-            onPressed: () {
+            onPressed: isSaving ? null : () {
               Haptics.confirm(context);
               onPressed();
             },
-            icon: Icon(
-              isEditing ? Icons.save_outlined : Icons.add_circle_outline,
-            ),
-            label: Text(isEditing ? 'Actualizar producto' : 'Guardar producto'),
+            icon: isSaving
+                ? const SizedBox(
+                    width: 20, height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white),
+                  )
+                : Icon(
+                    isEditing ? Icons.save_outlined : Icons.add_circle_outline,
+                  ),
+            label: Text(isSaving ? 'Guardando…' : (isEditing ? 'Actualizar producto' : 'Guardar producto')),
             style: ElevatedButton.styleFrom(
               minimumSize: const Size.fromHeight(54),
               shape: RoundedRectangleBorder(borderRadius: AppRadii.mdBorder),

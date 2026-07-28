@@ -7,6 +7,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/haptics.dart';
 import '../../../core/utils/validators.dart';
 import '../../../shared/models/usuario.dart';
+import '../../../shared/widgets/indicador_conexion.dart';
 import '../../../shared/widgets/loading_overlay.dart';
 import '../providers/auth_provider.dart';
 
@@ -78,155 +79,157 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
     return LoadingOverlay(
       isLoading: authState.isLoading,
       child: Scaffold(
-        body: SafeArea(
-          child: Center(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.xl,
-                vertical: AppSpacing.lg,
-              ),
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 430),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Demo mode indicator
-                    _DemoBadge(),
-                    const SizedBox(height: AppSpacing.xxl),
-
-                    // App identity
-                    Row(
-                      children: [
-                        AppBranding.buildAppIcon(context, size: 56),
-                        const SizedBox(width: AppSpacing.md),
-                        Text(
-                          AppBranding.appName,
-                          style: Theme.of(context)
-                              .textTheme
-                              .headlineMedium
-                              ?.copyWith(fontSize: 27),
-                        ),
-                      ],
+        body: Column(
+          children: [
+            const IndicadorConexion(),
+            Expanded(
+              child: SafeArea(
+                child: Center(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.xl,
+                      vertical: AppSpacing.lg,
                     ),
-                    const SizedBox(height: AppSpacing.xxl + AppSpacing.xs),
-
-                    // Welcome message
-                    FadeTransition(
-                      opacity: _fadeAnim,
-                      child: SlideTransition(
-                        position: _slideAnim,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              _selectedRole == UserRole.admin
-                                  ? 'Bienvenido, Jefe'
-                                  : 'Hola, equipo',
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .headlineMedium,
-                            ),
-                            const SizedBox(height: AppSpacing.sm),
-                            Text(
-                              _selectedRole == UserRole.admin
-                                  ? 'Acceso al panel de control.'
-                                  : 'Acceso para gestionar tu turno.',
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .bodyLarge
-                                  ?.copyWith(color: colors.muted),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: AppSpacing.xl),
-
-                    // Role selection tiles
-                    _RoleTiles(
-                      selected: _selectedRole,
-                      onSelect: _switchRole,
-                    ),
-                    const SizedBox(height: AppSpacing.xl),
-
-                    // Form
-                    Form(
-                      key: _formKey,
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 430),
                       child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          TextFormField(
-                            controller: _emailController,
-                            keyboardType: TextInputType.emailAddress,
-                            autovalidateMode:
-                                AutovalidateMode.onUserInteraction,
-                            validator: (value) {
-                              if (value == null || value.trim().isEmpty) {
-                                return 'El email es requerido';
-                              }
-                              if (!isValidEmail(value.trim())) {
-                                return 'Ingresa un email válido';
-                              }
-                              return null;
-                            },
-                            decoration: const InputDecoration(
-                              labelText: 'Email',
-                              hintText: 'correo@tienda.local',
-                              prefixIcon: Icon(Icons.mail_outline),
+                          _DemoBadge(),
+                          const SizedBox(height: AppSpacing.xxl),
+                          Row(
+                            children: [
+                              AppBranding.buildAppIcon(context, size: 56),
+                              const SizedBox(width: AppSpacing.md),
+                              Text(
+                                AppBranding.appName,
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .headlineMedium
+                                    ?.copyWith(fontSize: 27),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: AppSpacing.xxl + AppSpacing.xs),
+                          FadeTransition(
+                            opacity: _fadeAnim,
+                            child: SlideTransition(
+                              position: _slideAnim,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    _selectedRole == UserRole.admin
+                                        ? 'Bienvenido, Jefe'
+                                        : 'Hola, equipo',
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .headlineMedium,
+                                  ),
+                                  const SizedBox(height: AppSpacing.sm),
+                                  Text(
+                                    _selectedRole == UserRole.admin
+                                        ? 'Acceso al panel de control.'
+                                        : 'Acceso para gestionar tu turno.',
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .bodyLarge
+                                        ?.copyWith(color: colors.muted),
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
-                          const SizedBox(height: AppSpacing.md),
-                          TextFormField(
-                            controller: _passwordController,
-                            obscureText: true,
-                            autovalidateMode:
-                                AutovalidateMode.onUserInteraction,
-                            validator: (value) {
-                              if (value == null || value.isEmpty) {
-                                return 'La contraseña es requerida';
-                              }
-                              if (value.length < 6) {
-                                return 'Mínimo 6 caracteres';
-                              }
-                              return null;
+                          const SizedBox(height: AppSpacing.xl),
+                          _RoleTiles(
+                            selected: _selectedRole,
+                            onSelect: _switchRole,
+                          ),
+                          const SizedBox(height: AppSpacing.xl),
+                          Form(
+                            key: _formKey,
+                            child: Column(
+                              children: [
+                                TextFormField(
+                                  controller: _emailController,
+                                  keyboardType: TextInputType.emailAddress,
+                                  autovalidateMode:
+                                      AutovalidateMode.onUserInteraction,
+                                  validator: (value) {
+                                    if (value == null || value.trim().isEmpty) {
+                                      return 'El email es requerido';
+                                    }
+                                    if (!isValidEmail(value.trim())) {
+                                      return 'Ingresa un email válido';
+                                    }
+                                    return null;
+                                  },
+                                  decoration: const InputDecoration(
+                                    labelText: 'Email',
+                                    hintText: 'correo@tienda.local',
+                                    prefixIcon: Icon(Icons.mail_outline),
+                                  ),
+                                ),
+                                const SizedBox(height: AppSpacing.md),
+                                TextFormField(
+                                  controller: _passwordController,
+                                  obscureText: true,
+                                  autovalidateMode:
+                                      AutovalidateMode.onUserInteraction,
+                                  validator: (value) {
+                                    if (value == null || value.isEmpty) {
+                                      return 'La contraseña es requerida';
+                                    }
+                                    if (value.length < 6) {
+                                      return 'Mínimo 6 caracteres';
+                                    }
+                                    return null;
+                                  },
+                                  decoration: const InputDecoration(
+                                    labelText: 'Contraseña',
+                                    hintText: 'Ingresa tu contraseña',
+                                    prefixIcon: Icon(Icons.lock_outline),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          if (authState.error != null) ...[
+                            const SizedBox(height: AppSpacing.sm),
+                            Text(
+                              authState.error!,
+                              maxLines: 3,
+                              overflow: TextOverflow.ellipsis,
+                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                color: colors.danger,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                          const SizedBox(height: AppSpacing.xl),
+                          ElevatedButton.icon(
+                            onPressed: () {
+                              Haptics.tap(context);
+                              _signIn();
                             },
-                            decoration: const InputDecoration(
-                              labelText: 'Contraseña',
-                              hintText: 'Ingresa tu contraseña',
-                              prefixIcon: Icon(Icons.lock_outline),
+                            icon: const Icon(Icons.login_rounded),
+                            label: const Text('Ingresar'),
+                            style: ElevatedButton.styleFrom(
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(14),
+                              ),
                             ),
                           ),
                         ],
                       ),
                     ),
-                    if (authState.error != null) ...[
-                      const SizedBox(height: AppSpacing.sm),
-                      Text(
-                        authState.error!,
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: colors.danger,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
-                    const SizedBox(height: AppSpacing.xl),
-                    ElevatedButton.icon(
-                      onPressed: () {
-                        Haptics.tap(context);
-                        _signIn();
-                      },
-                      icon: const Icon(Icons.login_rounded),
-                      label: const Text('Ingresar'),
-                      style: ElevatedButton.styleFrom(
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14),
-                        ),
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
               ),
             ),
-          ),
+          ],
         ),
       ),
     );

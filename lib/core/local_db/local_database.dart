@@ -18,7 +18,7 @@ class LocalDatabase {
 
     final dbPath = await getDatabasesPath();
     final database = await openDatabase(
-      p.join(dbPath, 'inventario_app.db'),
+      p.join(dbPath, 'mypiutil.db'),
       version: 8,
       onCreate: (db, version) async {
         await db.execute('''

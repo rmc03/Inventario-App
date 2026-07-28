@@ -120,6 +120,7 @@ class MovimientosScreen extends ConsumerStatefulWidget {
 class _MovimientosScreenState extends ConsumerState<MovimientosScreen> {
   late final TextEditingController _searchController;
   Timer? _debounce;
+  bool _isLoading = true;
 
   @override
   void initState() {
@@ -127,6 +128,9 @@ class _MovimientosScreenState extends ConsumerState<MovimientosScreen> {
     _searchController = TextEditingController(
       text: ref.read(movimientosFilterProvider).query,
     );
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) setState(() => _isLoading = false);
+    });
   }
 
   @override
@@ -494,9 +498,11 @@ class _MovimientosScreenState extends ConsumerState<MovimientosScreen> {
 
                 // ── Feed único ──
                 Expanded(
-                  child: items.isEmpty
-                      ? _EmptyState(onLimpiar: _limpiarFiltros)
-                      : ListView.builder(
+                  child: _isLoading
+                      ? const Center(child: CircularProgressIndicator())
+                      : items.isEmpty
+                          ? _EmptyState(onLimpiar: _limpiarFiltros)
+                          : ListView.builder(
                           padding: const EdgeInsets.only(
                             top: AppSpacing.xl,
                             bottom: AppSpacing.xl,
@@ -635,6 +641,8 @@ class _DayHeader extends StatelessWidget {
             ),
             child: Text(
               label.toUpperCase(),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
               style: Theme.of(context).textTheme.labelLarge?.copyWith(
                     fontSize: 13,
                     fontWeight: FontWeight.w800,
@@ -716,6 +724,8 @@ class _EmptyState extends StatelessWidget {
             const SizedBox(height: AppSpacing.xxl),
             Text(
               'No hay movimientos',
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
               style: Theme.of(context).textTheme.headlineLarge?.copyWith(
                     fontSize: 28,
                     color: context.colors.ink,
@@ -725,6 +735,8 @@ class _EmptyState extends StatelessWidget {
             const SizedBox(height: AppSpacing.md),
             Text(
               'Los movimientos de inventario\naparecerán aquí',
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                     fontSize: 18,
@@ -994,6 +1006,8 @@ class _MovimientoCard extends StatelessWidget {
                 children: [
                   Text(
                     accionTexto,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                     style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                           fontSize: 16,
                           fontWeight: FontWeight.w700,
@@ -1011,6 +1025,8 @@ class _MovimientoCard extends StatelessWidget {
                       const SizedBox(width: 5),
                       Text(
                         timeFormatter.format(movimiento.fecha),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                               fontSize: 13,
                               color: context.colors.muted,
@@ -1092,6 +1108,8 @@ class _MovimientoCard extends StatelessWidget {
                 children: [
                   Text(
                     accionTexto,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                     style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                           fontSize: 16,
                           fontWeight: FontWeight.w700,
@@ -1110,6 +1128,8 @@ class _MovimientoCard extends StatelessWidget {
                       const SizedBox(width: 5),
                       Text(
                         timeFormatter.format(movimiento.fecha),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                               fontSize: 13,
                               color: context.colors.muted,
@@ -1320,6 +1340,8 @@ class _VentaCardState extends ConsumerState<_VentaCard> with SingleTickerProvide
                               Expanded(
                                 child: Text(
                                   'Venta de ${formatCurrency(totalAmount)}',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
                                   style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                                         fontSize: 16,
                                         fontWeight: FontWeight.w700,
@@ -1603,10 +1625,12 @@ class _VentaCardState extends ConsumerState<_VentaCard> with SingleTickerProvide
                                 ),
                                 const SizedBox(width: 10),
                                 Expanded(
-                                  child: Text(
-                                    producto,
-                                    style: Theme.of(context).textTheme.bodyMedium,
-                                  ),
+                                child: Text(
+                                  producto,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: Theme.of(context).textTheme.bodyMedium,
+                                ),
                                 ),
                               ],
                             ),
@@ -1646,12 +1670,16 @@ class _VentaCardState extends ConsumerState<_VentaCard> with SingleTickerProvide
                                 Expanded(
                                   child: Text(
                                     '${mov.cantidad}x ${mov.productoNombre}',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
                                     style: Theme.of(context).textTheme.bodyMedium,
                                   ),
                                 ),
                                 if (mov.precioUnitario != null)
                                   Text(
                                     formatCurrency((mov.precioUnitario! * mov.cantidad).toDouble()),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
                                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                           fontWeight: FontWeight.w600,
                                           color: context.colors.success,
@@ -1699,6 +1727,8 @@ class _VentaCardState extends ConsumerState<_VentaCard> with SingleTickerProvide
                   Expanded(
                     child: Text(
                       'Coincide con: ${widget.matchedProduct}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                             color: context.colors.warning,
                             fontWeight: FontWeight.w600,

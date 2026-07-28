@@ -147,24 +147,30 @@ class _CuadreResumenScreenState extends ConsumerState<CuadreResumenScreen> {
                 Expanded(
                   child: ventas.isEmpty
                       ? const _EmptyResumen()
-                      : ListView(
-                          padding: const EdgeInsets.fromLTRB(
-                            AppSpacing.lg,
-                            0,
-                            AppSpacing.lg,
-                            AppSpacing.md,
-                          ),
-                          children: _mostrarProductos
-                              ? _buildProductosView(
-                                  context, ventas, total, totalUnidades)
-                              : _buildResumenView(
-                                  context,
-                                  ventas,
-                                  total,
-                                  totalUnidades,
-                                  totalEfectivo,
-                                  totalTransferencia,
-                                ),
+                      : Builder(
+                          builder: (ctx) {
+                            final items = _mostrarProductos
+                                ? _buildProductosView(
+                                    ctx, ventas, total, totalUnidades)
+                                : _buildResumenView(
+                                    ctx,
+                                    ventas,
+                                    total,
+                                    totalUnidades,
+                                    totalEfectivo,
+                                    totalTransferencia,
+                                  );
+                            return ListView.builder(
+                              padding: const EdgeInsets.fromLTRB(
+                                AppSpacing.lg,
+                                0,
+                                AppSpacing.lg,
+                                AppSpacing.md,
+                              ),
+                              itemCount: items.length,
+                              itemBuilder: (_, index) => items[index],
+                            );
+                          },
                         ),
                 ),
 

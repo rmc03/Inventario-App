@@ -130,236 +130,103 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen>
         child: Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 800),
-            child: ListView(
-              padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
-              children: [
-                _staggeredSection(
-                  0,
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const _SectionHeader(
-                        icon: Icons.person_rounded,
-                        label: 'Perfil',
-                      ),
-                      if (user != null)
-                        Card(
-                          child: Padding(
-                            padding: const EdgeInsets.all(16),
-                            child: Row(
-                              children: [
-                                _ProfileAvatar(user: user),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        user.nombre,
-                                        style: Theme.of(context)
-                                            .textTheme
-                                            .titleMedium,
-                                      ),
-                                      Text(user.email),
-                                    ],
-                                  ),
-                                ),
-                                if (!widget.isAdmin)
-                                  IconButton(
-                                    onPressed: () => _showEditProfileDialog(
-                                        context, ref, user),
-                                    icon: const Icon(Icons.edit_rounded),
-                                    tooltip: 'Editar perfil',
-                                  ),
-                              ],
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 18),
-                _staggeredSection(
-                  1,
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const _SectionHeader(
-                        icon: Icons.brightness_6_rounded,
-                        label: 'Personalización',
-                      ),
-                      Card(
-                        child: Column(
-                          children: [
-                            ListTile(
-                              leading: const Icon(Icons.palette_rounded),
-                              title: const Text('Temas'),
-                              subtitle:
-                                  const Text('Esquema de colores y modo de brillo'),
-                              trailing:
-                                  const Icon(Icons.chevron_right_rounded),
-                              onTap: () => context.push(
-                                widget.isAdmin
-                                    ? '/admin/configuracion/temas'
-                                    : '/dependiente/configuracion/temas',
-                              ),
-                            ),
-                            const Divider(
-                                height: 1,
-                                indent: 16,
-                                endIndent: 16),
-                            Consumer(
-                              builder: (context, ref, _) {
-                                return SwitchListTile(
-                                  secondary:
-                                      const Icon(Icons.vibration_rounded),
-                                  title: const Text('Vibración en botones'),
-                                  subtitle: const Text(
-                                    'Feedback táctil en acciones importantes',
-                                  ),
-                                  value: ref.watch(hapticsEnabledProvider),
-                                  onChanged: (v) {
-                                    ref
-                                        .read(hapticsEnabledProvider.notifier)
-                                        .setEnabled(v);
-                                    if (v) Haptics.tap(context);
-                                  },
-                                );
-                              },
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 18),
-                _staggeredSection(
-                  2,
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Card(
-                        child: ListTile(
-                          leading:
-                              const Icon(Icons.accessibility_new_rounded),
-                          title: const Text('Accesibilidad'),
-                          subtitle:
-                              const Text('Tamaño de texto, contraste y más'),
-                          trailing:
-                              const Icon(Icons.chevron_right_rounded),
-                          onTap: () => context.push(
-                            widget.isAdmin
-                                ? '/admin/configuracion/accesibilidad'
-                                : '/dependiente/configuracion/accesibilidad',
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 18),
-
-                // ── QRS DE PAGO (admin y dependiente) ──
-                _staggeredSection(
-                  3,
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const _SectionHeader(
-                        icon: Icons.qr_code_2_rounded,
-                        label: 'Pagos',
-                      ),
-                      Card(
-                        child: ListTile(
-                          leading: const Icon(Icons.qr_code_scanner_rounded),
-                          title: const Text('Mis QRs de pago'),
-                          subtitle: const Text('Gestiona tus códigos QR para transferencias'),
-                          trailing: const Icon(Icons.chevron_right_rounded),
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => const GestionarQrsScreen(),
-                              ),
-                            );
-                          },
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 18),
-
-                // ── CUADRES (solo dependiente) ──
-                if (!widget.isAdmin)
+            child: Builder(
+              builder: (context) {
+                final sections = <Widget>[
                   _staggeredSection(
-                    4,
+                    0,
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         const _SectionHeader(
-                          icon: Icons.receipt_long_rounded,
-                          label: 'Cuadres',
+                          icon: Icons.person_rounded,
+                          label: 'Perfil',
                         ),
-                        Card(
-                          child: ListTile(
-                            leading: const Icon(Icons.history_rounded),
-                            title: const Text('Historial de cuadres'),
-                            subtitle:
-                                const Text('Ver mis cuadres anteriores'),
-                            trailing:
-                                const Icon(Icons.chevron_right_rounded),
-                            onTap: () => context
-                                .push('/dependiente/cuadres/historial'),
+                        if (user != null)
+                          Card(
+                            child: Padding(
+                              padding: const EdgeInsets.all(16),
+                              child: Row(
+                                children: [
+                                  _ProfileAvatar(user: user),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          user.nombre,
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .titleMedium,
+                                        ),
+                                        Text(user.email),
+                                      ],
+                                    ),
+                                  ),
+                                  if (!widget.isAdmin)
+                                    IconButton(
+                                      onPressed: () => _showEditProfileDialog(
+                                          context, ref, user),
+                                      icon: const Icon(Icons.edit_rounded),
+                                      tooltip: 'Editar perfil',
+                                    ),
+                                ],
+                              ),
+                            ),
                           ),
-                        ),
                       ],
                     ),
                   ),
-
-                // ── GESTIÓN (solo admin) ──
-                if (widget.isAdmin)
+                  const SizedBox(height: 18),
                   _staggeredSection(
-                    4,
+                    1,
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         const _SectionHeader(
-                          icon: Icons.settings_rounded,
-                          label: 'Gestión',
+                          icon: Icons.brightness_6_rounded,
+                          label: 'Personalización',
                         ),
                         Card(
                           child: Column(
                             children: [
                               ListTile(
-                                leading:
-                                    const Icon(Icons.people_outline),
-                                title: const Text('Equipo'),
-                                subtitle: const Text(
-                                    'Administrar miembros del equipo'),
-                                trailing: const Icon(
-                                    Icons.chevron_right_rounded),
+                                leading: const Icon(Icons.palette_rounded),
+                                title: const Text('Temas'),
+                                subtitle:
+                                    const Text('Esquema de colores y modo de brillo'),
+                                trailing:
+                                    const Icon(Icons.chevron_right_rounded),
                                 onTap: () => context.push(
-                                  '/admin/configuracion/equipo',
+                                  widget.isAdmin
+                                      ? '/admin/configuracion/temas'
+                                      : '/dependiente/configuracion/temas',
                                 ),
                               ),
                               const Divider(
                                   height: 1,
                                   indent: 16,
                                   endIndent: 16),
-                              ListTile(
-                                leading: const Icon(
-                                    Icons.category_outlined),
-                                title: const Text('Categorías'),
-                                subtitle:
-                                    const Text('Organizar productos'),
-                                trailing: const Icon(
-                                    Icons.chevron_right_rounded),
-                                onTap: () => context.push(
-                                  '/admin/configuracion/categorias',
-                                ),
+                              Consumer(
+                                builder: (context, ref, _) {
+                                  return SwitchListTile(
+                                    secondary:
+                                        const Icon(Icons.vibration_rounded),
+                                    title: const Text('Vibración en botones'),
+                                    subtitle: const Text(
+                                      'Feedback táctil en acciones importantes',
+                                    ),
+                                    value: ref.watch(hapticsEnabledProvider),
+                                    onChanged: (v) {
+                                      ref
+                                          .read(hapticsEnabledProvider.notifier)
+                                          .setEnabled(v);
+                                      if (v) Haptics.tap(context);
+                                    },
+                                  );
+                                },
                               ),
                             ],
                           ),
@@ -367,7 +234,146 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen>
                       ],
                     ),
                   ),
-              ],
+                  const SizedBox(height: 18),
+                  _staggeredSection(
+                    2,
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Card(
+                          child: ListTile(
+                            leading:
+                                const Icon(Icons.accessibility_new_rounded),
+                            title: const Text('Accesibilidad'),
+                            subtitle:
+                                const Text('Tamaño de texto, contraste y más'),
+                            trailing:
+                                const Icon(Icons.chevron_right_rounded),
+                            onTap: () => context.push(
+                              widget.isAdmin
+                                  ? '/admin/configuracion/accesibilidad'
+                                  : '/dependiente/configuracion/accesibilidad',
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+                  _staggeredSection(
+                    3,
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const _SectionHeader(
+                          icon: Icons.qr_code_2_rounded,
+                          label: 'Pagos',
+                        ),
+                        Card(
+                          child: ListTile(
+                            leading: const Icon(Icons.qr_code_scanner_rounded),
+                            title: const Text('Mis QRs de pago'),
+                            subtitle: const Text('Gestiona tus códigos QR para transferencias'),
+                            trailing: const Icon(Icons.chevron_right_rounded),
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => const GestionarQrsScreen(),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+                ];
+                if (!widget.isAdmin) {
+                  sections.addAll([
+                    _staggeredSection(
+                      4,
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const _SectionHeader(
+                            icon: Icons.receipt_long_rounded,
+                            label: 'Cuadres',
+                          ),
+                          Card(
+                            child: ListTile(
+                              leading: const Icon(Icons.history_rounded),
+                              title: const Text('Historial de cuadres'),
+                              subtitle:
+                                  const Text('Ver mis cuadres anteriores'),
+                              trailing:
+                                  const Icon(Icons.chevron_right_rounded),
+                              onTap: () => context
+                                  .push('/dependiente/cuadres/historial'),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ]);
+                }
+                if (widget.isAdmin) {
+                  sections.addAll([
+                    _staggeredSection(
+                      4,
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const _SectionHeader(
+                            icon: Icons.settings_rounded,
+                            label: 'Gestión',
+                          ),
+                          Card(
+                            child: Column(
+                              children: [
+                                ListTile(
+                                  leading:
+                                      const Icon(Icons.people_outline),
+                                  title: const Text('Equipo'),
+                                  subtitle: const Text(
+                                      'Administrar miembros del equipo'),
+                                  trailing: const Icon(
+                                      Icons.chevron_right_rounded),
+                                  onTap: () => context.push(
+                                    '/admin/configuracion/equipo',
+                                  ),
+                                ),
+                                const Divider(
+                                    height: 1,
+                                    indent: 16,
+                                    endIndent: 16),
+                                ListTile(
+                                  leading: const Icon(
+                                      Icons.category_outlined),
+                                  title: const Text('Categorías'),
+                                  subtitle:
+                                      const Text('Organizar productos'),
+                                  trailing: const Icon(
+                                      Icons.chevron_right_rounded),
+                                  onTap: () => context.push(
+                                    '/admin/configuracion/categorias',
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ]);
+                }
+                return ListView.builder(
+                  padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+                  itemCount: sections.length,
+                  itemBuilder: (_, i) => sections[i],
+                );
+              },
             ),
           ),
         ),

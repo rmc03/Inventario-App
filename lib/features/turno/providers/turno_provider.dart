@@ -80,33 +80,38 @@ class TurnoController extends Notifier<TurnoState> {
     return a.year == b.year && a.month == b.month && a.day == b.day;
   }
 
-  void iniciarTurno() {
-    // Verificar si hay un cuadre pendiente ANTES de limpiar las ventas
-    final tieneCuadrePendiente = _tieneCuadrePendienteHoy();
-    
-    _repo.iniciarTurno();
-    
-    // Solo limpiar ventas si NO hay cuadre pendiente
-    // (es un turno completamente nuevo, no una reapertura)
-    if (!tieneCuadrePendiente) {
-      ref.read(ventasDelTurnoProvider.notifier).clearVentas();
-    }
-    
-    state = TurnoState(
-      estaActivo: true,
-      horaInicio: _repo.horaInicio,
-      cuadreEnviadoHoy: tieneCuadrePendiente,
-      permitirVentas: true,
-    );
-    
-    // Registrar inicio de turno como movimiento solo si es turno nuevo
-    if (!tieneCuadrePendiente) {
-      final usuario = ref.read(authControllerProvider).user;
-      if (usuario != null) {
-        ref.read(movimientoControllerProvider.notifier).registrarInicioTurno(
-          dependiente: usuario,
-        );
+  String? iniciarTurno() {
+    try {
+      // Verificar si hay un cuadre pendiente ANTES de limpiar las ventas
+      final tieneCuadrePendiente = _tieneCuadrePendienteHoy();
+      
+      _repo.iniciarTurno();
+      
+      // Solo limpiar ventas si NO hay cuadre pendiente
+      // (es un turno completamente nuevo, no una reapertura)
+      if (!tieneCuadrePendiente) {
+        ref.read(ventasDelTurnoProvider.notifier).clearVentas();
       }
+      
+      state = TurnoState(
+        estaActivo: true,
+        horaInicio: _repo.horaInicio,
+        cuadreEnviadoHoy: tieneCuadrePendiente,
+        permitirVentas: true,
+      );
+      
+      // Registrar inicio de turno como movimiento solo si es turno nuevo
+      if (!tieneCuadrePendiente) {
+        final usuario = ref.read(authControllerProvider).user;
+        if (usuario != null) {
+          ref.read(movimientoControllerProvider.notifier).registrarInicioTurno(
+            dependiente: usuario,
+          );
+        }
+      }
+      return null;
+    } catch (e) {
+      return 'Error al iniciar turno: ${e.toString()}';
     }
   }
 

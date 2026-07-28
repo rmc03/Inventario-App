@@ -159,14 +159,24 @@ class InventarioController extends Notifier<InventarioState> {
     return state.productos[index];
   }
 
-  void upsertProducto(Producto producto) {
-    _repository.upsertProducto(producto);
-    _refresh();
+  String? upsertProducto(Producto producto) {
+    try {
+      _repository.upsertProducto(producto);
+      _refresh();
+      return null;
+    } catch (e) {
+      return 'Error al guardar el producto: ${e.toString()}';
+    }
   }
 
-  void deleteProducto(String id) {
-    _repository.deleteProducto(id);
-    _refresh();
+  String? deleteProducto(String id) {
+    try {
+      _repository.deleteProducto(id);
+      _refresh();
+      return null;
+    } catch (e) {
+      return 'Error al eliminar el producto: ${e.toString()}';
+    }
   }
 
   void applyMovimiento({

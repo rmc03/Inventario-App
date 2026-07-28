@@ -237,23 +237,26 @@ class _CuadreDetalleScreenState extends ConsumerState<CuadreDetalleScreen>
                                 ),
                               );
                             },
-                            child: _mostrarProductos
-                                ? ListView(
-                                    key: const ValueKey('productos'),
-                                    padding:
-                                        const EdgeInsets.fromLTRB(20, 0, 20, 16),
-                                    children: _buildProductosView(
-                                        context, ventas, total, totalUnidades,
-                                        comentario),
-                                  )
-                                : ListView(
-                                    key: const ValueKey('resumen'),
-                                    padding:
-                                        const EdgeInsets.fromLTRB(20, 0, 20, 16),
-                                    children: _buildResumenView(
-                                        context, ventas, total, totalUnidades,
-                                        comentario),
-                                  ),
+                            child: Builder(
+                              builder: (ctx) {
+                                final items = _mostrarProductos
+                                    ? _buildProductosView(
+                                        ctx, ventas, total, totalUnidades,
+                                        comentario)
+                                    : _buildResumenView(
+                                        ctx, ventas, total, totalUnidades,
+                                        comentario);
+                                return ListView.builder(
+                                  key: _mostrarProductos
+                                      ? const ValueKey('productos')
+                                      : const ValueKey('resumen'),
+                                  padding: const EdgeInsets.fromLTRB(
+                                      20, 0, 20, 16),
+                                  itemCount: items.length,
+                                  itemBuilder: (_, i) => items[i],
+                                );
+                              },
+                            ),
                           ),
                   ),
 

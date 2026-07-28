@@ -16,6 +16,12 @@ class VentaDetalleScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    if (venta.items.isEmpty && venta.total == 0) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
     return Scaffold(
       backgroundColor: context.colors.background,
       appBar: AppBar(
@@ -75,6 +81,8 @@ class VentaDetalleScreen extends ConsumerWidget {
                             // ID de venta destacado
                             Text(
                               'Venta #${venta.id.substring(0, 8).toUpperCase()}',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                               style: TextStyle(
                                 fontSize: 22,
                                 fontWeight: FontWeight.w700,
@@ -87,6 +95,8 @@ class VentaDetalleScreen extends ConsumerWidget {
                             // Fecha y hora
                             Text(
                               '${compactDateFormatter.format(venta.fecha)} a las ${timeFormatter.format(venta.fecha)}',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                               style: TextStyle(
                                 fontSize: 15,
                                 fontWeight: FontWeight.w400,
@@ -159,6 +169,8 @@ class VentaDetalleScreen extends ConsumerWidget {
                           const SizedBox(height: 2),
                           Text(
                             venta.dependienteNombre,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                             style: TextStyle(
                               fontSize: 17,
                               fontWeight: FontWeight.w600,
@@ -418,6 +430,8 @@ class VentaDetalleScreen extends ConsumerWidget {
                             ),
                             Text(
                               venta.pagos.map((p) => p.metodo.label).join(' + '),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                               style: TextStyle(
                                 fontSize: 15,
                                 fontWeight: FontWeight.w600,

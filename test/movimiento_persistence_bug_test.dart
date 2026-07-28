@@ -1,9 +1,9 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:inventario_app/core/local_db/local_database.dart';
-import 'package:inventario_app/features/movimientos/data/sqlite_movimiento_repository.dart';
-import 'package:inventario_app/shared/models/movimiento.dart';
+import 'package:mypiutil_app/core/local_db/local_database.dart';
+import 'package:mypiutil_app/features/movimientos/data/sqlite_movimiento_repository.dart';
+import 'package:mypiutil_app/shared/models/movimiento.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:uuid/uuid.dart';
 

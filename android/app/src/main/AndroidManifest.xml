@@ -1,6 +1,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <application
-        android:label="Tu Mypime"
+        android:label="MypiUtil"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity

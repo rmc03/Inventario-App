@@ -85,40 +85,38 @@ class AppColorsExtension extends ThemeExtension<AppColorsExtension> {
     );
   }
 
-  // 💳 LIGHT MODE: Cash App Style — Minimalista Premium
-  // Inspiración: Cash App, Mercury, Brex
-  // Neutros suaves + azul índigo como acento estratégico
-  // Tipografía bold, radii grandes, espaciado generoso
+  // 💼 CORPORATIVO — Profesional, confiable, moderno
+  // Neutros fríos con acento índigo. Fondo sutilmente azulado.
   static const light = AppColorsExtension(
-    primary: Color(0xFF4F46E5),           // 💼 Índigo 600 — acento estratégico (no dominante)
-    primaryDark: Color(0xFF4338CA),       // Índigo 700 (pressed)
-    ink: Color(0xFF1A1A1A),               // Negro suave (no puro) — títulos pesados
-    muted: Color(0xFF6B7280),             // Gray 500 — texto secundario
-    line: Color(0xFFE5E7EB),              // Gray 200 — bordes sutiles
-    surface: Color(0xFFFFFFFF),           // Blanco puro (cards destacadas)
-    surfaceSecondary: Color(0xFFF3F4F6),  // Gray 100 — botones pill, fondos secundarios
-    background: Color(0xFFFAFAFA),        // 🎨 Gris ultra claro — scaffold limpio (Cash App style)
-    success: Color(0xFF10B981),           // Emerald 500 — éxito
-    warning: Color(0xFFF59E0B),           // Amber 500 — advertencias
-    danger: Color(0xFFEF4444),            // Red 500 — errores
-    info: Color(0xFF8B5CF6),              // 🔮 Violet 500 — ilustraciones, momentos especiales
+    primary: Color(0xFF4F46E5),
+    primaryDark: Color(0xFF4338CA),
+    ink: Color(0xFF1A1A2E),
+    muted: Color(0xFF6B7280),
+    line: Color(0xFFE2E4EB),
+    surface: Color(0xFFFFFFFF),
+    surfaceSecondary: Color(0xFFEEF0F6),
+    background: Color(0xFFF8F9FC),
+    success: Color(0xFF10B981),
+    warning: Color(0xFFF59E0B),
+    danger: Color(0xFFEF4444),
+    info: Color(0xFF8B5CF6),
   );
 
-  // 🌙 DARK MODE: Premium Dark
-  // Slate oscuro profesional + índigo vibrante
+  // 🌙 DARK: Corporativo
+  // Fondo navy profundo, índigo vibrante como acento
   static const dark = AppColorsExtension(
-    primary: Color(0xFF818CF8),           // 💼 Índigo 400 — vibrante
-    primaryDark: Color(0xFFA5B4FC),       // Índigo 300 (pressed)
-    ink: Color(0xFFFAFAFA),               // Blanco suave — títulos
-    muted: Color(0xFF9CA3AF),             // Gray 400 — secundario
-    line: Color(0xFF374151),              // Gray 700 — bordes
-    surface: Color(0xFF1F2937),           // Gray 800 — cards
-    surfaceSecondary: Color(0xFF111827),  // Gray 900 — fondos secundarios
-    background: Color(0xFF0F172A),        // Slate 900 — base oscura
-    success: Color(0xFF34D399),           // Emerald 400
-    warning: Color(0xFFFBBF24),           // Amber 400
-    danger: Color(0xFFF87171),            // Red 400
-    info: Color(0xFFA78BFA),              // 🔮 Violet 400
+    primary: Color(0xFF818CF8),
+    primaryDark: Color(0xFFA5B4FC),
+    ink: Color(0xFFEEEEF4),
+    muted: Color(0xFF8B8DA8),
+    line: Color(0xFF2D2E4A),
+    surface: Color(0xFF1A1B2E),
+    surfaceSecondary: Color(0xFF12132A),
+    background: Color(0xFF0E0F1A),
+    success: Color(0xFF34D399),
+    warning: Color(0xFFFBBF24),
+    danger: Color(0xFFF87171),
+    info: Color(0xFFA78BFA),
   );
 }
 

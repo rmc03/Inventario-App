@@ -257,6 +257,8 @@ class _ConfirmarPagoScreenState extends ConsumerState<ConfirmarPagoScreen>
                           const SizedBox(height: 8),
                           Text(
                             'No hay QRs configurados',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                             style: TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.w600,
@@ -266,6 +268,8 @@ class _ConfirmarPagoScreenState extends ConsumerState<ConfirmarPagoScreen>
                           const SizedBox(height: 4),
                           Text(
                             'Agrega códigos QR desde Configuración',
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
                             style: TextStyle(
                               fontSize: 12,
                               color: context.colors.muted,
@@ -360,23 +364,27 @@ case ModoPago.mixto:
                                   children: [
                                     Icon(Icons.qr_code_2_rounded, size: 28, color: context.colors.warning),
                                     const SizedBox(height: 8),
-                                    Text(
-                                      'No hay QRs configurados',
-                                      style: TextStyle(
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w600,
-                                        color: context.colors.warning,
-                                      ),
+                                  Text(
+                                    'No hay QRs configurados',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w600,
+                                      color: context.colors.warning,
                                     ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      'Agrega códigos QR desde Configuración',
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        color: context.colors.muted,
-                                      ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'Agrega códigos QR desde Configuración',
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: context.colors.muted,
                                     ),
-                                  ],
+                                  ),
+                                ],
                                 ),
                               );
                             }
@@ -455,6 +463,8 @@ case ModoPago.mixto:
                             _montoPendiente > 0
                                 ? 'Falta ${formatCurrency(_montoPendiente)} por asignar'
                                 : 'Sobra ${formatCurrency(_montoPendiente.abs())}',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                             style: TextStyle(
                               fontSize: 13, fontWeight: FontWeight.w500,
                               color: context.colors.warning, letterSpacing: -0.1,
@@ -566,6 +576,8 @@ case ModoPago.mixto:
                                         const SizedBox(height: 6),
                                         Text(
                                           '${item.cantidad} \u00d7 ${formatCurrency(item.precioUnitario)}',
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
                                           style: TextStyle(
                                             fontSize: 14,
                                             fontWeight: FontWeight.w400,
@@ -748,37 +760,48 @@ case ModoPago.mixto:
                       child: SizedBox(
                         height: 56,
                         width: double.infinity,
-                        child: FilledButton(
-                          onPressed: (_esValido && !_isConfirming)
-                              ? () {
-                                  Haptics.confirm(context);
-                                  _confirmar();
-                                }
-                              : null,
-                          style: FilledButton.styleFrom(
-                            backgroundColor: context.colors.primary,
-                            disabledBackgroundColor: context.colors.muted.withValues(alpha: 0.3),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(14),
-                            ),
-                            elevation: 0,
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              const Icon(Icons.check_circle_outline_rounded, size: 22),
-                              const SizedBox(width: 8),
-                              Text(
-                                _esValido ? 'Confirmar y registrar venta' : 'Complete el pago',
-                                style: const TextStyle(
-                                  fontSize: 17,
-                                  fontWeight: FontWeight.w600,
-                                  letterSpacing: -0.3,
-                                ),
+                          child: FilledButton(
+                            onPressed: (_esValido && !_isConfirming)
+                                ? () {
+                                    Haptics.confirm(context);
+                                    _confirmar();
+                                  }
+                                : null,
+                            style: FilledButton.styleFrom(
+                              backgroundColor: context.colors.primary,
+                              disabledBackgroundColor: context.colors.muted.withValues(alpha: 0.3),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(14),
                               ),
-                            ],
+                              elevation: 0,
+                            ),
+                            child: _isConfirming
+                                ? const SizedBox(
+                                    height: 22,
+                                    width: 22,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2.5,
+                                      color: Colors.white,
+                                    ),
+                                  )
+                                : Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      const Icon(Icons.check_circle_outline_rounded, size: 22),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        _esValido ? 'Confirmar y registrar venta' : 'Complete el pago',
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: const TextStyle(
+                                          fontSize: 17,
+                                          fontWeight: FontWeight.w600,
+                                          letterSpacing: -0.3,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                           ),
-                        ),
                       ),
                     ),
                   ],
@@ -881,6 +904,8 @@ class _ModoButton extends StatelessWidget {
               const SizedBox(height: 4),
               Text(
                 label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
@@ -945,6 +970,8 @@ class _CampoMontoMixto extends StatelessWidget {
             const SizedBox(width: 8),
             Text(
               label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
               style: TextStyle(
                 fontSize: 15,
                 fontWeight: FontWeight.w600,

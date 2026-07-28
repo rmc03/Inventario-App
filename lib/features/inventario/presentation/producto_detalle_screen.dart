@@ -106,12 +106,16 @@ class ProductoDetalleScreen extends ConsumerWidget {
             // ─── Nombre ──────────────────────────────────────────────────
             Text(
               producto.nombre,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
               style: Theme.of(context).textTheme.headlineMedium,
             ),
             if (descripcion != null && descripcion.isNotEmpty) ...[
               SizedBox(height: AppSpacing.sm),
               Text(
                 descripcion,
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
                 style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                   color: context.colors.muted,
                 ),
@@ -310,6 +314,8 @@ class _DetailRow extends StatelessWidget {
           Expanded(
             child: Text(
               label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
               style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                 fontWeight: FontWeight.w500,
               ),
@@ -318,6 +324,8 @@ class _DetailRow extends StatelessWidget {
           customValue ??
               Text(
                 value ?? '',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
                 textAlign: TextAlign.end,
                 style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                   fontWeight: FontWeight.w500,
@@ -344,6 +352,8 @@ class _DeleteButton extends ConsumerWidget {
         child: Center(
           child: Text(
             'Eliminar producto',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
             style: TextStyle(
               color: context.colors.danger,
               fontSize: 17,
@@ -373,6 +383,8 @@ class _DeleteButton extends ConsumerWidget {
           title: const Text('¿Eliminar producto?'),
           content: Text(
             'Esta acción no se puede deshacer. ¿Deseas eliminar ${producto.nombre}?',
+            maxLines: 3,
+            overflow: TextOverflow.ellipsis,
           ),
           actions: [
             OutlinedButton(
@@ -435,6 +447,8 @@ class _AjustarStockButton extends ConsumerWidget {
         child: Center(
           child: Text(
             'Ajustar stock',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
             style: TextStyle(
               color: context.colors.primary,
               fontSize: 17,
@@ -619,6 +633,8 @@ class _AjustarStockSheetState extends ConsumerState<_AjustarStockSheet> {
                     children: [
                       Text(
                         'Ajustar stock',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                         style: Theme.of(context).textTheme.titleLarge?.copyWith(
                               fontWeight: FontWeight.w700,
                             ),
@@ -662,6 +678,8 @@ class _AjustarStockSheetState extends ConsumerState<_AjustarStockSheet> {
                     children: [
                       Text(
                         'Stock actual',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                               color: context.colors.muted,
                               fontWeight: FontWeight.w600,
@@ -671,6 +689,8 @@ class _AjustarStockSheetState extends ConsumerState<_AjustarStockSheet> {
                       const SizedBox(height: 4),
                       Text(
                         '${widget.producto.stockActual} ${widget.producto.stockActual == 1 ? 'unidad' : 'unidades'}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                         style: Theme.of(context).textTheme.titleMedium?.copyWith(
                               fontWeight: FontWeight.w700,
                             ),
@@ -696,6 +716,8 @@ class _AjustarStockSheetState extends ConsumerState<_AjustarStockSheet> {
                                 children: [
                                   Text(
                                     'Nuevo stock',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
                                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                           color: context.colors.muted,
                                           fontWeight: FontWeight.w600,
@@ -705,6 +727,8 @@ class _AjustarStockSheetState extends ConsumerState<_AjustarStockSheet> {
                                   const SizedBox(height: 4),
                                   Text(
                                     '$_nuevoStock ${_nuevoStock == 1 ? 'unidad' : 'unidades'}',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
                                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
                                           fontWeight: FontWeight.w700,
                                           color: estaAumentando
@@ -725,6 +749,8 @@ class _AjustarStockSheetState extends ConsumerState<_AjustarStockSheet> {
             // ── Controles de Ajuste ──
             Text(
               'Cantidad a ajustar',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.w600,
                   ),
@@ -863,6 +889,8 @@ class _AjustarStockSheetState extends ConsumerState<_AjustarStockSheet> {
                                 const SizedBox(height: 2),
                                 Text(
                                   _ajuste.abs() == 1 ? 'unidad' : 'unidades',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
                                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                                         color: context.colors.muted,
                                       ),
@@ -916,6 +944,8 @@ class _AjustarStockSheetState extends ConsumerState<_AjustarStockSheet> {
                               : estaAumentando
                                   ? 'Aumentar stock'
                                   : 'Reducir stock',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w600,
@@ -1048,6 +1078,8 @@ class _QuickAdjustButton extends StatelessWidget {
           padding: const EdgeInsets.symmetric(vertical: 12),
           child: Text(
             label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 16,

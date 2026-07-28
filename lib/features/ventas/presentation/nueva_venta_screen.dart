@@ -240,9 +240,11 @@ class _NuevaVentaScreenState extends ConsumerState<NuevaVentaScreen> {
               ),
             ),
             Expanded(
-              child: productos.isEmpty
-                  ? const _EmptyProductList()
-                  : ListView.builder(
+              child: inventarioState.isLoading && productos.isEmpty
+                  ? const Center(child: CircularProgressIndicator())
+                  : productos.isEmpty
+                      ? const _EmptyProductList()
+                      : ListView.builder(
                       padding: const EdgeInsets.fromLTRB(
                         AppSpacing.xl,
                         0,
@@ -510,6 +512,8 @@ class _CategoryChip extends StatelessWidget {
         ),
         child: Text(
           label,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
             color: selected ? Colors.white : context.colors.ink,
             fontWeight: FontWeight.w700,
@@ -602,6 +606,8 @@ class _ProductoVentaTile extends StatelessWidget {
                       children: [
                         Text(
                           formatCurrency(producto.precio),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                           style: Theme.of(context).textTheme.titleMedium
                               ?.copyWith(
                                 color: context.colors.primary,
@@ -664,7 +670,7 @@ class _AddProductButton extends StatelessWidget {
           letterSpacing: -0.1,
         ),
       ),
-      child: const Text('+ Agregar'),
+      child: const Text('+ Agregar', overflow: TextOverflow.ellipsis),
     );
   }
 }
@@ -711,6 +717,8 @@ class _InlineQtySelector extends StatelessWidget {
               children: [
                 Text(
                   cantidad.toString(),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.w800,
                   ),
@@ -830,12 +838,16 @@ class _EmptyProductListState extends ConsumerState<_EmptyProductList>
                   'No hay productos disponibles',
                   style: Theme.of(context).textTheme.titleMedium,
                   textAlign: TextAlign.center,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: AppSpacing.xs),
                 Text(
                   'Prueba con otra búsqueda o categoría.',
                   style: Theme.of(context).textTheme.bodyMedium,
                   textAlign: TextAlign.center,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: AppSpacing.lg),
                 OutlinedButton.icon(
@@ -844,7 +856,7 @@ class _EmptyProductListState extends ConsumerState<_EmptyProductList>
                     ref.read(inventarioControllerProvider.notifier).clearFilters();
                   },
                   icon: const Icon(Icons.filter_alt_off_rounded, size: 16),
-                  label: const Text('Limpiar filtros'),
+                  label: const Text('Limpiar filtros', overflow: TextOverflow.ellipsis),
                 ),
               ],
             ),
@@ -865,6 +877,7 @@ class _AddQtySheet extends ConsumerStatefulWidget {
 
 class _AddQtySheetState extends ConsumerState<_AddQtySheet> {
   final _qtyCtrl = TextEditingController(text: '1');
+  bool _isAdding = false;
 
   @override
   void dispose() {
@@ -889,13 +902,17 @@ class _AddQtySheetState extends ConsumerState<_AddQtySheet> {
           children: [
             Text(
               'Añadir a venta',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
               style: Theme.of(context).textTheme.titleLarge,
             ),
             const SizedBox(height: AppSpacing.sm),
-            Text(p.nombre, style: Theme.of(context).textTheme.bodyLarge),
+            Text(p.nombre, style: Theme.of(context).textTheme.bodyLarge, maxLines: 2, overflow: TextOverflow.ellipsis),
             const SizedBox(height: 2),
             Text(
               'Stock disponible: ${p.stockActual}',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
               style: Theme.of(context).textTheme.bodyMedium,
             ),
             const SizedBox(height: AppSpacing.xl),
@@ -910,9 +927,13 @@ class _AddQtySheetState extends ConsumerState<_AddQtySheet> {
             ),
             const SizedBox(height: AppSpacing.xl),
             ElevatedButton.icon(
-              onPressed: () {
+              onPressed: _isAdding ? null : () {
+                setState(() => _isAdding = true);
                 final qty = int.tryParse(_qtyCtrl.text.trim()) ?? 0;
-                if (qty <= 0) return;
+                if (qty <= 0) {
+                  setState(() => _isAdding = false);
+                  return;
+                }
 
                 // Fetch the current qty in cart for this product
                 final ventaEnCurso = ref.read(ventaEnCursoProvider);
@@ -923,6 +944,7 @@ class _AddQtySheetState extends ConsumerState<_AddQtySheet> {
                     0;
 
                 if (qtyInCart + qty > p.stockActual) {
+                  setState(() => _isAdding = false);
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text('Cantidad supera el stock')),
                   );
@@ -941,8 +963,13 @@ class _AddQtySheetState extends ConsumerState<_AddQtySheet> {
                     );
                 Navigator.of(context).pop();
               },
-              icon: const Icon(Icons.add_shopping_cart_rounded),
-              label: const Text('Agregar'),
+              icon: _isAdding
+                  ? const SizedBox(
+                      width: 20, height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white),
+                    )
+                  : const Icon(Icons.add_shopping_cart_rounded),
+              label: Text(_isAdding ? 'Agregando…' : 'Agregar', overflow: TextOverflow.ellipsis),
               style: ElevatedButton.styleFrom(
                 minimumSize: const Size(double.infinity, 52),
               ),
@@ -1070,6 +1097,8 @@ class _CartBottomBarState extends ConsumerState<_CartBottomBar>
                       children: [
                         Text(
                           _articulosLabel(totalArticulos),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                           style: Theme.of(context).textTheme.titleMedium
                               ?.copyWith(fontWeight: FontWeight.w800),
                         ),
@@ -1079,6 +1108,8 @@ class _CartBottomBarState extends ConsumerState<_CartBottomBar>
                           children: [
                             Text(
                               'Ver carrito',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                               style: Theme.of(context).textTheme.bodyMedium
                                   ?.copyWith(color: context.colors.primary),
                             ),
@@ -1166,10 +1197,14 @@ class _CartSheet extends ConsumerWidget {
                 children: [
                   Text(
                     'Carrito',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: Theme.of(context).textTheme.titleLarge,
                   ),
                   Text(
                     formatCurrency(venta.total),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: Theme.of(
                       context,
                     ).textTheme.titleMedium?.copyWith(color: context.colors.primary),
@@ -1196,6 +1231,8 @@ class _CartSheet extends ConsumerWidget {
                               children: [
                                 Text(
                                   item.productoNombre,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
                                   style: Theme.of(
                                     context,
                                   ).textTheme.titleMedium,
@@ -1203,6 +1240,8 @@ class _CartSheet extends ConsumerWidget {
                                 const SizedBox(height: 2),
                                 Text(
                                   '${formatCurrency(item.precioUnitario)} c/u',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
                                   style: Theme.of(context).textTheme.bodyMedium,
                                 ),
                               ],

@@ -106,70 +106,81 @@ class VentaEnCursoController extends Notifier<Venta?> {
   }
 
   /// Completa la venta: la añade al historial del turno, descuenta el stock real y registra los movimientos.
-  void completarVenta() {
-    if (state == null || state!.items.isEmpty) return;
-    completarVentaConPagos([]);
+  String? completarVenta() {
+    if (state == null || state!.items.isEmpty) return 'No hay productos en la venta.';
+    return completarVentaConPagos([]);
   }
   /// Completa la venta con la lista de pagos (soporta split payments).
-  void completarVentaConPagos(List<Pago> pagos) {
-    if (state == null || state!.items.isEmpty) return;
+  String? completarVentaConPagos(List<Pago> pagos) {
+    if (state == null || state!.items.isEmpty) return 'No hay productos en la venta.';
 
-    final venta = state!.copyWith(
-      estado: VentaEstado.completada,
-      fecha: DateTime.now(),
-      pagos: pagos,
-    );
+    try {
+      final venta = state!.copyWith(
+        estado: VentaEstado.completada,
+        fecha: DateTime.now(),
+        pagos: pagos,
+      );
 
-    // 1. Añadir al historial del turno actual
-    ref.read(ventasDelTurnoProvider.notifier).addVentaCompletada(venta);
+      // 1. Añadir al historial del turno actual
+      ref.read(ventasDelTurnoProvider.notifier).addVentaCompletada(venta);
 
-    // 2. Descontar stock y registrar movimientos individuales por producto
-    final inv = ref.read(inventarioControllerProvider.notifier);
-    final movRepo = ref.read(movimientoRepositoryProvider);
+      // 2. Descontar stock y registrar movimientos individuales por producto
+      final inv = ref.read(inventarioControllerProvider.notifier);
+      final movRepo = ref.read(movimientoRepositoryProvider);
 
-    for (final item in venta.items) {
-      // Registrar movimiento de salida (para compatibilidad con sistema anterior)
-      movRepo.addMovimiento(
-        Movimiento(
-          id: const Uuid().v4(),
+      for (final item in venta.items) {
+        // Validar stock disponible
+        final prod = inv.findProducto(item.productoId);
+        if (prod != null && item.cantidad > prod.stockActual) {
+          return 'Stock insuficiente para ${item.productoNombre}. Disponible: ${prod.stockActual}';
+        }
+
+        // Registrar movimiento de salida (para compatibilidad con sistema anterior)
+        movRepo.addMovimiento(
+          Movimiento(
+            id: const Uuid().v4(),
+            productoId: item.productoId,
+            productoNombre: item.productoNombre,
+            usuarioId: venta.dependienteId,
+            usuarioNombre: venta.dependienteNombre,
+            usuarioFotoUrl: venta.dependienteFotoUrl,
+            tipo: MovimientoTipo.salida,
+            cantidad: item.cantidad,
+            fecha: venta.fecha,
+            nota: 'Venta #${venta.id.substring(0, 8)}',
+            createdAt: DateTime.now(),
+            synced: false,
+            ventaId: venta.id,
+            precioUnitario: item.precioUnitario,
+          ),
+        );
+
+        // Aplicar al inventario (descuenta el stock)
+        inv.applyMovimiento(
           productoId: item.productoId,
-          productoNombre: item.productoNombre,
-          usuarioId: venta.dependienteId,
-          usuarioNombre: venta.dependienteNombre,
-          usuarioFotoUrl: venta.dependienteFotoUrl,
           tipo: MovimientoTipo.salida,
           cantidad: item.cantidad,
-          fecha: venta.fecha,
-          nota: 'Venta #${venta.id.substring(0, 8)}',
-          createdAt: DateTime.now(),
-          synced: false,
-          ventaId: venta.id,
-          precioUnitario: item.precioUnitario,
-        ),
+        );
+      }
+
+      // 3. Registrar venta agrupada como movimiento tipo "venta"
+      ref.read(movimientoControllerProvider.notifier).registrarVenta(
+        ventaId: venta.id,
+        dependiente: ref.read(authControllerProvider).user!,
+        productos: venta.items.map((item) => {
+          'nombre': item.productoNombre,
+          'cantidad': item.cantidad,
+          'precio': item.precioUnitario,
+        }).toList(),
+        totalVenta: venta.total,
       );
 
-      // Aplicar al inventario (descuenta el stock)
-      inv.applyMovimiento(
-        productoId: item.productoId,
-        tipo: MovimientoTipo.salida,
-        cantidad: item.cantidad,
-      );
+      // 4. Limpiar la venta en curso
+      state = null;
+      return null;
+    } catch (e) {
+      return 'Error al completar la venta: ${e.toString()}';
     }
-
-    // 3. Registrar venta agrupada como movimiento tipo "venta"
-    ref.read(movimientoControllerProvider.notifier).registrarVenta(
-      ventaId: venta.id,
-      dependiente: ref.read(authControllerProvider).user!,
-      productos: venta.items.map((item) => {
-        'nombre': item.productoNombre,
-        'cantidad': item.cantidad,
-        'precio': item.precioUnitario,
-      }).toList(),
-      totalVenta: venta.total,
-    );
-
-    // 4. Limpiar la venta en curso
-    state = null;
   }
 
   void cancelarVenta() {

@@ -4,87 +4,151 @@
 
 ## Visual Identity
 
-**Brand Thesis:** "Clean Focus" — Fondo gris suave (no negro puro) donde el azul destaca en momentos estratégicos. Limpio, funcional, sin distracciones.
+**Brand Thesis:** "Clean Focus" — Fondos neutros con tintes de personalidad donde el color primario destaca en momentos estratégicos. Limpio, funcional, sin distracciones.
 
-**Color Philosophy:**
-- **Light Mode:** Azure blue + copper accent — fresh, professional, memorable
-- **Dark Mode:** Soft gray + electric blue hero accent. "Clean focus" — minimal, clear, readable
+**Color Philosophy:** 
+- **6 temas con personalidad propia** — cada uno con su propio "color soul" que se extiende a fondos, bordes y semanticos
+- **Neutros teñidos, no grises genéricos** — el tema se siente desde el fondo, no solo en el CTA
+- **Dark mode con base única** — cada tema tiene su propio color de fondo oscuro, no todos slate idéntico
 
-## Color System
+## Color System — 6 Temas
 
-### Light Mode
+Cada tema varía: primary, neutros (background, surfaceSecondary, line, ink) y semánticos (success, warning, danger, info) para crear una identidad visual completa.
+
+### 1. 💼 CORPORATIVO (Indigo) — Profesional, confiable
+**Light:** Fondo #F8F9FC (gris azulado frío), cards blancos, bordes #E2E4EB
+**Dark:** Fondo #0E0F1A (navy profundo), cards #1A1B2E, índigo #818CF8
+
 ```dart
-primary: #0F62FE        // 🔥 Azure blue (IBM Carbon) — vibrante, moderno, confiable, MEMORABLE
-primaryDark: #0043CE    // Pressed state (azure profundo)
-ink: #161616            // Near-black text (softer than pure black)
-muted: #6F6F6F          // Warm gray (secondary content)
-line: #E0E0E0           // Light border
-surface: #FFFFFF        // Card surface (white)
-surfaceSecondary: #F0F2F5  // Neutral gray-blue (subtle)
-background: #F5F5F5     // Neutral gray scaffold
-success: #24A148        // Fresh green (operational success)
-warning: #B95000        // Deep amber (caution)
-danger: #DA1E28         // Vibrant red (errors, stock alerts)
-info: #E8743B           // 🔥 Warm copper — PERSONALITY ACCENT
+// Light                         // Dark
+primary:      #4F46E5           #818CF8
+ink:          #1A1A2E           #EEEEF4
+muted:        #6B7280           #8B8DA8
+line:         #E2E4EB           #2D2E4A
+surface:      #FFFFFF           #1A1B2E
+surfaceSec:   #EEF0F6           #12132A
+background:   #F8F9FC           #0E0F1A
+success:      #10B981           #34D399
+warning:      #F59E0B           #FBBF24
+danger:       #EF4444           #F87171
+info:         #8B5CF6           #A78BFA
 ```
 
-### Dark Mode — WhatsApp-Inspired Clean Edition
+### 2. 💰 PROSPERIDAD (Emerald) — Fresco, natural
+**Light:** Fondo #F8FAF7 (verde tenue), bordes #E2EBE5, ink #1A2E1A
+**Dark:** Fondo #0F1A14 (bosque profundo), cards #1A2E22, esmeralda #34D399
+
 ```dart
-primary: #5B9FFF        // 🔥 Electric azure — HERO ACCENT (más vibrante que índigo)
-primaryDark: #85B8FF    // Pressed state (brighter azure)
-ink: #E5E5E5            // Soft white text (easy on eyes)
-muted: #999999          // Medium gray for secondary
-line: #2A2A2A           // Subtle dark border
-surface: #1F1F1F        // Card surface (slightly lighter)
-surfaceSecondary: #2A2A2A  // Slightly lighter gray
-background: #111111     // 🔥 WhatsApp-style background (matches #0E0E0E vibe)
-success: #3FD372        // Neon green
-warning: #FFD23F        // Bright amber
-danger: #FF6B7A         // Hot pink-red
-info: #FF8B5A           // Vibrant copper
+// Light                         // Dark
+primary:      #059669           #34D399
+ink:          #1A2E1A           #EEF4F0
+muted:        #6B7280           #8BA898
+line:         #E2EBE5           #2A4A38
+surface:      #FFFFFF           #1A2E22
+surfaceSec:   #ECF7F0           #0F1A14
+background:   #F8FAF7           #0F1A14
+success:      #059669           #6EE7B7
+warning:      #D97706           #FBBF24
+danger:       #DC2626           #F87171
+info:         #0891B2           #22D3EE
 ```
 
-**Philosophy:** 
-- **Azul Azure con personalidad** — no genérico, vibrante, memorable
-- **Fondo como WhatsApp** (#111111) — oscuro pero no negro puro
-- **AppBar oscuro** en dark mode (como WhatsApp) con texto claro
-- AppBar azul solo en light mode (más colorido y vibrante)
-- Diseño limpio sin brillos innecesarios
+### 3. ⚡ ENERGÍA (Sunset) — Cálido, dinámico
+**Light:** Fondo #FEFAF7 (melón tenue), bordes #F0E6DE, ink #2E1A1A
+**Dark:** Fondo #1A120E (carbón cálido), cards #2E221A, naranja #FB923C
 
-## Dark Mode Enhancements (WhatsApp-inspired)
+```dart
+// Light                         // Dark
+primary:      #EA580C           #FB923C
+ink:          #2E1A1A           #F4F0EE
+muted:        #6B7280           #A89888
+line:         #F0E6DE           #4A3A2A
+surface:      #FFFFFF           #2E221A
+surfaceSec:   #FFF5ED           #1A120E
+background:   #FEFAF7           #1A120E
+success:      #059669           #34D399
+warning:      #D97706           #FBBF24
+danger:       #DC2626           #F87171
+info:         #DB2777           #F472B6
+```
 
-### Filosofía: Grises Neutros + Azul Héroe
-Como WhatsApp usa verde sobre gris oscuro, esta app usa **azul eléctrico** como color héroe sobre grises neutros limpios:
-- **Backgrounds:** Grises neutros (#0F0F0F, #1F1F1F, #2A2A2A) sin tintes de color
-- **Azul es el héroe:** Solo aparece en momentos estratégicos que requieren atención
-- **No gradientes de color en backgrounds** — solo en íconos y elementos específicos
+### 4. 🛡️ CONFIANZA (Ocean) — Calmado, seguro
+**Light:** Fondo #F7FAFC (cielo tenue), bordes #DEE7F0, ink #1A1A2E
+**Dark:** Fondo #0E141A (océano profundo), cards #1A2632, celeste #38BDF8
 
-### Headers con Fondo Azul
-Los day headers en Movimientos usan **fondo azul sólido** (#5B9FFF) con texto blanco, creando un punto focal claro:
-- Sombra azul dramática (alpha 0.35, blur 24px)
-- Sin border (el color sólido es suficiente statement)
-- Líneas laterales en gris neutro (no azul)
+```dart
+// Light                         // Dark
+primary:      #0284C7           #38BDF8
+ink:          #1A1A2E           #EEF0F4
+muted:        #6B7280           #889EA8
+line:         #DEE7F0           #2A3E4A
+surface:      #FFFFFF           #1A2632
+surfaceSec:   #EDF4FA           #0E141A
+background:   #F7FAFC           #0E141A
+success:      #059669           #34D399
+warning:      #D97706           #FBBF24
+danger:       #DC2626           #F87171
+info:         #0891B2           #22D3EE
+```
 
-### Hero Stats Cards
-Diseño minimalista con acentos de color estratégicos:
-- **Background:** Gris surface neutro (#1F1F1F), sin gradientes
-- **Border:** Color del ícono @ alpha 0.15 para énfasis sutil
-- **Ícono:** Gradiente radial del color + shadow glow
-- **Valor numérico:** Color vibrante del ícono (success/info)
-- **Card shadow:** Glow de color con dual-layer (blur 16+32px)
+### 5. 💡 INNOVACIÓN (Amethyst) — Creativo, visionario
+**Light:** Fondo #FAF8FC (lavanda tenue), bordes #E8E2F0, ink #1E1A2E
+**Dark:** Fondo #14101A (púrpura profundo), cards #221A32, violeta #A78BFA
 
-### Glow Effects
-Elementos clave tienen glow sutil en modo oscuro para crear énfasis visual:
-- **Hero Stats Cards:** Sombras de color en el tono del ícono (success, info) con blur radius de 16-32px
-- **Day Headers:** Sombra azul eléctrica con alpha 0.25, blur 20px
-- **Empty States:** Círculos con sombra primaria más pronunciada
-- **Cards:** Elevation 2 con shadowColor de primary.withAlpha(0.15)
+```dart
+// Light                         // Dark
+primary:      #7C3AED           #A78BFA
+ink:          #1E1A2E           #F2EEF6
+muted:        #6B7280           #9E88B0
+line:         #E8E2F0           #3A2A4A
+surface:      #FFFFFF           #221A32
+surfaceSec:   #F3EEF8           #14101A
+background:   #FAF8FC           #14101A
+success:      #059669           #34D399
+warning:      #D97706           #FBBF24
+danger:       #DC2626           #F87171
+info:         #7C3AED           #C4B5FD
+```
 
-### Borders y Líneas
-Borders sutiles en gris neutro, excepto cuando se usa color para énfasis:
-- Border width: 1.5px estándar
-- Color borders: solo en elementos que necesitan destacar (cards con glow)
-- Line dividers: gris neutro (#3A3A3A), no gradientes
+### 6. 🎯 IMPACTO (Ruby) — Audaz, decidido
+**Light:** Fondo #FEF8F8 (rosa tenue), bordes #F0E2E2, ink #2E1A1A
+**Dark:** Fondo #1A0E0E (burdeos profundo), cards #2E1A1A, rojo #F87171
+
+```dart
+// Light                         // Dark
+primary:      #DC2626           #F87171
+ink:          #2E1A1A           #F4EEEE
+muted:        #6B7280           #A88888
+line:         #F0E2E2           #4A2A2A
+surface:      #FFFFFF           #2E1A1A
+surfaceSec:   #FEEEEE           #1A0E0E
+background:   #FEF8F8           #1A0E0E
+success:      #059669           #34D399
+warning:      #D97706           #FBBF24
+danger:       #DC2626           #FCA5A5
+info:         #DB2777           #F472B6
+```
+
+## Dark Mode Design
+
+### Filosofía: Cada tema, su propia noche
+A diferencia de un enfoque "one dark fits all", cada tema tiene su propia base oscura:
+- **Corporativo:** Navy profundo (#0E0F1A) — serio, profesional
+- **Prosperidad:** Bosque (#0F1A14) — natural, orgánico
+- **Energía:** Carbón cálido (#1A120E) — acogedor, vibrante
+- **Confianza:** Océano (#0E141A) — profundo, calmado
+- **Innovación:** Púrpura (#14101A) — creativo, misterioso
+- **Impacto:** Burdeos (#1A0E0E) — intenso, dramático
+
+### Principios comunes (aplican a todos los temas):
+- Sin negro puro (#000000) — siempre fondos con carácter
+- Color primario brilla más en dark mode (variante más clara)
+- Neutros se tiñen sutilmente del tono del tema
+- Glow estratégico en elementos hero (stats, headers)
+- Bordes visibles pero sutiles
+
+## Dark Mode Enhancements (per-theme day headers)
+Los day headers en Movimientos usan el color primario del tema activo como fondo sólido con texto blanco.
 
 ## Typography
 
@@ -227,23 +291,24 @@ count: 800ms         // Hero stat number animations
 
 ## Usage Principles
 
-1. **Dark mode es limpio y minimalista** — grises neutros como WhatsApp, azul como héroe
-2. **El azul es estratégico** — solo en headers importantes, stats, y elementos interactivos clave
-3. **Sin gradientes de fondo** — backgrounds siempre sólidos en grises neutros
+1. **Cada tema tiene personalidad desde el fondo** — no solo el CTA cambia, también los neutros y semánticos
+2. **El color primario es estratégico** — solo en headers importantes, stats, y elementos interactivos clave
+3. **Sin gradientes de fondo** — backgrounds siempre sólidos, pero con el tinte del tema
 4. **Glow es purposeful** — solo en cards de estadísticas hero y headers destacados
-5. **Borders en gris neutral** — excepto cuando se necesita énfasis con color (alpha 0.15)
+5. **Dark mode no es genérico** — cada tema tiene su propia base oscura con carácter único
 
 ## Anti-Patterns
 
-❌ Don't use pure black (#000000) backgrounds — use neutral dark gray (#0F0F0F)
-❌ Don't add blue tints to grays — keep backgrounds neutral like WhatsApp
-❌ Don't use gradients on card backgrounds — only solid grays
+❌ Don't use pure black (#000000) backgrounds — use themed dark gray/color
+❌ Don't use identical neutrals across themes — each theme tints its grays
+❌ Don't use the same dark background for all themes — each needs its own night
+❌ Don't use gradients on card backgrounds — only solid colors
 ❌ Don't apply glow to every element — reserve for hero moments (headers, hero stats)
 ❌ Don't use gradients on text — only on backgrounds and icon containers
 ❌ Don't override platform navigation patterns
 
 ---
 
-**Last Updated:** 2026-07-25  
-**Design Direction:** Bolder — amplified saturation, enhanced depth, electric confidence  
+**Last Updated:** 2026-07-28  
+**Design Direction:** Bolder — 6 themes, each with distinct color soul  
 **Conformance:** iOS HIG + Material Design 3 Motion Guidelines

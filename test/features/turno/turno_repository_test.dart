@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:inventario_app/features/turno/data/turno_repository.dart';
+import 'package:mypiutil_app/features/turno/data/turno_repository.dart';
 
 void main() {
   group('TurnoRepository', () {
