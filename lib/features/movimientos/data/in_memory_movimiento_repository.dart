@@ -8,7 +8,6 @@ import 'movimiento_repository.dart';
 const _uuid = Uuid();
 
 List<Movimiento> _buildTestMovimientos() {
-  final now = DateTime.now();
   final rows = <Movimiento>[];
 
   Movimiento m({

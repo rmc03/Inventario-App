@@ -763,14 +763,14 @@ class _QtyRoundButton extends StatelessWidget {
   }
 }
 
-class _EmptyProductList extends StatefulWidget {
+class _EmptyProductList extends ConsumerStatefulWidget {
   const _EmptyProductList();
 
   @override
-  State<_EmptyProductList> createState() => _EmptyProductListState();
+  ConsumerState<_EmptyProductList> createState() => _EmptyProductListState();
 }
 
-class _EmptyProductListState extends State<_EmptyProductList>
+class _EmptyProductListState extends ConsumerState<_EmptyProductList>
     with SingleTickerProviderStateMixin {
   late final AnimationController _ctrl;
   late final Animation<double> _fade;
@@ -809,17 +809,20 @@ class _EmptyProductListState extends State<_EmptyProductList>
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Container(
-                  width: 68,
-                  height: 68,
-                  decoration: BoxDecoration(
-                    color: context.colors.surfaceSecondary,
-                    borderRadius: AppRadii.xlBorder,
-                  ),
-                  child: Icon(
-                    Icons.search_off_rounded,
-                    color: context.colors.muted,
-                    size: 34,
+                Semantics(
+                  label: 'Icono de búsqueda sin resultados',
+                  child: Container(
+                    width: 68,
+                    height: 68,
+                    decoration: BoxDecoration(
+                      color: context.colors.surfaceSecondary,
+                      borderRadius: AppRadii.xlBorder,
+                    ),
+                    child: Icon(
+                      Icons.search_off_rounded,
+                      color: context.colors.muted,
+                      size: 34,
+                    ),
                   ),
                 ),
                 const SizedBox(height: AppSpacing.md),
@@ -833,6 +836,15 @@ class _EmptyProductListState extends State<_EmptyProductList>
                   'Prueba con otra búsqueda o categoría.',
                   style: Theme.of(context).textTheme.bodyMedium,
                   textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: AppSpacing.lg),
+                OutlinedButton.icon(
+                  onPressed: () {
+                    // Limpiar filtros
+                    ref.read(inventarioControllerProvider.notifier).clearFilters();
+                  },
+                  icon: const Icon(Icons.filter_alt_off_rounded, size: 16),
+                  label: const Text('Limpiar filtros'),
                 ),
               ],
             ),

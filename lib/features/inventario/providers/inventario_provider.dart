@@ -240,4 +240,13 @@ class InventarioController extends Notifier<InventarioState> {
       categorias: _repository.fetchCategorias(),
     );
   }
+
+  void clearFilters() {
+    state = state.copyWith(
+      search: '',
+      categoriaId: null,
+      sortBy: ProductoSortBy.nombreAsc,
+      soloStockBajo: false,
+    );
+  }
 }

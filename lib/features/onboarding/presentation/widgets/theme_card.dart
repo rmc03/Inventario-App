@@ -42,7 +42,7 @@ class _ThemeCardState extends State<ThemeCard> {
       },
       onTapCancel: () => setState(() => _isPressed = false),
       child: AnimatedScale(
-        scale: _isPressed ? 0.95 : (widget.isSelected ? 1.05 : 1.0),
+        scale: _isPressed ? 0.98 : (widget.isSelected ? 1.0 : 1.0),
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeOutBack,
         child: AnimatedContainer(
@@ -61,13 +61,8 @@ class _ThemeCardState extends State<ThemeCard> {
                 ? [
                     BoxShadow(
                       color: colors.primary.withAlpha(51), // 0.2
-                      blurRadius: 16,
+                      blurRadius: 12,
                       offset: const Offset(0, 4),
-                    ),
-                    BoxShadow(
-                      color: colors.primary.withAlpha(25), // 0.1
-                      blurRadius: 32,
-                      offset: const Offset(0, 8),
                     ),
                   ]
                 : [
@@ -78,47 +73,51 @@ class _ThemeCardState extends State<ThemeCard> {
                     ),
                   ],
           ),
-          padding: const EdgeInsets.all(AppSpacing.lg),
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.md,
+            vertical: AppSpacing.sm,
+          ),
           child: Row(
             children: [
               // Ícono con gradient
               Container(
-                width: 56,
-                height: 56,
+                width: 44,
+                height: 44,
                 decoration: BoxDecoration(
                   gradient: RadialGradient(
                     colors: [colors.primary, colors.primaryDark],
                   ),
-                  borderRadius: BorderRadius.circular(14),
+                  borderRadius: BorderRadius.circular(11),
                   boxShadow: [
                     BoxShadow(
                       color: colors.primary.withAlpha(51), // 0.2
-                      blurRadius: 12,
+                      blurRadius: 6,
                     ),
                   ],
                 ),
                 child: Icon(
                   widget.colorScheme.icon,
                   color: Colors.white,
-                  size: 28,
+                  size: 22,
                 ),
               ),
-              const SizedBox(width: AppSpacing.lg),
+              const SizedBox(width: AppSpacing.md),
 
               // Info del tema
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     // Nombre del tema
                     Text(
                       widget.colorScheme.label,
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
                             fontWeight: FontWeight.bold,
                             color: colors.ink,
                           ),
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 3),
 
                     // Mini preview del UI
                     _MiniPreview(colors: colors),
@@ -126,14 +125,14 @@ class _ThemeCardState extends State<ThemeCard> {
                 ),
               ),
 
-              const SizedBox(width: AppSpacing.md),
+              const SizedBox(width: AppSpacing.sm),
 
               // Checkmark si está seleccionado
               if (widget.isSelected)
                 Icon(
                   Icons.check_circle,
                   color: colors.primary,
-                  size: 28,
+                  size: 22,
                 ),
             ],
           ),
@@ -157,34 +156,34 @@ class _MiniPreview extends StatelessWidget {
         Expanded(
           flex: 2,
           child: Container(
-            height: 6,
+            height: 5,
             decoration: BoxDecoration(
               color: colors.primary,
-              borderRadius: BorderRadius.circular(3),
+              borderRadius: BorderRadius.circular(2.5),
             ),
           ),
         ),
-        const SizedBox(width: 4),
+        const SizedBox(width: 3),
 
         // Bar success
         Expanded(
           child: Container(
-            height: 6,
+            height: 5,
             decoration: BoxDecoration(
               color: colors.success,
-              borderRadius: BorderRadius.circular(3),
+              borderRadius: BorderRadius.circular(2.5),
             ),
           ),
         ),
-        const SizedBox(width: 4),
+        const SizedBox(width: 3),
 
         // Bar info
         Expanded(
           child: Container(
-            height: 6,
+            height: 5,
             decoration: BoxDecoration(
               color: colors.info,
-              borderRadius: BorderRadius.circular(3),
+              borderRadius: BorderRadius.circular(2.5),
             ),
           ),
         ),

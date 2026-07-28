@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/utils/haptics.dart';
 import '../models/categoria.dart';
 
 /// Enum para las opciones de ordenamiento de productos
@@ -273,6 +274,7 @@ class _FilterSortSheetState extends State<FilterSortSheet> {
                         icon: _getSortIcon(sortOption),
                         isSelected: isSelected,
                         onTap: () {
+                          Haptics.tap(context);
                           setState(() => _sortBy = sortOption);
                           _applyFilters();
                         },
@@ -296,6 +298,7 @@ class _FilterSortSheetState extends State<FilterSortSheet> {
                       icon: Icons.warning_amber_rounded,
                       value: _soloStockBajo,
                       onChanged: (val) {
+                        Haptics.tap(context);
                         setState(() => _soloStockBajo = val);
                         _applyFilters();
                       },
@@ -318,6 +321,7 @@ class _FilterSortSheetState extends State<FilterSortSheet> {
                       icon: Icons.apps_rounded,
                       isSelected: _categoriaId == null,
                       onTap: () {
+                        Haptics.tap(context);
                         setState(() => _categoriaId = null);
                         _applyFilters();
                       },
@@ -331,6 +335,7 @@ class _FilterSortSheetState extends State<FilterSortSheet> {
                         icon: Icons.label_rounded,
                         isSelected: isSelected,
                         onTap: () {
+                          Haptics.tap(context);
                           setState(() => _categoriaId = categoria.id);
                           _applyFilters();
                         },

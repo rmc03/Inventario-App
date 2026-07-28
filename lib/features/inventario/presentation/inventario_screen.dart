@@ -395,7 +395,7 @@ class _AnimatedProductTileState extends State<_AnimatedProductTile>
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 400),
+      duration: const Duration(milliseconds: 250),
     );
     _fade = CurvedAnimation(parent: _controller, curve: Curves.easeOut);
     _slide = Tween<Offset>(
@@ -403,8 +403,8 @@ class _AnimatedProductTileState extends State<_AnimatedProductTile>
       end: Offset.zero,
     ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic));
 
-    // Delay escalonado: 60ms por índice, máximo 600ms
-    final delay = Duration(milliseconds: (widget.index * 60).clamp(0, 600));
+    // Delay escalonado: 35ms por índice, máximo 350ms
+    final delay = Duration(milliseconds: (widget.index * 35).clamp(0, 350));
     Future.delayed(delay, () {
       if (mounted) _controller.forward();
     });

@@ -8,6 +8,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_dimens.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/formatters.dart';
+import '../../../core/utils/haptics.dart';
 import '../../../shared/models/movimiento.dart';
 import '../../../shared/models/pago.dart';
 import '../../../shared/models/venta.dart';
@@ -313,6 +314,7 @@ class _MovimientosScreenState extends ConsumerState<MovimientosScreen> {
                               suffixIcon: filtro.query.isNotEmpty
                                   ? _AnimatedClearButton(
                                       onPressed: () {
+                                        Haptics.tap(context);
                                         _searchController.clear();
                                         ref.read(movimientosFilterProvider.notifier)
                                             .setQuery('');
@@ -470,9 +472,12 @@ class _MovimientosScreenState extends ConsumerState<MovimientosScreen> {
                             ),
                             const SizedBox(width: 6),
                             GestureDetector(
-                              onTap: () => ref
-                                  .read(movimientosFilterProvider.notifier)
-                                  .setTipo(TipoMovimientoFiltro.todos),
+                              onTap: () {
+                                Haptics.tap(context);
+                                ref
+                                    .read(movimientosFilterProvider.notifier)
+                                    .setTipo(TipoMovimientoFiltro.todos);
+                              },
                               child: Icon(
                                 Icons.close_rounded,
                                 size: 18,
@@ -729,7 +734,10 @@ class _EmptyState extends StatelessWidget {
             ),
             const SizedBox(height: AppSpacing.xxl + AppSpacing.sm),
             FilledButton.icon(
-              onPressed: onLimpiar,
+              onPressed: () {
+                Haptics.tap(context);
+                onLimpiar();
+              },
               icon: const Icon(Icons.filter_list_off_rounded, size: 22),
               label: const Text('Limpiar filtros'),
               style: FilledButton.styleFrom(
@@ -1259,7 +1267,10 @@ class _VentaCardState extends ConsumerState<_VentaCard> with SingleTickerProvide
             child: InkWell(
               borderRadius: BorderRadius.circular(16),
               onTap: venta != null
-                  ? () => context.push('/admin/movimientos/ventas/${venta.id}', extra: venta)
+                  ? () {
+                      Haptics.tap(context);
+                      context.push('/admin/movimientos/ventas/${venta.id}', extra: venta);
+                    }
                   : null,
               child: Padding(
                 padding: const EdgeInsets.all(16),
@@ -1319,6 +1330,7 @@ class _VentaCardState extends ConsumerState<_VentaCard> with SingleTickerProvide
                               // Botón de flecha (intercepta tap para expandir/colapsar)
                               GestureDetector(
                                 onTap: () {
+                                  Haptics.tap(context);
                                   _toggleExpansion();
                                 },
                                 child: AnimatedContainer(

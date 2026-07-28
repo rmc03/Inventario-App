@@ -6,12 +6,12 @@ import 'app_theme.dart';
 /// 🎨 Esquemas de color para la app
 /// Cada esquema define una paleta completa para modo claro y oscuro
 enum AppColorScheme {
-  indigo('Índigo', 'Profesional y moderno', LucideIcons.briefcase),
-  emerald('Esmeralda', 'Fresco y natural', LucideIcons.leaf),
-  sunset('Atardecer', 'Cálido y energético', LucideIcons.sun),
-  ocean('Océano', 'Tranquilo y confiable', LucideIcons.droplets),
-  amethyst('Amatista', 'Creativo y sofisticado', LucideIcons.sparkles),
-  ruby('Rubí', 'Audaz y apasionado', LucideIcons.heart);
+  indigo('Corporativo', 'Profesional y moderno', LucideIcons.building2),
+  emerald('Prosperidad', 'Crecimiento y éxito', LucideIcons.coins),
+  sunset('Energía', 'Cálido y dinámico', LucideIcons.zap),
+  ocean('Confianza', 'Estable y seguro', LucideIcons.shield),
+  amethyst('Innovación', 'Creativo y visionario', LucideIcons.lightbulb),
+  ruby('Impacto', 'Audaz y decidido', LucideIcons.target);
 
   const AppColorScheme(this.label, this.description, this.icon);
 
@@ -66,7 +66,7 @@ enum AppColorScheme {
 
 extension AppColorsSchemes on AppColorsExtension {
   // ══════════════════════════════════════════════════════════════════════════
-  // 💼 ÍNDIGO — Profesional y moderno (original)
+  // 💼 CORPORATIVO — Profesional y moderno (original)
   // ══════════════════════════════════════════════════════════════════════════
   static AppColorsExtension _indigo(Brightness brightness) {
     if (brightness == Brightness.light) {
@@ -103,7 +103,7 @@ extension AppColorsSchemes on AppColorsExtension {
   }
 
   // ══════════════════════════════════════════════════════════════════════════
-  // 🌿 ESMERALDA — Fresco y natural
+  // 💰 PROSPERIDAD — Crecimiento y éxito
   // ══════════════════════════════════════════════════════════════════════════
   static AppColorsExtension _emerald(Brightness brightness) {
     if (brightness == Brightness.light) {
@@ -140,7 +140,7 @@ extension AppColorsSchemes on AppColorsExtension {
   }
 
   // ══════════════════════════════════════════════════════════════════════════
-  // 🌅 ATARDECER — Cálido y energético
+  // ⚡ ENERGÍA — Cálido y dinámico
   // ══════════════════════════════════════════════════════════════════════════
   static AppColorsExtension _sunset(Brightness brightness) {
     if (brightness == Brightness.light) {
@@ -177,7 +177,7 @@ extension AppColorsSchemes on AppColorsExtension {
   }
 
   // ══════════════════════════════════════════════════════════════════════════
-  // 🌊 OCÉANO — Tranquilo y confiable
+  // 🛡️ CONFIANZA — Estable y seguro
   // ══════════════════════════════════════════════════════════════════════════
   static AppColorsExtension _ocean(Brightness brightness) {
     if (brightness == Brightness.light) {
@@ -214,7 +214,7 @@ extension AppColorsSchemes on AppColorsExtension {
   }
 
   // ══════════════════════════════════════════════════════════════════════════
-  // 💎 AMATISTA — Creativo y sofisticado
+  // 💡 INNOVACIÓN — Creativo y visionario
   // ══════════════════════════════════════════════════════════════════════════
   static AppColorsExtension _amethyst(Brightness brightness) {
     if (brightness == Brightness.light) {
@@ -251,7 +251,7 @@ extension AppColorsSchemes on AppColorsExtension {
   }
 
   // ══════════════════════════════════════════════════════════════════════════
-  // 💎 RUBÍ — Audaz y apasionado
+  // 🎯 IMPACTO — Audaz y decidido
   // ══════════════════════════════════════════════════════════════════════════
   static AppColorsExtension _ruby(Brightness brightness) {
     if (brightness == Brightness.light) {

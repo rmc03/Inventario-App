@@ -5,6 +5,7 @@ import '../../../core/config/app_branding.dart';
 import '../../../core/theme/app_dimens.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/haptics.dart';
+import '../../../core/utils/validators.dart';
 import '../../../shared/models/usuario.dart';
 import '../../../shared/widgets/loading_overlay.dart';
 import '../providers/auth_provider.dart';
@@ -159,10 +160,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                             autovalidateMode:
                                 AutovalidateMode.onUserInteraction,
                             validator: (value) {
-                              if (value == null || value.isEmpty) {
+                              if (value == null || value.trim().isEmpty) {
                                 return 'El email es requerido';
                               }
-                              if (!value.contains('@')) {
+                              if (!isValidEmail(value.trim())) {
                                 return 'Ingresa un email válido';
                               }
                               return null;
@@ -276,32 +277,6 @@ class _DemoBadge extends StatelessWidget {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _AppIcon extends StatelessWidget {
-  const _AppIcon({required this.colors});
-  final AppColorsExtension colors;
-
-  @override
-  Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: colors.surface,
-        borderRadius: const BorderRadius.all(
-          Radius.circular(AppRadii.md),
-        ),
-        boxShadow: AppShadows.subtle,
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.md),
-        child: Icon(
-          Icons.inventory_2_outlined,
-          color: colors.primary,
-          size: 30,
-        ),
       ),
     );
   }

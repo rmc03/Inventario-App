@@ -137,11 +137,13 @@ class InventarioApp extends ConsumerWidget {
       theme: AppTheme.light(
         textScaleFactor: accessibility.textSizeLevel.scale,
         boldText: accessibility.boldText,
+        reduceAnimations: accessibility.reduceAnimations,
         colorScheme: colorScheme,
       ),
       darkTheme: AppTheme.dark(
         textScaleFactor: accessibility.textSizeLevel.scale,
         boldText: accessibility.boldText,
+        reduceAnimations: accessibility.reduceAnimations,
         colorScheme: colorScheme,
       ),
       themeMode: themeMode,

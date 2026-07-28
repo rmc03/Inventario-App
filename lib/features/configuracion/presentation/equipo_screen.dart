@@ -7,11 +7,35 @@ import '../../../core/utils/haptics.dart';
 import '../../../shared/models/usuario.dart';
 import '../../usuarios/providers/usuario_provider.dart';
 
-class EquipoScreen extends ConsumerWidget {
+class EquipoScreen extends ConsumerStatefulWidget {
   const EquipoScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<EquipoScreen> createState() => _EquipoScreenState();
+}
+
+class _EquipoScreenState extends ConsumerState<EquipoScreen>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _entranceCtrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _entranceCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 500),
+    );
+    _entranceCtrl.forward();
+  }
+
+  @override
+  void dispose() {
+    _entranceCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final state = ref.watch(usuariosControllerProvider);
     final usuarios = state.usuarios;
 
@@ -25,7 +49,7 @@ class EquipoScreen extends ConsumerWidget {
         ),
         actions: [
           IconButton(
-            onPressed: () => _showUserDialog(context, ref),
+            onPressed: () => _showUserDialog(context),
             icon: const Icon(Icons.person_add_rounded),
             tooltip: 'Nuevo miembro',
           ),
@@ -36,67 +60,79 @@ class EquipoScreen extends ConsumerWidget {
         child: Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 800),
-            child: state.isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : usuarios.isEmpty
-                    ? const _EmptyUsuarios()
-                    : ListView(
-                        padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
-                        children: [
-                          Padding(
-                            padding: const EdgeInsets.fromLTRB(4, 0, 4, 8),
-                            child: Row(
-                              children: [
-                                Icon(
-                                  Icons.people_rounded,
-                                  size: 20,
-                                  color: context.colors.primary,
-                                ),
-                                const SizedBox(width: 8),
-                                Text(
-                                  '${usuarios.length} ${usuarios.length == 1 ? 'miembro' : 'miembros'}',
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .titleSmall
-                                      ?.copyWith(
-                                        color: context.colors.muted,
-                                        fontWeight: FontWeight.w600,
-                                        letterSpacing: 0.5,
-                                      ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          for (int i = 0; i < usuarios.length; i++) ...[
-                            _UserCard(
-                              key: ValueKey(usuarios[i].id),
-                              usuario: usuarios[i],
-                              index: i + 1,
-                              onEdit: () => _showUserDialog(
-                                context,
-                                ref,
-                                usuario: usuarios[i],
-                              ),
-                              onDelete: () => _confirmDeleteUser(
-                                context,
-                                ref,
-                                usuarios[i],
-                              ),
-                            ),
-                            if (i < usuarios.length - 1)
-                              const SizedBox(height: AppSpacing.sm),
-                          ],
-                        ],
-                      ),
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 300),
+              switchInCurve: Curves.easeOutCubic,
+              switchOutCurve: Curves.easeInCubic,
+              child: state.isLoading
+                  ? const CircularProgressIndicator(key: ValueKey('loading'))
+                  : usuarios.isEmpty
+                      ? const _EmptyUsuarios(key: ValueKey('empty'))
+                      : _buildUserList(usuarios, context),
+            ),
           ),
         ),
       ),
     );
   }
 
+  Widget _buildUserList(List<Usuario> usuarios, BuildContext context) {
+    return ListView(
+      key: const ValueKey('list'),
+      padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(4, 0, 4, 8),
+          child: Row(
+            children: [
+              Icon(
+                Icons.people_rounded,
+                size: 20,
+                color: context.colors.primary,
+              ),
+              const SizedBox(width: 8),
+              AnimatedSwitcher(
+                duration: const Duration(milliseconds: 200),
+                child: Text(
+                  '${usuarios.length} ${usuarios.length == 1 ? 'miembro' : 'miembros'}',
+                  key: ValueKey('count-${usuarios.length}'),
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        color: context.colors.muted,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 0.5,
+                      ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        for (int i = 0; i < usuarios.length; i++) ...[
+          _AnimatedCard(
+            index: i,
+            controller: _entranceCtrl,
+            child: _UserCard(
+              key: ValueKey(usuarios[i].id),
+              usuario: usuarios[i],
+              index: i + 1,
+              onEdit: () => _showUserDialog(
+                context,
+                usuario: usuarios[i],
+              ),
+              onDelete: () => _confirmDeleteUser(
+                context,
+                usuarios[i],
+              ),
+            ),
+          ),
+          if (i < usuarios.length - 1)
+            const SizedBox(height: AppSpacing.sm),
+        ],
+      ],
+    );
+  }
+
   Future<void> _showUserDialog(
-    BuildContext context,
-    WidgetRef ref, {
+    BuildContext context, {
     Usuario? usuario,
   }) async {
     final isEdit = usuario != null;
@@ -167,7 +203,6 @@ class EquipoScreen extends ConsumerWidget {
 
   Future<void> _confirmDeleteUser(
     BuildContext context,
-    WidgetRef ref,
     Usuario usuario,
   ) async {
     final confirmed = await showDialog<bool>(
@@ -235,6 +270,49 @@ class EquipoScreen extends ConsumerWidget {
         );
       }
     }
+  }
+}
+
+// ─── Animated Card Wrapper ──────────────────────────────────────────────────
+
+class _AnimatedCard extends StatelessWidget {
+  const _AnimatedCard({
+    required this.index,
+    required this.controller,
+    required this.child,
+  });
+
+  final int index;
+  final Animation<double> controller;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final double stagger = index * 0.08;
+    final double start = stagger;
+    final double end = (stagger + 0.35).clamp(0.0, 1.0);
+
+    final Animation<double> anim = Tween<double>(begin: 0, end: 1).animate(
+      CurvedAnimation(
+        parent: controller,
+        curve: Interval(start, end, curve: Curves.easeOutCubic),
+      ),
+    );
+
+    return AnimatedBuilder(
+      animation: anim,
+      builder: (context, child) => FadeTransition(
+        opacity: anim,
+        child: SlideTransition(
+          position: Tween<Offset>(
+            begin: const Offset(0, 0.06),
+            end: Offset.zero,
+          ).animate(anim),
+          child: child!,
+        ),
+      ),
+      child: child,
+    );
   }
 }
 
@@ -410,7 +488,7 @@ class _UserCard extends StatelessWidget {
 // ─── Empty State ────────────────────────────────────────────────────────────
 
 class _EmptyUsuarios extends StatelessWidget {
-  const _EmptyUsuarios();
+  const _EmptyUsuarios({super.key});
 
   @override
   Widget build(BuildContext context) {

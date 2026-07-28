@@ -54,9 +54,6 @@ class _ConfirmarPagoScreenState extends ConsumerState<ConfirmarPagoScreen>
   // FocusNode para la calculadora de cambio - detecta foco para scroll
   final _calculadoraFocusNode = FocusNode();
 
-  // Track if keyboard is visible to add bottom padding
-  bool _keyboardVisible = false;
-
   @override
   void initState() {
     super.initState();
@@ -98,33 +95,17 @@ class _ConfirmarPagoScreenState extends ConsumerState<ConfirmarPagoScreen>
   }
 
 // Scroll to make calculadora visible when keyboard appears
-  // ignore: use_build_context_synchronously
   void _scrollToCalculadora() {
     if (_scrollController.hasClients && mounted) {
       // Use a small delay to let keyboard animation start
-      Future.delayed(const Duration(milliseconds: 100), () {
+      Future.delayed(const Duration(milliseconds: 150), () {
         if (!mounted) return;
-        // Get fresh context from key after async gap - this is safe pattern
-        final currentContext = _calculadoraKey.currentContext;
-        if (currentContext != null && mounted) {
-          Scrollable.ensureVisible(
-            currentContext,
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeOutCubic,
-            alignment: 0.1, // 10% from top of viewport
-          );
-        }
-      });
-    }
-  }
-
-  // Update keyboard visibility state based on MediaQuery viewInsets
-  void _updateKeyboardVisibility(BuildContext context) {
-    final viewInsets = MediaQuery.of(context).viewInsets.bottom;
-    final isVisible = viewInsets > 0;
-    if (isVisible != _keyboardVisible) {
-      setState(() {
-        _keyboardVisible = isVisible;
+        // Scroll to the bottom to show the calculadora
+        _scrollController.animateTo(
+          _scrollController.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOutCubic,
+        );
       });
     }
   }
@@ -500,9 +481,6 @@ case ModoPago.mixto:
 
   @override
   Widget build(BuildContext context) {
-    // Update keyboard visibility for bottom padding
-    _updateKeyboardVisibility(context);
-
     final venta = ref.watch(ventaEnCursoProvider);
     if (venta == null) return const SizedBox.shrink();
 
@@ -532,10 +510,11 @@ case ModoPago.mixto:
       body: SafeArea(
         child: Column(
           children: [
-            // ── Resumen de la venta (scrolleable) ──
-            Expanded(
+            // ── Resumen de la venta (compacto) ──
+            Container(
+              constraints: const BoxConstraints(maxHeight: 180),
               child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -621,181 +600,189 @@ case ModoPago.mixto:
               ),
             ),
 
-            // ── Panel de pago combinado ──
-            Container(
-              width: double.infinity,
-              decoration: BoxDecoration(
-                color: context.colors.surface,
-                border: Border(
-                  top: BorderSide(
-                    color: context.colors.line.withValues(alpha: 0.2),
-                    width: 1,
+            // ── Panel de pago ──
+            Expanded(
+              child: Container(
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  color: context.colors.surface,
+                  border: Border(
+                    top: BorderSide(
+                      color: context.colors.line.withValues(alpha: 0.2),
+                      width: 1,
+                    ),
                   ),
                 ),
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Total de la venta (fijo, no hace scroll)
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                    decoration: BoxDecoration(
-                      color: context.colors.surfaceSecondary,
-                      border: Border(
-                        bottom: BorderSide(
-                          color: context.colors.line.withValues(alpha: 0.2),
-                          width: 1,
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    // Total de la venta (fijo, no hace scroll)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                      decoration: BoxDecoration(
+                        color: context.colors.surfaceSecondary,
+                        border: Border(
+                          bottom: BorderSide(
+                            color: context.colors.line.withValues(alpha: 0.2),
+                            width: 1,
+                          ),
                         ),
                       ),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      crossAxisAlignment: CrossAxisAlignment.baseline,
-                      textBaseline: TextBaseline.alphabetic,
-                      children: [
-                        Text(
-                          'Total',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w600,
-                            color: context.colors.ink,
-                            letterSpacing: -0.4,
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        crossAxisAlignment: CrossAxisAlignment.baseline,
+                        textBaseline: TextBaseline.alphabetic,
+                        children: [
+                          Text(
+                            'Total',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w600,
+                              color: context.colors.ink,
+                              letterSpacing: -0.4,
+                            ),
                           ),
-                        ),
-                        Text(
-                          formatCurrency(_totalVenta),
-                          style: TextStyle(
-                            fontSize: 28,
-                            fontWeight: FontWeight.w800,
-                            color: context.colors.primary,
-                            letterSpacing: -0.8,
-                            fontFeatures: const [FontFeature.tabularFigures()],
+                          Text(
+                            formatCurrency(_totalVenta),
+                            style: TextStyle(
+                              fontSize: 28,
+                              fontWeight: FontWeight.w800,
+                              color: context.colors.primary,
+                              letterSpacing: -0.8,
+                              fontFeatures: const [FontFeature.tabularFigures()],
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                  ),
 
-                  // Contenido scrolleable: métodos de pago y calculadora
-                  SingleChildScrollView(
-                    controller: _scrollController,
-                    padding: EdgeInsets.fromLTRB(
-                      16,
-                      16,
-                      16,
-                      16 + (_keyboardVisible ? MediaQuery.of(context).viewInsets.bottom : 0),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Título
-                        Text(
-                          'Método de pago',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                            color: context.colors.ink,
-                            letterSpacing: -0.3,
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-
-                        // Selector de modo (Efectivo / Transferencia / Mixto)
-                        Row(
+                    // Contenido scrolleable con Flexible (solo crece si es necesario)
+                    Flexible(
+                      child: SingleChildScrollView(
+                        controller: _scrollController,
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
                           children: [
-                            Expanded(
-                              child: _ModoButton(
-                                label: 'Efectivo',
-                                icon: Icons.payments_outlined,
-                                isSelected: _modo == ModoPago.efectivo,
-                                onTap: () {
-                                  setState(() {
-                                    _modo = ModoPago.efectivo;
-                                    _actualizarModoEfectivo();
-                                  });
-                                },
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: _ModoButton(
-                                label: 'Transferencia',
-                                icon: Icons.account_balance_outlined,
-                                isSelected: _modo == ModoPago.transferencia,
-                                onTap: () {
-                                  setState(() {
-                                    _modo = ModoPago.transferencia;
-                                    _actualizarModoTransferencia();
-                                  });
-                                },
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: _ModoButton(
-                                label: 'Mixto',
-                                icon: Icons.compare_arrows_outlined,
-                                isSelected: _modo == ModoPago.mixto,
-                                onTap: () {
-                                  setState(() {
-                                    _modo = ModoPago.mixto;
-                                    _actualizarModoMixto();
-                                  });
-                                },
-                              ),
-                            ),
-                          ],
-                        ),
-
-                        const SizedBox(height: 20),
-
-                        // Usar animación diferente dependiendo si hay cambio de tamaño
-                        _buildModoContentWithTransition(),
-                      ],
-                    ),
-                  ),
-
-                  // Botón confirmar
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                    child: SizedBox(
-                      height: 56,
-                      width: double.infinity,
-                      child: FilledButton(
-                        onPressed: (_esValido && !_isConfirming)
-                            ? () {
-                                Haptics.confirm(context);
-                                _confirmar();
-                              }
-                            : null,
-                        style: FilledButton.styleFrom(
-                          backgroundColor: context.colors.primary,
-                          disabledBackgroundColor: context.colors.muted.withValues(alpha: 0.3),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(14),
-                          ),
-                          elevation: 0,
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Icon(Icons.check_circle_outline_rounded, size: 22),
-                            const SizedBox(width: 8),
+                            // Título
                             Text(
-                              _esValido ? 'Confirmar y registrar venta' : 'Complete el pago',
-                              style: const TextStyle(
-                                fontSize: 17,
+                              'Método de pago',
+                              style: TextStyle(
+                                fontSize: 16,
                                 fontWeight: FontWeight.w600,
+                                color: context.colors.ink,
                                 letterSpacing: -0.3,
                               ),
                             ),
+                            const SizedBox(height: 12),
+
+                            // Selector de modo
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: _ModoButton(
+                                    label: 'Efectivo',
+                                    icon: Icons.payments_outlined,
+                                    isSelected: _modo == ModoPago.efectivo,
+                                    onTap: () {
+                                      setState(() {
+                                        _modo = ModoPago.efectivo;
+                                        _actualizarModoEfectivo();
+                                      });
+                                    },
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: _ModoButton(
+                                    label: 'Transferencia',
+                                    icon: Icons.account_balance_outlined,
+                                    isSelected: _modo == ModoPago.transferencia,
+                                    onTap: () {
+                                      setState(() {
+                                        _modo = ModoPago.transferencia;
+                                        _actualizarModoTransferencia();
+                                      });
+                                    },
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: _ModoButton(
+                                    label: 'Mixto',
+                                    icon: Icons.compare_arrows_outlined,
+                                    isSelected: _modo == ModoPago.mixto,
+                                    onTap: () {
+                                      setState(() {
+                                        _modo = ModoPago.mixto;
+                                        _actualizarModoMixto();
+                                      });
+                                    },
+                                  ),
+                                ),
+                              ],
+                            ),
+
+                            const SizedBox(height: 20),
+
+                            // Contenido del modo
+                            _buildModoContentWithTransition(),
                           ],
                         ),
                       ),
                     ),
-                  ),
-                ],
+
+                    // ── Botón confirmar: FIJO, fuera del área scrolleable ──
+                    Container(
+                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+                      decoration: BoxDecoration(
+                        color: context.colors.surface,
+                        border: Border(
+                          top: BorderSide(
+                            color: context.colors.line.withValues(alpha: 0.15),
+                            width: 1,
+                          ),
+                        ),
+                      ),
+                      child: SizedBox(
+                        height: 56,
+                        width: double.infinity,
+                        child: FilledButton(
+                          onPressed: (_esValido && !_isConfirming)
+                              ? () {
+                                  Haptics.confirm(context);
+                                  _confirmar();
+                                }
+                              : null,
+                          style: FilledButton.styleFrom(
+                            backgroundColor: context.colors.primary,
+                            disabledBackgroundColor: context.colors.muted.withValues(alpha: 0.3),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                            elevation: 0,
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Icon(Icons.check_circle_outline_rounded, size: 22),
+                              const SizedBox(width: 8),
+                              Text(
+                                _esValido ? 'Confirmar y registrar venta' : 'Complete el pago',
+                                style: const TextStyle(
+                                  fontSize: 17,
+                                  fontWeight: FontWeight.w600,
+                                  letterSpacing: -0.3,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ],
@@ -1088,6 +1075,16 @@ class _CalculadoraCambio extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          Text(
+            'Calcular vuelto',
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: context.colors.ink,
+              letterSpacing: -0.2,
+            ),
+          ),
+          const SizedBox(height: 8),
           TextFormField(
             controller: controller,
             focusNode: focusNode,
@@ -1102,13 +1099,7 @@ class _CalculadoraCambio extends StatelessWidget {
               fontFeatures: const [FontFeature.tabularFigures()],
             ),
             decoration: InputDecoration(
-              labelText: 'Efectivo recibido',
-              labelStyle: TextStyle(
-                fontSize: 14,
-                color: context.colors.muted,
-              ),
-              floatingLabelBehavior: FloatingLabelBehavior.auto,
-              hintText: montoEfectivo > 0 ? formatCurrency(montoEfectivo) : '0',
+              hintText: montoEfectivo > 0 ? montoEfectivo.toInt().toString() : '0',
               hintStyle: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.w400,
@@ -1158,19 +1149,7 @@ class _CalculadoraCambio extends StatelessWidget {
                   width: 2,
                 ),
               ),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-              helperText: efectivoRecibido == 0
-                  ? 'Ingrese el monto recibido del cliente'
-                  : (cambio >= 0
-                      ? 'Cambio a devolver: ${formatCurrency(cambio)}'
-                      : '⚠️ Falta ${formatCurrency(cambio.abs())} para completar el pago'),
-              helperStyle: TextStyle(
-                fontSize: 12,
-                color: efectivoRecibido == 0
-                    ? context.colors.muted
-                    : (cambio >= 0 ? context.colors.success : context.colors.danger),
-                fontWeight: FontWeight.w500,
-              ),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             ),
             onChanged: (valor) {
               onChanged(double.tryParse(valor) ?? 0.0);
@@ -1190,7 +1169,7 @@ class _CalculadoraCambio extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    'Cambio a devolver',
+                    cambio >= 0 ? 'Cambio a devolver' : 'Falta',
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
@@ -1201,7 +1180,7 @@ class _CalculadoraCambio extends StatelessWidget {
                     ),
                   ),
                   Text(
-                    formatCurrency(cambio >= 0 ? cambio : 0),
+                    formatCurrency(cambio >= 0 ? cambio : cambio.abs()),
                     style: TextStyle(
                       fontSize: 22,
                       fontWeight: FontWeight.w800,
@@ -1215,19 +1194,6 @@ class _CalculadoraCambio extends StatelessWidget {
                 ],
               ),
             ),
-            if (cambio < 0)
-              Padding(
-                padding: const EdgeInsets.only(top: 8),
-                child: Text(
-                  '⚠️ El efectivo recibido es insuficiente',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                    color: context.colors.danger,
-                    letterSpacing: -0.1,
-                  ),
-                ),
-              ),
           ],
         ],
       ),

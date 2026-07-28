@@ -6,10 +6,12 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/theme/app_dimens.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/utils/haptics.dart';
 import '../../../shared/widgets/skeleton_loader.dart';
 import '../../../shared/widgets/screen_popup_menu.dart';
 import '../data/resumen_repository.dart';
 import '../providers/resumen_provider.dart';
+import '../../../core/utils/formatters.dart';
 
 /// Duración base para animaciones de entrada (iOS/Android native timing).
 const _kEntranceDuration = Duration(milliseconds: 400);
@@ -182,10 +184,13 @@ class _ResumenBodyState extends State<_ResumenBody>
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              LucideIcons.alertTriangle,
-              size: 48,
-              color: context.colors.danger,
+            Semantics(
+              label: 'Error al cargar el resumen',
+              child: Icon(
+                LucideIcons.alertTriangle,
+                size: 48,
+                color: context.colors.danger,
+              ),
             ),
             SizedBox(height: AppSpacing.md),
             Text(
@@ -200,14 +205,27 @@ class _ResumenBodyState extends State<_ResumenBody>
               textAlign: TextAlign.center,
             ),
             SizedBox(height: AppSpacing.xl),
-            Semantics(
-              label: 'Reintentar carga del resumen',
-              button: true,
-              child: OutlinedButton.icon(
-                onPressed: widget.onRetry,
-                icon: const Icon(LucideIcons.refreshCw),
-                label: const Text('Reintentar'),
-              ),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                OutlinedButton.icon(
+                  onPressed: () {
+                    Haptics.tap(context);
+                    widget.onRetry();
+                  },
+                  icon: const Icon(LucideIcons.refreshCw),
+                  label: const Text('Reintentar'),
+                ),
+                SizedBox(width: AppSpacing.md),
+                ElevatedButton.icon(
+                  onPressed: () {
+                    Haptics.tap(context);
+                    context.go('/admin/inventario');
+                  },
+                  icon: const Icon(LucideIcons.package),
+                  label: const Text('Ir a Inventario'),
+                ),
+              ],
             ),
           ],
         ),
@@ -274,8 +292,6 @@ class _PeriodoSelector extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    
     return TweenAnimationBuilder<double>(
       duration: const Duration(milliseconds: 300),
       curve: Curves.easeOutCubic,
@@ -298,13 +314,15 @@ class _PeriodoSelector extends StatelessWidget {
               label: Text(
                 periodo.label,
                 style: const TextStyle(fontSize: 14),
-                overflow: TextOverflow.visible,
+                overflow: TextOverflow.ellipsis,
+                maxLines: 1,
                 softWrap: false,
               ),
             );
           }).toList(),
           selected: {periodoActual},
           onSelectionChanged: (selection) {
+            Haptics.tap(context);
             onPeriodoChanged(selection.first);
           },
           style: ButtonStyle(
@@ -349,10 +367,7 @@ class _HeroStats extends StatelessWidget {
             icon: LucideIcons.dollarSign,
             color: context.colors.success,
             delta: deltaVentas,
-            formatter: (val) => NumberFormat.currency(
-              symbol: '\$',
-              decimalDigits: 0,
-            ).format(val),
+            formatter: (val) => formatCurrency(val),
             delay: Duration.zero,
           ),
         ),
@@ -571,15 +586,27 @@ class _CountDisplayState extends State<_CountDisplay>
       child: AnimatedBuilder(
         animation: _anim,
         builder: (context, _) {
-          return Text(
-            widget.formatter(_anim.value),
-            style: Theme.of(context).textTheme.headlineLarge?.copyWith(
-                  color: widget.color,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: -1.2,
-                  height: 1,
-                ),
-            textAlign: TextAlign.center,
+          return SizedBox(
+            // Ancho fijo para prevenir layout shifts durante la animación.
+            // Suficiente para el número más largo esperado (~$999,999).
+            width: 145,
+            child: Text(
+              widget.formatter(_anim.value),
+              style: Theme.of(context).textTheme.headlineLarge?.copyWith(
+                    color: widget.color,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: -1.2,
+                    height: 1.2, // Mayor que 1 para evitar clipping vertical
+                    fontFeatures: const [
+                      // Usa dígitos tabulares (monospace) para que cada número
+                      // ocupe el mismo ancho, previniendo saltos horizontales.
+                      FontFeature.tabularFigures(),
+                    ],
+                  ),
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.visible,
+            ),
           );
         },
       ),
@@ -807,10 +834,13 @@ class _TopProductosCard extends StatelessWidget {
                   },
                   child: Column(
                     children: [
-                      Icon(
-                        LucideIcons.package,
-                        size: 48,
-                        color: context.colors.muted.withValues(alpha: 0.3),
+                      Semantics(
+                        label: 'Icono de paquete vacío',
+                        child: Icon(
+                          LucideIcons.package,
+                          size: 48,
+                          color: context.colors.muted.withValues(alpha: 0.3),
+                        ),
                       ),
                       SizedBox(height: AppSpacing.md),
                       Text(
@@ -822,6 +852,16 @@ class _TopProductosCard extends StatelessWidget {
                 ),
               ),
               SizedBox(height: AppSpacing.xl),
+              Center(
+                child: OutlinedButton.icon(
+                  onPressed: () {
+                    Haptics.tap(context);
+                    context.push('/admin/inventario');
+                  },
+                  icon: const Icon(LucideIcons.plus, size: 16),
+                  label: const Text('Ver inventario'),
+                ),
+              ),
             ],
           ),
         ),
@@ -915,10 +955,7 @@ class _TopProductoItem extends StatelessWidget {
                       ),
                       SizedBox(width: AppSpacing.sm),
                       Text(
-                        NumberFormat.currency(
-                          symbol: '\$',
-                          decimalDigits: 0,
-                        ).format(valor),
+                        formatCurrency(valor),
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                               fontSize: 13,
                             ),
@@ -1223,7 +1260,12 @@ class _AlertaCardState extends State<_AlertaCard>
                 : BorderSide(color: context.colors.line, width: 1),
           ),
           child: InkWell(
-            onTap: widget.onTap,
+            onTap: widget.onTap != null
+                ? () {
+                    Haptics.tap(context);
+                    widget.onTap!();
+                  }
+                : null,
             onTapDown: _handleTapDown,
             onTapUp: _handleTapUp,
             onTapCancel: _handleTapCancel,
@@ -1261,29 +1303,31 @@ class _AlertaCardState extends State<_AlertaCard>
                     ),
                   ),
                   SizedBox(width: AppSpacing.md),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          widget.title,
-                          style:
-                              Theme.of(context).textTheme.titleMedium?.copyWith(
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                        ),
-                        SizedBox(height: AppSpacing.xs / 2),
-                        Text(
-                          widget.subtitle,
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                fontSize: 13,
-                              ),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
+Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            widget.title,
+                            style:
+                                Theme.of(context).textTheme.titleMedium?.copyWith(
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          SizedBox(height: AppSpacing.xs / 2),
+                          Text(
+                            widget.subtitle,
+                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                  fontSize: 13,
+                                ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
                   if (widget.hasAction) ...[
                     SizedBox(width: AppSpacing.sm),
                     Icon(
@@ -1392,10 +1436,7 @@ class _TendenciaVentasCard extends StatelessWidget {
                   Expanded(
                     child: _MiniStat(
                       label: 'Promedio',
-                      value: NumberFormat.currency(
-                        symbol: '\$',
-                        decimalDigits: 0,
-                      ).format(promedio),
+                      value: formatCurrency(promedio),
                       color: context.colors.primary,
                     ),
                   ),
@@ -1407,10 +1448,7 @@ class _TendenciaVentasCard extends StatelessWidget {
                   Expanded(
                     child: _MiniStat(
                       label: 'Mejor día',
-                      value: NumberFormat.currency(
-                        symbol: '\$',
-                        decimalDigits: 0,
-                      ).format(max),
+                      value: formatCurrency(max),
                       color: context.colors.success,
                     ),
                   ),
@@ -1422,10 +1460,7 @@ class _TendenciaVentasCard extends StatelessWidget {
                   Expanded(
                     child: _MiniStat(
                       label: 'Menor valor',
-                      value: NumberFormat.currency(
-                        symbol: '\$',
-                        decimalDigits: 0,
-                      ).format(min),
+                      value: formatCurrency(min),
                       color: context.colors.muted,
                     ),
                   ),

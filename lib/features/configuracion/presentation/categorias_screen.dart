@@ -9,11 +9,35 @@ import '../../../shared/models/categoria.dart';
 import '../../../shared/widgets/category_name_dialog.dart';
 import '../../inventario/providers/inventario_provider.dart';
 
-class CategoriasScreen extends ConsumerWidget {
+class CategoriasScreen extends ConsumerStatefulWidget {
   const CategoriasScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<CategoriasScreen> createState() => _CategoriasScreenState();
+}
+
+class _CategoriasScreenState extends ConsumerState<CategoriasScreen>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _entranceCtrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _entranceCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 500),
+    );
+    _entranceCtrl.forward();
+  }
+
+  @override
+  void dispose() {
+    _entranceCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final categorias = ref.watch(
       inventarioControllerProvider.select((s) => s.categorias),
     );
@@ -28,7 +52,7 @@ class CategoriasScreen extends ConsumerWidget {
         ),
         actions: [
           IconButton(
-            onPressed: () => _showCategoryDialog(context, ref),
+            onPressed: () => _showCategoryDialog(context),
             icon: const Icon(Icons.add_rounded),
             tooltip: 'Nueva categoría',
           ),
@@ -39,59 +63,13 @@ class CategoriasScreen extends ConsumerWidget {
         child: Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 800),
-            child: ListView(
-              padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
-              children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(4, 0, 4, 8),
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.category_rounded,
-                        size: 20,
-                        color: context.colors.primary,
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        '${categorias.length} ${categorias.length == 1 ? 'categoría' : 'categorías'}',
-                        style: Theme.of(context)
-                            .textTheme
-                            .titleSmall
-                            ?.copyWith(
-                              color: context.colors.muted,
-                              fontWeight: FontWeight.w600,
-                              letterSpacing: 0.5,
-                            ),
-                      ),
-                    ],
-                  ),
-                ),
-                categorias.isEmpty
-                    ? const _EmptyCategorias()
-                    : Column(
-                        children: [
-                          for (int i = 0; i < categorias.length; i++) ...[
-                            _CategoryCard(
-                              key: ValueKey(categorias[i].id),
-                              categoria: categorias[i],
-                              index: i + 1,
-                              onEdit: () => _showCategoryDialog(
-                                context,
-                                ref,
-                                categoria: categorias[i],
-                              ),
-                              onDelete: () => _confirmDeleteCategoria(
-                                context,
-                                ref,
-                                categorias[i],
-                              ),
-                            ),
-                            if (i < categorias.length - 1)
-                              const SizedBox(height: AppSpacing.sm),
-                          ],
-                        ],
-                      ),
-              ],
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 300),
+              switchInCurve: Curves.easeOutCubic,
+              switchOutCurve: Curves.easeInCubic,
+              child: categorias.isEmpty
+                  ? const _EmptyCategorias(key: ValueKey('empty'))
+                  : _buildCategoryList(categorias, context),
             ),
           ),
         ),
@@ -99,9 +77,63 @@ class CategoriasScreen extends ConsumerWidget {
     );
   }
 
+  Widget _buildCategoryList(List<Categoria> categorias, BuildContext context) {
+    return ListView(
+      key: const ValueKey('list'),
+      padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(4, 0, 4, 8),
+          child: Row(
+            children: [
+              Icon(
+                Icons.category_rounded,
+                size: 20,
+                color: context.colors.primary,
+              ),
+              const SizedBox(width: 8),
+              AnimatedSwitcher(
+                duration: const Duration(milliseconds: 200),
+                child: Text(
+                  '${categorias.length} ${categorias.length == 1 ? 'categoría' : 'categorías'}',
+                  key: ValueKey('count-${categorias.length}'),
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        color: context.colors.muted,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 0.5,
+                      ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        for (int i = 0; i < categorias.length; i++) ...[
+          _AnimatedCategoryCard(
+            index: i,
+            controller: _entranceCtrl,
+            child: _CategoryCard(
+              key: ValueKey(categorias[i].id),
+              categoria: categorias[i],
+              index: i + 1,
+              onEdit: () => _showCategoryDialog(
+                context,
+                categoria: categorias[i],
+              ),
+              onDelete: () => _confirmDeleteCategoria(
+                context,
+                categorias[i],
+              ),
+            ),
+          ),
+          if (i < categorias.length - 1)
+            const SizedBox(height: AppSpacing.sm),
+        ],
+      ],
+    );
+  }
+
   Future<void> _showCategoryDialog(
-    BuildContext context,
-    WidgetRef ref, {
+    BuildContext context, {
     Categoria? categoria,
   }) async {
     final isEdit = categoria != null;
@@ -144,7 +176,6 @@ class CategoriasScreen extends ConsumerWidget {
 
   Future<void> _confirmDeleteCategoria(
     BuildContext context,
-    WidgetRef ref,
     Categoria categoria,
   ) async {
     final confirmed = await showDialog<bool>(
@@ -212,6 +243,49 @@ class CategoriasScreen extends ConsumerWidget {
         );
       }
     }
+  }
+}
+
+// ─── Animated Category Card Wrapper ─────────────────────────────────────────
+
+class _AnimatedCategoryCard extends StatelessWidget {
+  const _AnimatedCategoryCard({
+    required this.index,
+    required this.controller,
+    required this.child,
+  });
+
+  final int index;
+  final Animation<double> controller;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final double stagger = index * 0.08;
+    final double start = stagger;
+    final double end = (stagger + 0.35).clamp(0.0, 1.0);
+
+    final Animation<double> anim = Tween<double>(begin: 0, end: 1).animate(
+      CurvedAnimation(
+        parent: controller,
+        curve: Interval(start, end, curve: Curves.easeOutCubic),
+      ),
+    );
+
+    return AnimatedBuilder(
+      animation: anim,
+      builder: (context, child) => FadeTransition(
+        opacity: anim,
+        child: SlideTransition(
+          position: Tween<Offset>(
+            begin: const Offset(0, 0.06),
+            end: Offset.zero,
+          ).animate(anim),
+          child: child!,
+        ),
+      ),
+      child: child,
+    );
   }
 }
 
@@ -345,7 +419,7 @@ class _CategoryCard extends StatelessWidget {
 // ─── Empty State ────────────────────────────────────────────────────────────
 
 class _EmptyCategorias extends StatelessWidget {
-  const _EmptyCategorias();
+  const _EmptyCategorias({super.key});
 
   @override
   Widget build(BuildContext context) {

@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/formatters.dart';
+import '../../../core/utils/haptics.dart';
 import '../../../shared/models/cuadre.dart';
 import '../../../shared/widgets/screen_popup_menu.dart';
 import '../providers/cuadre_provider.dart';
@@ -206,6 +207,7 @@ class _PressScaleCardState extends State<_PressScaleCard>
       onTapDown: (_) => _scaleController.forward(),
       onTapUp: (_) {
         _scaleController.reverse();
+        Haptics.tap(context);
         widget.onTap();
       },
       onTapCancel: () => _scaleController.reverse(),

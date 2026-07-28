@@ -126,12 +126,16 @@ class _ThemePickerPageState extends ConsumerState<ThemePickerPage>
                 onToggle: _toggleBrightness,
               ),
             ),
-            const SizedBox(height: AppSpacing.xl),
+            const SizedBox(height: AppSpacing.xxl),
 
             // Lista de temas
             Expanded(
               child: ListView.builder(
-                padding: const EdgeInsets.only(bottom: AppSpacing.md),
+                padding: const EdgeInsets.only(
+                  bottom: AppSpacing.md,
+                  top: AppSpacing.md,
+                ),
+                clipBehavior: Clip.hardEdge,
                 physics: const BouncingScrollPhysics(),
                 itemCount: AppColorScheme.values.length,
                 itemBuilder: (context, index) {
@@ -162,7 +166,9 @@ class _ThemePickerPageState extends ConsumerState<ThemePickerPage>
                         ),
                       ),
                       child: Padding(
-                        padding: const EdgeInsets.only(bottom: AppSpacing.md),
+                        padding: const EdgeInsets.only(
+                          bottom: AppSpacing.md,
+                        ),
                         child: ThemeCard(
                           colorScheme: scheme,
                           isSelected: scheme == currentScheme,

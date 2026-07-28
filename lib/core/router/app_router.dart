@@ -53,8 +53,8 @@ Page<void> _buildPageWithFadeTransition(
         child: child,
       );
     },
-    transitionDuration: const Duration(milliseconds: 150),  // Más rápido
-    reverseTransitionDuration: const Duration(milliseconds: 150),
+    transitionDuration: const Duration(milliseconds: 300),
+    reverseTransitionDuration: const Duration(milliseconds: 250),
   );
 }
 

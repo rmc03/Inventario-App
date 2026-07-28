@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/formatters.dart';
+import '../../../core/utils/haptics.dart';
 import '../../../shared/models/pago.dart';
 import '../../../shared/models/venta.dart';
 import '../../auth/providers/auth_provider.dart';
@@ -33,7 +34,10 @@ class VentaDetalleScreen extends ConsumerWidget {
           icon: Icon(Icons.arrow_back_rounded, color: context.colors.ink),
           iconSize: 24,
           padding: const EdgeInsets.all(12),
-          onPressed: () => context.pop(),
+          onPressed: () {
+            Haptics.tap(context);
+            context.pop();
+          },
         ),
       ),
       body: SafeArea(

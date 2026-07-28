@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/utils/haptics.dart';
 import '../../features/movimientos/data/movimiento_repository.dart';
 
 class MovimientoFilterSheet extends StatefulWidget {
@@ -271,6 +272,7 @@ class _MovimientoFilterSheetState extends State<MovimientoFilterSheet> {
                       icon: Icons.all_inclusive_rounded,
                       isSelected: _tipo == TipoMovimientoFiltro.todos,
                       onTap: () {
+                        Haptics.tap(context);
                         setState(() => _tipo = TipoMovimientoFiltro.todos);
                         _applyFilters();
                       },
@@ -280,6 +282,7 @@ class _MovimientoFilterSheetState extends State<MovimientoFilterSheet> {
                       icon: Icons.arrow_downward_rounded,
                       isSelected: _tipo == TipoMovimientoFiltro.entradas,
                       onTap: () {
+                        Haptics.tap(context);
                         setState(() => _tipo = TipoMovimientoFiltro.entradas);
                         _applyFilters();
                       },
@@ -289,6 +292,7 @@ class _MovimientoFilterSheetState extends State<MovimientoFilterSheet> {
                       icon: Icons.shopping_cart_rounded,
                       isSelected: _tipo == TipoMovimientoFiltro.ventas,
                       onTap: () {
+                        Haptics.tap(context);
                         setState(() => _tipo = TipoMovimientoFiltro.ventas);
                         _applyFilters();
                       },
@@ -310,6 +314,7 @@ class _MovimientoFilterSheetState extends State<MovimientoFilterSheet> {
                       icon: Icons.all_inclusive_rounded,
                       isSelected: _rango == RangoFechaFiltro.todos,
                       onTap: () {
+                        Haptics.tap(context);
                         setState(() => _rango = RangoFechaFiltro.todos);
                         _applyFilters();
                       },
@@ -319,6 +324,7 @@ class _MovimientoFilterSheetState extends State<MovimientoFilterSheet> {
                       icon: Icons.today_rounded,
                       isSelected: _rango == RangoFechaFiltro.hoy,
                       onTap: () {
+                        Haptics.tap(context);
                         setState(() => _rango = RangoFechaFiltro.hoy);
                         _applyFilters();
                       },
@@ -328,6 +334,7 @@ class _MovimientoFilterSheetState extends State<MovimientoFilterSheet> {
                       icon: Icons.date_range_rounded,
                       isSelected: _rango == RangoFechaFiltro.semana,
                       onTap: () {
+                        Haptics.tap(context);
                         setState(() => _rango = RangoFechaFiltro.semana);
                         _applyFilters();
                       },
@@ -337,6 +344,7 @@ class _MovimientoFilterSheetState extends State<MovimientoFilterSheet> {
                       icon: Icons.calendar_month_rounded,
                       isSelected: _rango == RangoFechaFiltro.mes,
                       onTap: () {
+                        Haptics.tap(context);
                         setState(() => _rango = RangoFechaFiltro.mes);
                         _applyFilters();
                       },
@@ -752,7 +760,10 @@ class _CustomDateRangePickerState extends State<_CustomDateRangePicker> {
                       const Spacer(),
                       if (_startDate != null || _endDate != null)
                         IconButton(
-                          onPressed: _clear,
+                          onPressed: () {
+                            Haptics.tap(context);
+                            _clear();
+                          },
                           icon: const Icon(Icons.clear_rounded),
                           iconSize: 20,
                           style: IconButton.styleFrom(
@@ -870,7 +881,10 @@ class _CustomDateRangePickerState extends State<_CustomDateRangePicker> {
                   Row(
                     children: [
                       IconButton(
-                        onPressed: _previousMonth,
+                        onPressed: () {
+                          Haptics.tap(context);
+                          _previousMonth();
+                        },
                         icon: const Icon(Icons.chevron_left_rounded),
                         style: IconButton.styleFrom(
                           backgroundColor: context.colors.surfaceSecondary,
@@ -887,7 +901,12 @@ class _CustomDateRangePickerState extends State<_CustomDateRangePicker> {
                         ),
                       ),
                       IconButton(
-                        onPressed: canGoNext ? _nextMonth : null,
+                        onPressed: canGoNext
+                            ? () {
+                                Haptics.tap(context);
+                                _nextMonth();
+                              }
+                            : null,
                         icon: const Icon(Icons.chevron_right_rounded),
                         style: IconButton.styleFrom(
                           backgroundColor: canGoNext
@@ -953,7 +972,12 @@ class _CustomDateRangePickerState extends State<_CustomDateRangePicker> {
                           final isStartOrEnd = _isStartOrEnd(date);
 
                           return InkWell(
-                            onTap: isFuture ? null : () => _onDateTapped(date),
+                            onTap: isFuture
+                                ? null
+                                : () {
+                                    Haptics.tap(context);
+                                    _onDateTapped(date);
+                                  },
                             borderRadius: BorderRadius.circular(20),
                             child: Container(
                               width: 40,
@@ -1002,7 +1026,10 @@ class _CustomDateRangePickerState extends State<_CustomDateRangePicker> {
                 children: [
                   Expanded(
                     child: OutlinedButton(
-                      onPressed: () => Navigator.of(context).pop(),
+                      onPressed: () {
+                        Haptics.tap(context);
+                        Navigator.of(context).pop();
+                      },
                       style: OutlinedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 16),
                       ),
@@ -1013,7 +1040,10 @@ class _CustomDateRangePickerState extends State<_CustomDateRangePicker> {
                   Expanded(
                     child: FilledButton(
                       onPressed: _startDate != null && _endDate != null
-                          ? _confirm
+                          ? () {
+                              Haptics.confirm(context);
+                              _confirm();
+                            }
                           : null,
                       style: FilledButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 16),

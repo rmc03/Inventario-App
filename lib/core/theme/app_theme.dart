@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 
 import 'app_color_schemes.dart';
 import 'app_dimens.dart';
@@ -140,26 +141,29 @@ class AppTheme {
   static ThemeData light({
     double textScaleFactor = 1.0,
     bool boldText = false,
+    bool reduceAnimations = false,
     AppColorScheme? colorScheme,
   }) {
     final ext = colorScheme != null ? colorScheme.light : AppColorsExtension.light;
-    return _buildTheme(Brightness.light, ext, textScaleFactor, boldText);
+    return _buildTheme(Brightness.light, ext, textScaleFactor, boldText, reduceAnimations);
   }
 
   static ThemeData dark({
     double textScaleFactor = 1.0,
     bool boldText = false,
+    bool reduceAnimations = false,
     AppColorScheme? colorScheme,
   }) {
     final ext = colorScheme != null ? colorScheme.dark : AppColorsExtension.dark;
-    return _buildTheme(Brightness.dark, ext, textScaleFactor, boldText);
+    return _buildTheme(Brightness.dark, ext, textScaleFactor, boldText, reduceAnimations);
   }
 
-  static ThemeData _buildTheme(
+static ThemeData _buildTheme(
     Brightness brightness, 
     AppColorsExtension ext,
     double textScaleFactor,
     bool boldText,
+    bool reduceAnimations,
   ) {
     final colorScheme = ColorScheme.fromSeed(
       seedColor: ext.primary,
@@ -179,6 +183,15 @@ class AppTheme {
       scaffoldBackgroundColor: ext.background,
       extensions: [ext],
       textTheme: _buildTextTheme(ext, textScaleFactor, boldText),
+      pageTransitionsTheme: reduceAnimations
+          ? const PageTransitionsTheme(builders: {
+              TargetPlatform.android: CupertinoPageTransitionsBuilder(),
+              TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
+              TargetPlatform.macOS: CupertinoPageTransitionsBuilder(),
+              TargetPlatform.linux: CupertinoPageTransitionsBuilder(),
+              TargetPlatform.windows: CupertinoPageTransitionsBuilder(),
+            })
+          : null,
       appBarTheme: AppBarTheme(
         // 💳 CASH APP STYLE: Fondo casi blanco, título NEGRO bold y grande
         // Sin colores en el título — minimalista y limpio

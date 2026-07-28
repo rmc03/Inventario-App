@@ -9,6 +9,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../models/usuario.dart';
 import 'indicador_conexion.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/utils/haptics.dart';
 import '../../features/cuadres/providers/cuadre_provider.dart';
 import '../models/cuadre.dart';
 
@@ -59,8 +60,10 @@ class RoleShell extends ConsumerWidget {
         children: [
           NavigationRail(
             selectedIndex: selectedIndex,
-            onDestinationSelected: (index) =>
-                context.go(items[index].path),
+            onDestinationSelected: (index) {
+              Haptics.tap(context);
+              context.go(items[index].path);
+            },
             labelType: NavigationRailLabelType.all,
             groupAlignment: -1.0,
             leading: Padding(
@@ -120,7 +123,10 @@ class RoleShell extends ConsumerWidget {
               top: false,
               child: BottomNavigationBar(
                 currentIndex: selectedIndex,
-                onTap: (index) => context.go(items[index].path),
+                onTap: (index) {
+                  Haptics.tap(context);
+                  context.go(items[index].path);
+                },
                 type: BottomNavigationBarType.fixed,
                 backgroundColor: Theme.of(context).colorScheme.surface,
                 selectedLabelStyle: const TextStyle(

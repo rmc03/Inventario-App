@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_dimens.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/formatters.dart';
+import '../../../core/utils/haptics.dart';
 import '../../../shared/models/cuadre.dart';
 import '../../../shared/widgets/estado_badge.dart';
 import '../../auth/providers/auth_provider.dart';
@@ -29,7 +30,10 @@ class CuadresHistorialScreen extends ConsumerWidget {
         title: const Text('Mis Cuadres'),
         leading: IconButton(
           icon: Icon(Icons.arrow_back_rounded, color: context.colors.ink),
-          onPressed: () => context.pop(),
+          onPressed: () {
+            Haptics.tap(context);
+            context.pop();
+          },
         ),
       ),
       body: SafeArea(
@@ -152,7 +156,10 @@ class _CardContent extends StatelessWidget {
         color: ext.surface,
         borderRadius: AppRadii.lgBorder,
         child: InkWell(
-          onTap: onTap,
+          onTap: () {
+            Haptics.tap(context);
+            onTap();
+          },
           borderRadius: AppRadii.lgBorder,
           splashColor: accent.withValues(alpha: 0.06),
           highlightColor: accent.withValues(alpha: 0.04),
