@@ -1107,17 +1107,20 @@ class _CartBottomBarState extends ConsumerState<_CartBottomBar>
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Text(
-                              'Ver carrito',
+                              hasItems ? 'Ver carrito' : 'Carrito vacío',
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: Theme.of(context).textTheme.bodyMedium
-                                  ?.copyWith(color: context.colors.primary),
+                                  ?.copyWith(
+                                    color: hasItems ? context.colors.primary : context.colors.muted,
+                                  ),
                             ),
-                            Icon(
-                              Icons.keyboard_arrow_down_rounded,
-                              size: 16,
-                              color: context.colors.primary,
-                            ),
+                            if (hasItems)
+                              Icon(
+                                Icons.keyboard_arrow_down_rounded,
+                                size: 16,
+                                color: context.colors.primary,
+                              ),
                           ],
                         ),
                       ],
@@ -1178,7 +1181,36 @@ class _CartSheet extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final venta = ref.watch(ventaEnCursoProvider);
     if (venta == null || venta.items.isEmpty) {
-      return const SafeArea(child: SizedBox(height: 100));
+      return SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.remove_shopping_cart_outlined,
+                size: 64,
+                color: context.colors.muted.withValues(alpha: 0.5),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Carrito vacío',
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      color: context.colors.muted,
+                    ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Agrega productos a la venta para verlos aquí.',
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: context.colors.muted,
+                    ),
+              ),
+            ],
+          ),
+        ),
+      );
     }
 
     final ctrl = ref.read(ventaEnCursoProvider.notifier);

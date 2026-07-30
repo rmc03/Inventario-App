@@ -322,7 +322,19 @@ case ModoPago.mixto:
                         controller: _efectivoMixtoController,
                         monto: _montoEfectivo, otroMonto: _montoTransferencia,
                         totalVenta: _totalVenta,
-                        onChanged: (valor) => setState(() => _montoEfectivo = valor),
+                        onChanged: (valor) {
+                          setState(() {
+                            _montoEfectivo = valor;
+                            final resto = _totalVenta - valor;
+                            if (resto >= 0) {
+                              _montoTransferencia = resto;
+                              _transferenciaMixtoController.text = resto == 0 ? '' : (resto == resto.toInt() ? resto.toInt().toString() : resto.toString());
+                            } else {
+                              _montoTransferencia = 0;
+                              _transferenciaMixtoController.text = '0';
+                            }
+                          });
+                        },
                         onCompletarResto: () {
                           final resto = _totalVenta - _montoTransferencia;
                           _efectivoMixtoController.text = resto > 0 ? resto.toInt().toString() : '0';
@@ -335,7 +347,19 @@ case ModoPago.mixto:
                         controller: _transferenciaMixtoController,
                         monto: _montoTransferencia, otroMonto: _montoEfectivo,
                         totalVenta: _totalVenta,
-                        onChanged: (valor) => setState(() => _montoTransferencia = valor),
+                        onChanged: (valor) {
+                          setState(() {
+                            _montoTransferencia = valor;
+                            final resto = _totalVenta - valor;
+                            if (resto >= 0) {
+                              _montoEfectivo = resto;
+                              _efectivoMixtoController.text = resto == 0 ? '' : (resto == resto.toInt() ? resto.toInt().toString() : resto.toString());
+                            } else {
+                              _montoEfectivo = 0;
+                              _efectivoMixtoController.text = '0';
+                            }
+                          });
+                        },
                         onCompletarResto: () {
                           final resto = _totalVenta - _montoEfectivo;
                           _transferenciaMixtoController.text = resto > 0 ? resto.toInt().toString() : '0';
@@ -518,297 +542,287 @@ case ModoPago.mixto:
         ),
       ),
       body: SafeArea(
-        child: Column(
-          children: [
-            // ── Resumen de la venta (compacto) ──
-            Container(
-              constraints: const BoxConstraints(maxHeight: 180),
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Productos
-                    ...venta.items.asMap().entries.map((entry) {
-                      final i = entry.key;
-                      final item = entry.value;
-                      return FadeTransition(
-                        opacity: _itemAnimations[i],
-                        child: SlideTransition(
-                          position: Tween<Offset>(
-                            begin: const Offset(0, 0.08),
-                            end: Offset.zero,
-                          ).animate(_itemAnimations[i]),
-                          child: Padding(
-                            padding: const EdgeInsets.only(bottom: 12),
-                            child: Container(
-                              padding: const EdgeInsets.all(16),
-                              decoration: BoxDecoration(
-                                color: context.colors.surface,
-                                borderRadius: BorderRadius.circular(16),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: context.colors.ink.withValues(alpha: 0.04),
-                                    blurRadius: 8,
-                                    offset: const Offset(0, 2),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            return Column(
+              children: [
+                // ── 1. Lista de Productos Independiente ──
+                // Al ser Expanded, toma todo el espacio sobrante.
+                // Así los productos no se cortan ni quedan "tapados" por un espacio vacío.
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        ...venta.items.asMap().entries.map((entry) {
+                          final i = entry.key;
+                          final item = entry.value;
+                          return FadeTransition(
+                            opacity: _itemAnimations[i],
+                            child: SlideTransition(
+                              position: Tween<Offset>(
+                                begin: const Offset(0, 0.08),
+                                end: Offset.zero,
+                              ).animate(_itemAnimations[i]),
+                              child: Padding(
+                                padding: const EdgeInsets.only(bottom: 12),
+                                child: Container(
+                                  padding: const EdgeInsets.all(16),
+                                  decoration: BoxDecoration(
+                                    color: context.colors.surface,
+                                    borderRadius: BorderRadius.circular(16),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: context.colors.ink.withValues(alpha: 0.04),
+                                        blurRadius: 8,
+                                        offset: const Offset(0, 2),
+                                      ),
+                                    ],
                                   ),
-                                ],
-                              ),
-                              child: Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          item.productoNombre,
-                                          style: TextStyle(
-                                            fontSize: 17,
-                                            fontWeight: FontWeight.w600,
-                                            color: context.colors.ink,
-                                            letterSpacing: -0.3,
-                                            height: 1.3,
-                                          ),
-                                          maxLines: 2,
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                        const SizedBox(height: 6),
-                                        Text(
-                                          '${item.cantidad} \u00d7 ${formatCurrency(item.precioUnitario)}',
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                          style: TextStyle(
-                                            fontSize: 14,
-                                            fontWeight: FontWeight.w400,
-                                            color: context.colors.muted,
-                                            letterSpacing: -0.2,
-                                            fontFeatures: const [FontFeature.tabularFigures()],
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  const SizedBox(width: 16),
-                                  Text(
-                                    formatCurrency(item.subtotal),
-                                    style: TextStyle(
-                                      fontSize: 20,
-                                      fontWeight: FontWeight.w700,
-                                      color: context.colors.primary,
-                                      letterSpacing: -0.5,
-                                      fontFeatures: const [FontFeature.tabularFigures()],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                      );
-                    }),
-                  ],
-                ),
-              ),
-            ),
-
-            // ── Panel de pago ──
-            Expanded(
-              child: Container(
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  color: context.colors.surface,
-                  border: Border(
-                    top: BorderSide(
-                      color: context.colors.line.withValues(alpha: 0.2),
-                      width: 1,
-                    ),
-                  ),
-                ),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    // Total de la venta (fijo, no hace scroll)
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                      decoration: BoxDecoration(
-                        color: context.colors.surfaceSecondary,
-                        border: Border(
-                          bottom: BorderSide(
-                            color: context.colors.line.withValues(alpha: 0.2),
-                            width: 1,
-                          ),
-                        ),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        crossAxisAlignment: CrossAxisAlignment.baseline,
-                        textBaseline: TextBaseline.alphabetic,
-                        children: [
-                          Text(
-                            'Total',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w600,
-                              color: context.colors.ink,
-                              letterSpacing: -0.4,
-                            ),
-                          ),
-                          Text(
-                            formatCurrency(_totalVenta),
-                            style: TextStyle(
-                              fontSize: 28,
-                              fontWeight: FontWeight.w800,
-                              color: context.colors.primary,
-                              letterSpacing: -0.8,
-                              fontFeatures: const [FontFeature.tabularFigures()],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    // Contenido scrolleable con Flexible (solo crece si es necesario)
-                    Flexible(
-                      child: SingleChildScrollView(
-                        controller: _scrollController,
-                        padding: const EdgeInsets.all(16),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            // Título
-                            Text(
-                              'Método de pago',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                                color: context.colors.ink,
-                                letterSpacing: -0.3,
-                              ),
-                            ),
-                            const SizedBox(height: 12),
-
-                            // Selector de modo
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: _ModoButton(
-                                    label: 'Efectivo',
-                                    icon: Icons.payments_outlined,
-                                    isSelected: _modo == ModoPago.efectivo,
-                                    onTap: () {
-                                      setState(() {
-                                        _modo = ModoPago.efectivo;
-                                        _actualizarModoEfectivo();
-                                      });
-                                    },
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: _ModoButton(
-                                    label: 'Transferencia',
-                                    icon: Icons.account_balance_outlined,
-                                    isSelected: _modo == ModoPago.transferencia,
-                                    onTap: () {
-                                      setState(() {
-                                        _modo = ModoPago.transferencia;
-                                        _actualizarModoTransferencia();
-                                      });
-                                    },
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: _ModoButton(
-                                    label: 'Mixto',
-                                    icon: Icons.compare_arrows_outlined,
-                                    isSelected: _modo == ModoPago.mixto,
-                                    onTap: () {
-                                      setState(() {
-                                        _modo = ModoPago.mixto;
-                                        _actualizarModoMixto();
-                                      });
-                                    },
-                                  ),
-                                ),
-                              ],
-                            ),
-
-                            const SizedBox(height: 20),
-
-                            // Contenido del modo
-                            _buildModoContentWithTransition(),
-                          ],
-                        ),
-                      ),
-                    ),
-
-                    // ── Botón confirmar: FIJO, fuera del área scrolleable ──
-                    Container(
-                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-                      decoration: BoxDecoration(
-                        color: context.colors.surface,
-                        border: Border(
-                          top: BorderSide(
-                            color: context.colors.line.withValues(alpha: 0.15),
-                            width: 1,
-                          ),
-                        ),
-                      ),
-                      child: SizedBox(
-                        height: 56,
-                        width: double.infinity,
-                          child: FilledButton(
-                            onPressed: (_esValido && !_isConfirming)
-                                ? () {
-                                    Haptics.confirm(context);
-                                    _confirmar();
-                                  }
-                                : null,
-                            style: FilledButton.styleFrom(
-                              backgroundColor: context.colors.primary,
-                              disabledBackgroundColor: context.colors.muted.withValues(alpha: 0.3),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(14),
-                              ),
-                              elevation: 0,
-                            ),
-                            child: _isConfirming
-                                ? const SizedBox(
-                                    height: 22,
-                                    width: 22,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2.5,
-                                      color: Colors.white,
-                                    ),
-                                  )
-                                : Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
+                                  child: Row(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
-                                      const Icon(Icons.check_circle_outline_rounded, size: 22),
-                                      const SizedBox(width: 8),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              item.productoNombre,
+                                              style: TextStyle(
+                                                fontSize: 17,
+                                                fontWeight: FontWeight.w600,
+                                                color: context.colors.ink,
+                                                letterSpacing: -0.3,
+                                                height: 1.3,
+                                              ),
+                                              maxLines: 2,
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                            const SizedBox(height: 6),
+                                            Text(
+                                              '${item.cantidad} \u00d7 ${formatCurrency(item.precioUnitario)}',
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: TextStyle(
+                                                fontSize: 14,
+                                                fontWeight: FontWeight.w400,
+                                                color: context.colors.muted,
+                                                letterSpacing: -0.2,
+                                                fontFeatures: const [FontFeature.tabularFigures()],
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      const SizedBox(width: 16),
                                       Text(
-                                        _esValido ? 'Confirmar y registrar venta' : 'Complete el pago',
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: const TextStyle(
-                                          fontSize: 17,
-                                          fontWeight: FontWeight.w600,
-                                          letterSpacing: -0.3,
+                                        formatCurrency(item.subtotal),
+                                        style: TextStyle(
+                                          fontSize: 20,
+                                          fontWeight: FontWeight.w700,
+                                          color: context.colors.primary,
+                                          letterSpacing: -0.5,
+                                          fontFeatures: const [FontFeature.tabularFigures()],
                                         ),
                                       ),
                                     ],
                                   ),
-                          ),
-                      ),
+                                ),
+                              ),
+                            ),
+                          );
+                        }),
+                      ],
                     ),
-                  ],
+                  ),
                 ),
-              ),
-            ),
-          ],
+
+                // ── 2. Widget de Pago (Pegado al fondo) ──
+                // Está limitado a ocupar máximo el 85% de la pantalla actual.
+                // Si el teclado se abre, el 85% se reduce, y esto se vuelve scrolleable (para Mixto).
+                // Si no hay teclado (Efectivo/Transferencia), no scrollea y se adapta perfecto.
+                ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxHeight: constraints.maxHeight * 0.85, 
+                  ),
+                  child: SingleChildScrollView(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min, // Se adapta exactamente al contenido
+                      children: [
+                        // Total
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                          decoration: BoxDecoration(
+                            color: context.colors.surfaceSecondary,
+                            border: Border(
+                              top: BorderSide(
+                                color: context.colors.line.withValues(alpha: 0.2),
+                                width: 1,
+                              ),
+                              bottom: BorderSide(
+                                color: context.colors.line.withValues(alpha: 0.2),
+                                width: 1,
+                              ),
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            crossAxisAlignment: CrossAxisAlignment.baseline,
+                            textBaseline: TextBaseline.alphabetic,
+                            children: [
+                              Text(
+                                'Total',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w600,
+                                  color: context.colors.ink,
+                                  letterSpacing: -0.4,
+                                ),
+                              ),
+                              Text(
+                                formatCurrency(_totalVenta),
+                                style: TextStyle(
+                                  fontSize: 28,
+                                  fontWeight: FontWeight.w800,
+                                  color: context.colors.primary,
+                                  letterSpacing: -0.8,
+                                  fontFeatures: const [FontFeature.tabularFigures()],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+
+                        // Método de pago + contenido + botón
+                        Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                'Método de pago',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                  color: context.colors.ink,
+                                  letterSpacing: -0.3,
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+
+                              // Selector de modo
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: _ModoButton(
+                                      label: 'Efectivo',
+                                      icon: Icons.payments_outlined,
+                                      isSelected: _modo == ModoPago.efectivo,
+                                      onTap: () {
+                                        setState(() {
+                                          _modo = ModoPago.efectivo;
+                                          _actualizarModoEfectivo();
+                                        });
+                                      },
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: _ModoButton(
+                                      label: 'Transferencia',
+                                      icon: Icons.account_balance_outlined,
+                                      isSelected: _modo == ModoPago.transferencia,
+                                      onTap: () {
+                                        setState(() {
+                                          _modo = ModoPago.transferencia;
+                                          _actualizarModoTransferencia();
+                                        });
+                                      },
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: _ModoButton(
+                                      label: 'Mixto',
+                                      icon: Icons.compare_arrows_outlined,
+                                      isSelected: _modo == ModoPago.mixto,
+                                      onTap: () {
+                                        setState(() {
+                                          _modo = ModoPago.mixto;
+                                          _actualizarModoMixto();
+                                        });
+                                      },
+                                    ),
+                                  ),
+                                ],
+                              ),
+
+                              const SizedBox(height: 20),
+
+                              // Contenido del modo
+                              _buildModoContentWithTransition(),
+
+                              // ── Botón confirmar ──
+                              const SizedBox(height: 20),
+                              SizedBox(
+                                height: 56,
+                                width: double.infinity,
+                                child: FilledButton(
+                                  onPressed: (_esValido && !_isConfirming)
+                                      ? () {
+                                          Haptics.confirm(context);
+                                          _confirmar();
+                                        }
+                                      : null,
+                                  style: FilledButton.styleFrom(
+                                    backgroundColor: context.colors.primary,
+                                    disabledBackgroundColor: context.colors.muted.withValues(alpha: 0.3),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(14),
+                                    ),
+                                    elevation: 0,
+                                  ),
+                                  child: _isConfirming
+                                      ? const SizedBox(
+                                          height: 22,
+                                          width: 22,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2.5,
+                                            color: Colors.white,
+                                          ),
+                                        )
+                                      : Row(
+                                          mainAxisAlignment: MainAxisAlignment.center,
+                                          children: [
+                                            const Icon(Icons.check_circle_outline_rounded, size: 22),
+                                            const SizedBox(width: 8),
+                                            Text(
+                                              _esValido ? 'Confirmar y registrar venta' : 'Complete el pago',
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: const TextStyle(
+                                                fontSize: 17,
+                                                fontWeight: FontWeight.w600,
+                                                letterSpacing: -0.3,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            );
+          },
         ),
       ),
     );
