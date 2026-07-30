@@ -1174,40 +1174,99 @@ class _CartBottomBarState extends ConsumerState<_CartBottomBar>
   }
 }
 
-class _CartSheet extends ConsumerWidget {
+class _CartSheet extends ConsumerStatefulWidget {
   const _CartSheet();
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_CartSheet> createState() => _CartSheetState();
+}
+
+class _CartSheetState extends ConsumerState<_CartSheet>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _emptyStateCtrl;
+  late final Animation<double> _emptyFade;
+  late final Animation<double> _emptyScale;
+
+  @override
+  void initState() {
+    super.initState();
+    _emptyStateCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 400),
+    );
+    _emptyFade = CurvedAnimation(
+      parent: _emptyStateCtrl,
+      curve: Curves.easeOut,
+    );
+    _emptyScale = Tween<double>(begin: 0.92, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _emptyStateCtrl,
+        curve: Curves.easeOutCubic,
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    _emptyStateCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final venta = ref.watch(ventaEnCursoProvider);
+    
     if (venta == null || venta.items.isEmpty) {
+      _emptyStateCtrl.forward(from: 0);
+      
       return SafeArea(
         child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                Icons.remove_shopping_cart_outlined,
-                size: 64,
-                color: context.colors.muted.withValues(alpha: 0.5),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                'Carrito vacío',
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      color: context.colors.muted,
+          padding: const EdgeInsets.fromLTRB(20, 24, 20, 40),
+          child: FadeTransition(
+            opacity: _emptyFade,
+            child: ScaleTransition(
+              scale: _emptyScale,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Ícono con círculo de fondo - sin tachar
+                  Container(
+                    width: 88,
+                    height: 88,
+                    decoration: BoxDecoration(
+                      color: context.colors.surfaceSecondary,
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: context.colors.line.withValues(alpha: 0.3),
+                        width: 2,
+                      ),
                     ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Agrega productos a la venta para verlos aquí.',
-                textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: context.colors.muted,
+                    child: Icon(
+                      Icons.shopping_cart_outlined,
+                      size: 40,
+                      color: context.colors.muted.withValues(alpha: 0.6),
                     ),
+                  ),
+                  const SizedBox(height: 20),
+                  Text(
+                    'Carrito vacío',
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.w700,
+                          color: context.colors.ink,
+                        ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Agrega productos a la venta para verlos aquí.',
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: context.colors.muted,
+                          height: 1.4,
+                        ),
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
         ),
       );
@@ -1252,74 +1311,156 @@ class _CartSheet extends ConsumerWidget {
                 itemCount: venta.items.length,
                 itemBuilder: (ctx, i) {
                   final item = venta.items[i];
-                  return Card(
-                    child: Padding(
-                      padding: const EdgeInsets.all(12),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  item.productoNombre,
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: Theme.of(
-                                    context,
-                                  ).textTheme.titleMedium,
-                                ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  '${formatCurrency(item.precioUnitario)} c/u',
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: Theme.of(context).textTheme.bodyMedium,
-                                ),
-                              ],
-                            ),
-                          ),
-                          QtyControls(
-                            cantidad: item.cantidad,
-                            onDecrement: item.cantidad > 1
-                                ? () => ctrl.actualizarCantidadItem(
-                                    item.productoId,
-                                    item.cantidad - 1,
-                                  )
-                                : null,
-                            onIncrement: () {
-                              final p = ref
-                                  .read(inventarioControllerProvider.notifier)
-                                  .findProducto(item.productoId);
-                              if (p != null &&
-                                  item.cantidad + 1 > p.stockActual) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text('Sin stock')),
-                                );
-                                return;
-                              }
-                              ctrl.actualizarCantidadItem(
-                                item.productoId,
-                                item.cantidad + 1,
-                              );
-                            },
-                          ),
-                          const SizedBox(width: 8),
-                          IconButton(
-                            icon: Icon(
-                              Icons.delete_outline_rounded,
-                              color: context.colors.danger,
-                            ),
-                            onPressed: () => ctrl.eliminarItem(item.productoId),
-                          ),
-                        ],
-                      ),
-                    ),
+                  return _AnimatedCartItem(
+                    key: ValueKey(item.productoId),
+                    item: item,
+                    index: i,
+                    onDecrement: item.cantidad > 1
+                        ? () => ctrl.actualizarCantidadItem(
+                            item.productoId,
+                            item.cantidad - 1,
+                          )
+                        : null,
+                    onIncrement: () {
+                      final p = ref
+                          .read(inventarioControllerProvider.notifier)
+                          .findProducto(item.productoId);
+                      if (p != null && item.cantidad + 1 > p.stockActual) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Sin stock')),
+                        );
+                        return;
+                      }
+                      ctrl.actualizarCantidadItem(
+                        item.productoId,
+                        item.cantidad + 1,
+                      );
+                    },
+                    onDelete: () => ctrl.eliminarItem(item.productoId),
                   );
                 },
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Item animado del carrito con entrada suave
+class _AnimatedCartItem extends StatefulWidget {
+  const _AnimatedCartItem({
+    super.key,
+    required this.item,
+    required this.index,
+    required this.onDecrement,
+    required this.onIncrement,
+    required this.onDelete,
+  });
+
+  final CuadreItem item;
+  final int index;
+  final VoidCallback? onDecrement;
+  final VoidCallback onIncrement;
+  final VoidCallback onDelete;
+
+  @override
+  State<_AnimatedCartItem> createState() => _AnimatedCartItemState();
+}
+
+class _AnimatedCartItemState extends State<_AnimatedCartItem>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<double> _fade;
+  late final Animation<Offset> _slide;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 300),
+    );
+    _fade = CurvedAnimation(
+      parent: _controller,
+      curve: Curves.easeOut,
+    );
+    _slide = Tween<Offset>(
+      begin: const Offset(0, 0.15),
+      end: Offset.zero,
+    ).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: Curves.easeOutCubic,
+      ),
+    );
+
+    // Stagger basado en índice
+    final delay = Duration(milliseconds: (widget.index * 50).clamp(0, 200));
+    Future.delayed(delay, () {
+      if (mounted) _controller.forward();
+    });
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FadeTransition(
+      opacity: _fade,
+      child: SlideTransition(
+        position: _slide,
+        child: Padding(
+          padding: const EdgeInsets.only(bottom: 8),
+          child: Card(
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          widget.item.productoNombre,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          '${formatCurrency(widget.item.precioUnitario)} c/u',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: Theme.of(context).textTheme.bodyMedium,
+                        ),
+                      ],
+                    ),
+                  ),
+                  QtyControls(
+                    cantidad: widget.item.cantidad,
+                    onDecrement: widget.onDecrement,
+                    onIncrement: widget.onIncrement,
+                  ),
+                  const SizedBox(width: 8),
+                  IconButton(
+                    icon: Icon(
+                      Icons.delete_outline_rounded,
+                      color: Theme.of(context)
+                          .extension<AppColorsExtension>()
+                          ?.danger,
+                    ),
+                    onPressed: widget.onDelete,
+                  ),
+                ],
+              ),
+            ),
+          ),
         ),
       ),
     );
