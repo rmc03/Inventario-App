@@ -1,6 +1,6 @@
 {
-    "name": "MypiUtil",
-    "short_name": "MypiUtil",
+    "name": "MipyUtil",
+    "short_name": "MipyUtil",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

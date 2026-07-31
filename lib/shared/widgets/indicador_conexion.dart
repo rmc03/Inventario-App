@@ -25,77 +25,103 @@ class _IndicadorConexionState extends ConsumerState<IndicadorConexion> {
         if (!_initialized) {
           _isConnected = connected;
           _initialized = true;
+          // Show toast immediately if the app starts offline
+          if (!connected) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              _showToast(context, false);
+            });
+          }
         } else if (_isConnected != connected) {
           _isConnected = connected;
-          _showToast(context, connected);
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            _showToast(context, connected);
+          });
         }
       },
       loading: () {},
-error: (error, stackTrace) {
-        // Ignorar errores de conectividad
-      },
+      error: (error, stackTrace) {},
     );
 
-    if (_isConnected) {
-      return const SizedBox.shrink();
-    }
-
-    return Semantics(
-      label: 'Sin conexión a internet. Los datos se guardan localmente y se sincronizarán cuando haya conexión.',
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        color: Colors.red.shade700,
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(
-              Icons.wifi_off_rounded,
-              color: Colors.white,
-              size: 16,
-            ),
-            const SizedBox(width: 8),
-            Text(
-              'Sin conexión — los datos se guardan localmente',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w500,
-                  ),
-            ),
-          ],
-        ),
-      ),
-    );
+    // Nunca ocupa espacio en la UI, solo reacciona con Toasts
+    return const SizedBox.shrink();
   }
 
   void _showToast(BuildContext context, bool isConnected) {
     if (!mounted) return;
+    
+    final backgroundColor = isConnected ? const Color(0xFF1E2D24) : const Color(0xFF2D1E1E);
+    final borderColor = isConnected ? Colors.green.withValues(alpha: 0.3) : Colors.red.withValues(alpha: 0.3);
+    final iconColor = isConnected ? Colors.green.shade400 : Colors.red.shade400;
+    final iconBgColor = isConnected ? Colors.green.withValues(alpha: 0.15) : Colors.red.withValues(alpha: 0.15);
+
     ScaffoldMessenger.of(context).hideCurrentSnackBar();
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Row(
-          children: [
-            Icon(
-              isConnected ? Icons.wifi_rounded : Icons.wifi_off_rounded,
-              color: Colors.white,
-              size: 20,
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                isConnected
-                    ? 'Conexión restablecida'
-                    : 'Sin conexión — los datos se guardan localmente',
-              ),
-            ),
-          ],
-        ),
-        backgroundColor: isConnected ? Colors.green.shade700 : Colors.red.shade700,
+        elevation: 0,
+        backgroundColor: Colors.transparent,
         behavior: SnackBarBehavior.floating,
-        margin: const EdgeInsets.only(bottom: 72, left: 16, right: 16),
-        duration: const Duration(seconds: 3),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
+        margin: const EdgeInsets.only(bottom: 32, left: 16, right: 16),
+        duration: const Duration(seconds: 4),
+        content: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          decoration: BoxDecoration(
+            color: backgroundColor,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: borderColor, width: 1),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.25),
+                blurRadius: 16,
+                offset: const Offset(0, 8),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: iconBgColor,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  isConnected ? Icons.wifi_rounded : Icons.wifi_off_rounded,
+                  color: iconColor,
+                  size: 22,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      isConnected ? 'Conexión restablecida' : 'Sin conexión a internet',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 15,
+                        letterSpacing: -0.2,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      isConnected
+                          ? 'Sincronizando datos automáticamente...'
+                          : 'Trabajando en modo local seguro',
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.75),
+                        fontWeight: FontWeight.w400,
+                        fontSize: 13,
+                        letterSpacing: -0.1,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

@@ -8,7 +8,7 @@ class AppBranding {
   AppBranding._();
 
   // 📝 PLACEHOLDER - Cambiar cuando tengas nombre definitivo
-  static const String appName = 'MypiUtil';
+  static const String appName = 'MipyUtil';
   static const String appTagline = 'Tu mipyme, organizada';
   static const String appDescription =
       'Inventario, ventas y turnos. Todo sin internet.';

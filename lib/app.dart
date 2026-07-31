@@ -132,7 +132,7 @@ class InventarioApp extends ConsumerWidget {
     final accessibility = ref.watch(accessibilityProvider);
 
     return MaterialApp.router(
-      title: 'MypiUtil',
+      title: 'MipyUtil',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light(
         textScaleFactor: accessibility.textSizeLevel.scale,

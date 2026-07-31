@@ -18,7 +18,7 @@ class LocalDatabase {
 
     final dbPath = await getDatabasesPath();
     final database = await openDatabase(
-      p.join(dbPath, 'mypiutil.db'),
+      p.join(dbPath, 'mipyutil.db'),
       version: 8,
       onCreate: (db, version) async {
         await db.execute('''

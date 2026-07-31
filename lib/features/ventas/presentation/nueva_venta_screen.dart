@@ -1219,44 +1219,47 @@ class _CartSheetState extends ConsumerState<_CartSheet>
     if (venta == null || venta.items.isEmpty) {
       _emptyStateCtrl.forward(from: 0);
       
-      return SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 24, 20, 40),
-          child: FadeTransition(
-            opacity: _emptyFade,
-            child: ScaleTransition(
-              scale: _emptyScale,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Ícono con círculo de fondo - sin tachar
-                  Container(
-                    width: 88,
-                    height: 88,
-                    decoration: BoxDecoration(
-                      color: context.colors.surfaceSecondary,
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: context.colors.line.withValues(alpha: 0.3),
-                        width: 2,
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 48),
+        child: FadeTransition(
+          opacity: _emptyFade,
+          child: ScaleTransition(
+            scale: _emptyScale,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                // Ícono con círculo de fondo - sin tachar
+                Container(
+                  width: 88,
+                  height: 88,
+                  decoration: BoxDecoration(
+                    color: context.colors.surfaceSecondary,
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: context.colors.line.withValues(alpha: 0.3),
+                      width: 2,
+                    ),
+                  ),
+                  child: Icon(
+                    Icons.shopping_cart_outlined,
+                    size: 40,
+                    color: context.colors.muted.withValues(alpha: 0.6),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Text(
+                  'Carrito vacío',
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.w700,
+                        color: context.colors.ink,
                       ),
-                    ),
-                    child: Icon(
-                      Icons.shopping_cart_outlined,
-                      size: 40,
-                      color: context.colors.muted.withValues(alpha: 0.6),
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  Text(
-                    'Carrito vacío',
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.w700,
-                          color: context.colors.ink,
-                        ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
+                ),
+                const SizedBox(height: 8),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Text(
                     'Agrega productos a la venta para verlos aquí.',
                     textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
@@ -1264,8 +1267,8 @@ class _CartSheetState extends ConsumerState<_CartSheet>
                           height: 1.4,
                         ),
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
         ),
