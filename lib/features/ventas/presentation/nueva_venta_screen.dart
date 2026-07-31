@@ -1221,7 +1221,7 @@ class _CartSheetState extends ConsumerState<_CartSheet>
       
       return Container(
         width: double.infinity,
-        padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 48),
+        padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 80),
         child: FadeTransition(
           opacity: _emptyFade,
           child: ScaleTransition(
@@ -1248,7 +1248,7 @@ class _CartSheetState extends ConsumerState<_CartSheet>
                     color: context.colors.muted.withValues(alpha: 0.6),
                   ),
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: 24),
                 Text(
                   'Carrito vacío',
                   style: Theme.of(context).textTheme.titleLarge?.copyWith(
@@ -1256,7 +1256,7 @@ class _CartSheetState extends ConsumerState<_CartSheet>
                         color: context.colors.ink,
                       ),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 12),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: Text(

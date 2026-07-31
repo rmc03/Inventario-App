@@ -609,18 +609,18 @@ class _TurnoActivoViewState extends ConsumerState<_TurnoActivoView>
           ScreenPopupMenu(
             items: [
               ScreenMenuItem(
-                value: 'cerrar',
-                icon: Icons.logout_rounded,
-                iconColor: context.colors.danger,
-                title: 'Cerrar turno',
-                subtitle: 'Finaliza tu jornada',
-              ),
-              ScreenMenuItem(
                 value: 'ajustes',
                 icon: Icons.settings_rounded,
                 iconColor: context.colors.muted,
                 title: 'Ajustes',
                 subtitle: 'Preferencias de la app',
+              ),
+              ScreenMenuItem(
+                value: 'cerrar',
+                icon: Icons.logout_rounded,
+                iconColor: context.colors.danger,
+                title: 'Cerrar turno',
+                subtitle: 'Finaliza tu jornada',
               ),
             ],
             onSelected: (value) {
